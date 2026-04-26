@@ -5,8 +5,13 @@ function requireLogin(req, res, next) {
   next();
 }
 
+function isUserAdmin(user) {
+  if (!user) return false;
+  return Number(user.is_admin) === 1 || user.is_admin === true;
+}
+
 function requireAdmin(req, res, next) {
-  if (!req.session.user || req.session.user.is_admin !== 1) {
+  if (!isUserAdmin(req.session.user)) {
     return res.status(403).render('error', {
       code: 403,
       message: '관리자 권한이 필요합니다.'
@@ -15,4 +20,4 @@ function requireAdmin(req, res, next) {
   next();
 }
 
-module.exports = { requireLogin, requireAdmin };
+module.exports = { requireLogin, requireAdmin, isUserAdmin };

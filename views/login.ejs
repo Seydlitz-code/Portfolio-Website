@@ -23,6 +23,9 @@
       <% } %>
 
       <form action="/auth/login" method="POST" class="auth-form">
+        <% if (next) { %>
+          <input type="hidden" name="next" value="<%= next %>">
+        <% } %>
         <div class="form-group">
           <label class="form-label" for="username">아이디</label>
           <input type="text" id="username" name="username" class="form-input"

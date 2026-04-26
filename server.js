@@ -8,9 +8,13 @@ const { initializeDatabase } = require('./db/database');
 const authRoutes = require('./routes/auth');
 const postsRoutes = require('./routes/posts');
 const adminRoutes = require('./routes/admin');
+const { isUserAdmin } = require('./middleware/auth');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Render 등 리버스 프록시 뒤에서 쿠키/HTTPS 감지가 맞게 동작하도록
+app.set('trust proxy', 1);
 
 initializeDatabase();
 
@@ -25,18 +29,21 @@ app.use(express.static(path.join(__dirname, 'public')));
 const dbDir = path.join(__dirname, 'db');
 app.use(session({
   store: new SqliteStore({ db: 'sessions.db', dir: dbDir }),
+  name: 'portfolio.sid',
   secret: process.env.SESSION_SECRET || 'portfolio-secret-lilip-change-in-prod',
   resave: false,
   saveUninitialized: false,
+  proxy: true,
   cookie: {
     secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
     maxAge: 1000 * 60 * 60 * 24 * 7
   }
 }));
 
 app.use((req, res, next) => {
   res.locals.user = req.session.user || null;
-  res.locals.isAdmin = !!(req.session.user && req.session.user.is_admin === 1);
+  res.locals.isAdmin = isUserAdmin(req.session.user);
   next();
 });
 

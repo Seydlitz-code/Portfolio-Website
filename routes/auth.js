@@ -9,36 +9,63 @@ function generateCaptcha() {
   return { question: `${a} + ${b} = ?`, answer: a + b };
 }
 
+function safeRedirectPath(v) {
+  if (typeof v !== 'string' || !v.startsWith('/') || v.startsWith('//')) return null;
+  return v;
+}
+
 // GET /auth/login
 router.get('/login', (req, res) => {
-  if (req.session.user) return res.redirect('/');
+  if (req.session.user) {
+    return res.redirect(safeRedirectPath(req.query.next) || '/');
+  }
   const registered = req.query.registered === 'true';
-  res.render('login', { error: null, success: registered ? '회원가입이 완료되었습니다. 로그인해주세요.' : null });
+  const next = safeRedirectPath(req.query.next);
+  res.render('login', {
+    error: null,
+    success: registered ? '회원가입이 완료되었습니다. 로그인해주세요.' : null,
+    next: next
+  });
 });
 
 // POST /auth/login
 router.post('/login', (req, res) => {
   const { username, password } = req.body;
+  const nextForForm = safeRedirectPath(req.body.next) || safeRedirectPath(req.query.next) || null;
+
   if (!username || !password) {
-    return res.render('login', { error: '아이디와 비밀번호를 입력해주세요.', success: null });
+    return res.render('login', { error: '아이디와 비밀번호를 입력해주세요.', success: null, next: nextForForm });
   }
 
   const db = getDb();
   const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username.trim());
 
   if (!user || !bcrypt.compareSync(password, user.password)) {
-    return res.render('login', { error: '아이디 또는 비밀번호가 올바르지 않습니다.', success: null });
+    return res.render('login', { error: '아이디 또는 비밀번호가 올바르지 않습니다.', success: null, next: nextForForm });
   }
+
+  // connect-sqlite3(비동기) 세션이 파일에 쓰이기 전에 redirect 하면
+  // 쿠키/세션이 반영되지 않은 것처럼 보일 수 있으므로 반드시 save 후 응답
+  const nextUrl = safeRedirectPath(req.body.next) || safeRedirectPath(req.query.next) || '/';
 
   req.session.user = {
     id: user.id,
     username: user.username,
     nickname: user.nickname,
-    is_admin: user.is_admin
+    is_admin: user.is_admin != null ? Number(user.is_admin) : 0
   };
 
-  const next = req.query.next || '/';
-  res.redirect(next.startsWith('/') ? next : '/');
+  req.session.save((err) => {
+    if (err) {
+      console.error('Session save error:', err);
+      return res.render('login', {
+        error: '로그인 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.',
+        success: null,
+        next: nextForForm
+      });
+    }
+    res.redirect(nextUrl);
+  });
 });
 
 // GET /auth/register
