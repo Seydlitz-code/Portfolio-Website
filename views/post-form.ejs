@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= post ? '게시물 수정' : '새 게시물 작성' %> — 포트폴리오</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Inter:wght@300;400;500;700&display=swap" rel="stylesheet">
+</head>
+<body class="inner-page">
+
+  <header class="inner-header">
+    <div class="inner-header-inner">
+      <a href="/" class="inner-logo">← Donghawan Lee / @lilip</a>
+    </div>
+  </header>
+
+  <main class="inner-main">
+    <div class="inner-container" style="max-width: 760px;">
+      <h1 class="page-heading-sm"><%= post ? '게시물 수정' : '새 게시물 작성' %></h1>
+
+      <% if (typeof error !== 'undefined' && error) { %>
+        <div class="alert alert-error"><%= error %></div>
+      <% } %>
+
+      <form action="<%= formAction %>" method="<%= formMethod %>" class="post-write-form">
+        <div class="form-group">
+          <label class="form-label">제목 <span class="required">*</span></label>
+          <input type="text" name="title" class="form-input form-input-lg"
+                 value="<%= post ? post.title : '' %>" placeholder="게시물 제목을 입력하세요" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">프로젝트 분류</label>
+          <select name="project_id" class="form-input form-select">
+            <option value="">-- 분류 없음 --</option>
+            <% projects.forEach(p => { %>
+              <option value="<%= p.id %>" <%= (post && post.project_id === p.id) ? 'selected' : '' %>>
+                <%= p.name %>
+              </option>
+            <% }) %>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">내용 <span class="required">*</span></label>
+          <textarea name="content" class="form-input post-content-area" rows="16"
+                    placeholder="게시물 내용을 입력하세요..." required><%= post ? post.content : '' %></textarea>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn-primary">
+            <i class="fas fa-save"></i> <%= post ? '수정 완료' : '게시물 등록' %>
+          </button>
+          <a href="<%= post ? '/posts/' + post.id : '/posts' %>" class="btn-secondary">취소</a>
+        </div>
+      </form>
+    </div>
+  </main>
+</body>
+</html>

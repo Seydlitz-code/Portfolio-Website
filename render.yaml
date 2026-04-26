@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: portfolio-lilip
+    env: node
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: SESSION_SECRET
+        generateValue: true
+    disk:
+      name: portfolio-data
+      mountPath: /opt/render/project/src/db
+      sizeGB: 1

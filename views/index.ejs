@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= settings.site_name || 'Donghawan Lee / @lilip' %></title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Inter:wght@300;400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- ========== 상단 내비게이션 ========== -->
+  <nav class="topnav" id="topnav">
+    <div class="topnav-inner">
+      <div class="topnav-right">
+        <% if (user) { %>
+          <span class="nav-user">
+            <% if (isAdmin) { %><span class="admin-badge">관리자</span><% } %>
+            <%= user.nickname %>
+          </span>
+          <form action="/auth/logout" method="POST" class="inline-form">
+            <button type="submit" class="nav-btn">로그아웃</button>
+          </form>
+        <% } else { %>
+          <a href="/auth/login" class="nav-btn">로그인</a>
+          <a href="/auth/register" class="nav-btn nav-btn-outline">회원가입</a>
+        <% } %>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ========== 히어로 섹션 (메인 화면) ========== -->
+  <section id="hero" class="hero-section">
+    <div class="hero-content">
+
+      <!-- 프로필 이미지 -->
+      <div class="profile-area">
+        <div class="profile-circle-wrap">
+          <% if (settings.profile_image) { %>
+            <img src="<%= settings.profile_image %>" alt="프로필 이미지" class="profile-img">
+          <% } else { %>
+            <div class="profile-placeholder">
+              <i class="fas fa-user"></i>
+              <% if (isAdmin) { %>
+                <span class="placeholder-hint">이미지를 클릭하여 업로드</span>
+              <% } else { %>
+                <span class="placeholder-hint">프로필 이미지</span>
+              <% } %>
+            </div>
+          <% } %>
+          <% if (isAdmin) { %>
+            <label for="profileImageInput" class="profile-cam-btn" title="프로필 이미지 변경">
+              <i class="fas fa-camera"></i>
+            </label>
+            <form id="profileImageForm" action="/admin/profile-image" method="POST" enctype="multipart/form-data">
+              <input type="file" id="profileImageInput" name="profile_image" accept="image/*"
+                     style="display:none" onchange="this.form.submit()">
+            </form>
+          <% } %>
+        </div>
+      </div>
+
+      <!-- 정보 영역 -->
+      <div class="hero-info">
+        <!-- 이름 -->
+        <div class="hero-name-wrap">
+          <% if (isAdmin) { %>
+            <div id="nameDisplay" class="name-display">
+              <h1 class="hero-name"><%= settings.site_name || 'Donghawan Lee / @lilip' %></h1>
+              <button class="inline-edit-btn" onclick="toggleEdit('nameEdit', 'nameDisplay')" title="이름 수정">
+                <i class="fas fa-pen"></i>
+              </button>
+            </div>
+            <div id="nameEdit" class="name-edit" style="display:none">
+              <form action="/admin/settings" method="POST" class="inline-edit-form">
+                <input type="text" name="site_name"
+                       value="<%= settings.site_name || 'Donghawan Lee / @lilip' %>"
+                       class="edit-input" required>
+                <input type="hidden" name="bio" value="<%= settings.bio || '' %>">
+                <button type="submit" class="btn-save">저장</button>
+                <button type="button" class="btn-cancel" onclick="toggleEdit('nameEdit', 'nameDisplay')">취소</button>
+              </form>
+            </div>
+          <% } else { %>
+            <h1 class="hero-name"><%= settings.site_name || 'Donghawan Lee / @lilip' %></h1>
+          <% } %>
+        </div>
+
+        <!-- 자기소개 -->
+        <div class="hero-bio-wrap">
+          <% if (isAdmin) { %>
+            <div id="bioDisplay" class="bio-display">
+              <% if (settings.bio && settings.bio.trim()) { %>
+                <p class="hero-bio"><%= settings.bio %></p>
+              <% } else { %>
+                <p class="hero-bio bio-empty">사용자가 이력, 포폴을 추가하거나 수정할 수 있도록 하는 기능 추가<br>각 이력은 앞에 " - "를 달아서 구분</p>
+              <% } %>
+              <button class="inline-edit-btn" onclick="toggleEdit('bioEdit', 'bioDisplay')" title="소개 수정">
+                <i class="fas fa-pen"></i>
+              </button>
+            </div>
+            <div id="bioEdit" class="bio-edit" style="display:none">
+              <form action="/admin/settings" method="POST" class="inline-edit-form bio-form">
+                <input type="hidden" name="site_name" value="<%= settings.site_name || 'Donghawan Lee / @lilip' %>">
+                <textarea name="bio" class="edit-textarea" rows="4" placeholder="자기소개를 입력하세요.&#10;각 이력 앞에 ' - '를 붙여 구분합니다."><%= settings.bio || '' %></textarea>
+                <div class="btn-row">
+                  <button type="submit" class="btn-save">저장</button>
+                  <button type="button" class="btn-cancel" onclick="toggleEdit('bioEdit', 'bioDisplay')">취소</button>
+                </div>
+              </form>
+            </div>
+          <% } else { %>
+            <% if (settings.bio && settings.bio.trim()) { %>
+              <p class="hero-bio"><%= settings.bio %></p>
+            <% } %>
+          <% } %>
+        </div>
+
+        <!-- 소셜 링크 -->
+        <div class="social-links">
+          <a href="https://github.com/Seydlitz-code" target="_blank" rel="noopener" class="social-btn" title="GitHub">
+            <i class="fab fa-github"></i>
+          </a>
+          <a href="https://www.linkedin.com/in/%EB%8F%99%ED%99%98-%EC%9D%B4-aa7443369/" target="_blank" rel="noopener" class="social-btn" title="LinkedIn">
+            <i class="fab fa-linkedin-in"></i>
+          </a>
+          <a href="https://x.com/lilip_seydlitz" target="_blank" rel="noopener" class="social-btn" title="Twitter / X">
+            <i class="fab fa-x-twitter"></i>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- 스크롤 안내 -->
+    <div class="scroll-down-hint">
+      <span>스크롤하여 포트폴리오 보기</span>
+      <i class="fas fa-chevron-down bounce"></i>
+    </div>
+  </section>
+
+  <!-- ========== 포트폴리오 섹션 ========== -->
+  <main id="portfolio" class="portfolio-section">
+
+    <!-- 스티키 헤더 (클릭 시 메인으로 이동) -->
+    <div class="portfolio-sticky-header" id="portfolioHeader" onclick="scrollToHero()" title="메인으로 이동">
+      <span class="sticky-name"><%= settings.site_name || 'Donghawan Lee / @lilip' %></span>
+      <span class="sticky-hint"><i class="fas fa-arrow-up"></i> 메인으로</span>
+    </div>
+
+    <div class="portfolio-body">
+
+      <!-- 관리자 컨트롤 -->
+      <% if (isAdmin) { %>
+        <div class="admin-controls">
+          <a href="/posts/new" class="admin-action-btn">
+            <i class="fas fa-plus"></i> 새 게시물 작성
+          </a>
+          <button class="admin-action-btn" onclick="openModal('projectModal')">
+            <i class="fas fa-folder-plus"></i> 프로젝트 추가
+          </button>
+        </div>
+      <% } %>
+
+      <!-- 전체 최근 게시물 -->
+      <section class="portfolio-block">
+        <div class="block-header">
+          <div class="block-title-group">
+            <h2 class="block-title">전체 보기</h2>
+            <span class="block-title-ja">すべて見る</span>
+          </div>
+          <a href="/posts" class="view-all-btn">전체 게시물 →</a>
+        </div>
+        <div class="posts-grid">
+          <% if (recentPosts.length === 0) { %>
+            <div class="empty-posts">
+              <p>최근 게시물 순서대로 5개의 게시물이 표시됩니다.</p>
+              <% if (isAdmin) { %>
+                <a href="/posts/new" class="empty-action-link">첫 게시물을 작성해보세요 →</a>
+              <% } %>
+            </div>
+          <% } else { %>
+            <% recentPosts.forEach(post => { %>
+              <article class="post-card" onclick="location.href='/posts/<%= post.id %>'">
+                <h3 class="post-card-title"><%= post.title %></h3>
+                <div class="post-card-meta">
+                  <% if (post.project_name) { %>
+                    <span class="post-card-project"><%= post.project_name %></span>
+                  <% } %>
+                  <time class="post-card-date"><%= new Date(post.created_at).toLocaleDateString('ko-KR') %></time>
+                </div>
+              </article>
+            <% }) %>
+          <% } %>
+        </div>
+      </section>
+
+      <!-- 프로젝트별 섹션 -->
+      <% projects.forEach(project => { %>
+        <section class="portfolio-block">
+          <div class="block-header">
+            <div class="block-title-group">
+              <h2 class="block-title"><%= project.name %></h2>
+              <% if (project.name_ja) { %>
+                <span class="block-title-ja"><%= project.name_ja %></span>
+              <% } %>
+              <% if (project.description) { %>
+                <p class="block-desc"><%= project.description %></p>
+              <% } %>
+            </div>
+            <% if (isAdmin) { %>
+              <form action="/admin/projects/<%= project.id %>?_method=DELETE" method="POST"
+                    onsubmit="return confirm('프로젝트를 삭제하면 연결된 게시물의 분류가 해제됩니다. 계속하시겠습니까?')">
+                <button type="submit" class="btn-delete-sm">삭제</button>
+              </form>
+            <% } %>
+          </div>
+          <div class="posts-grid">
+            <% if (project.posts.length === 0) { %>
+              <div class="empty-posts">
+                <p>최근 게시물 순서대로 5개의 게시물이 표시됩니다.</p>
+                <% if (isAdmin) { %>
+                  <a href="/posts/new" class="empty-action-link">이 프로젝트에 게시물 추가 →</a>
+                <% } %>
+              </div>
+            <% } else { %>
+              <% project.posts.forEach(post => { %>
+                <article class="post-card" onclick="location.href='/posts/<%= post.id %>'">
+                  <h3 class="post-card-title"><%= post.title %></h3>
+                  <time class="post-card-date"><%= new Date(post.created_at).toLocaleDateString('ko-KR') %></time>
+                </article>
+              <% }) %>
+            <% } %>
+          </div>
+        </section>
+      <% }) %>
+
+    </div>
+  </main>
+
+  <!-- ========== 프로젝트 추가 모달 ========== -->
+  <% if (isAdmin) { %>
+    <div id="projectModal" class="modal-overlay" onclick="closeModalOnOverlay(event, 'projectModal')">
+      <div class="modal-box">
+        <div class="modal-header">
+          <h3>새 프로젝트 추가</h3>
+          <button class="modal-close" onclick="closeModal('projectModal')">&times;</button>
+        </div>
+        <form action="/admin/projects" method="POST">
+          <div class="form-group">
+            <label class="form-label">프로젝트명 <span class="required">*</span></label>
+            <input type="text" name="name" class="form-input" placeholder="프로젝트명을 입력하세요" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">프로젝트명 (일본어, 선택)</label>
+            <input type="text" name="name_ja" class="form-input" placeholder="日本語プロジェクト名（任意）">
+          </div>
+          <div class="form-group">
+            <label class="form-label">설명 (선택)</label>
+            <textarea name="description" class="form-input" rows="3" placeholder="프로젝트에 대한 간단한 설명"></textarea>
+          </div>
+          <div class="modal-actions">
+            <button type="submit" class="btn-primary">추가하기</button>
+            <button type="button" class="btn-secondary" onclick="closeModal('projectModal')">취소</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  <% } %>
+
+  <script src="/js/main.js"></script>
+</body>
+</html>

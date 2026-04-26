@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>회원가입 — 포트폴리오</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Inter:wght@300;400;500;700&display=swap" rel="stylesheet">
+</head>
+<body class="auth-page">
+  <div class="auth-container">
+    <div class="auth-card">
+      <a href="/" class="auth-back"><span>←</span> 메인으로</a>
+      <h1 class="auth-title">회원가입</h1>
+      <p class="auth-sub">새 계정을 만들어 댓글을 남겨보세요</p>
+
+      <% if (error) { %>
+        <div class="alert alert-error"><%= error %></div>
+      <% } %>
+
+      <form action="/auth/register" method="POST" class="auth-form" id="registerForm">
+        <div class="form-group">
+          <label class="form-label" for="nickname">닉네임 <span class="required">*</span></label>
+          <input type="text" id="nickname" name="nickname" class="form-input"
+                 placeholder="닉네임을 입력하세요" required maxlength="20">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="username">아이디 <span class="required">*</span></label>
+          <input type="text" id="username" name="username" class="form-input"
+                 placeholder="영문, 숫자, 밑줄(_)만 사용 (3자 이상)" required
+                 pattern="[a-zA-Z0-9_]+" minlength="3" maxlength="30"
+                 autocomplete="username">
+          <small class="form-hint">영문, 숫자, 밑줄(_)만 사용 가능합니다.</small>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="password">비밀번호 <span class="required">*</span></label>
+          <div class="password-wrap">
+            <input type="password" id="password" name="password" class="form-input"
+                   placeholder="8자 이상" required minlength="8" autocomplete="new-password">
+            <button type="button" class="pw-toggle" onclick="togglePw('password')">👁</button>
+          </div>
+          <small class="form-hint">최소 8자 이상이어야 합니다.</small>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="passwordConfirm">비밀번호 확인 <span class="required">*</span></label>
+          <div class="password-wrap">
+            <input type="password" id="passwordConfirm" name="passwordConfirm" class="form-input"
+                   placeholder="비밀번호를 다시 입력하세요" required autocomplete="new-password">
+            <button type="button" class="pw-toggle" onclick="togglePw('passwordConfirm')">👁</button>
+          </div>
+          <small id="pwMatchMsg" class="form-hint"></small>
+        </div>
+
+        <div class="form-group captcha-group">
+          <label class="form-label">로봇 방지 <span class="required">*</span></label>
+          <div class="captcha-box">
+            <span class="captcha-question"><%= captchaQuestion %></span>
+            <input type="number" name="captcha" class="form-input captcha-input"
+                   placeholder="답을 입력하세요" required>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-primary btn-full">회원가입</button>
+      </form>
+
+      <p class="auth-switch">이미 계정이 있으신가요? <a href="/auth/login">로그인</a></p>
+    </div>
+  </div>
+
+  <script>
+    function togglePw(id) {
+      const input = document.getElementById(id);
+      input.type = input.type === 'password' ? 'text' : 'password';
+    }
+
+    const pw = document.getElementById('password');
+    const pwConfirm = document.getElementById('passwordConfirm');
+    const msg = document.getElementById('pwMatchMsg');
+
+    pwConfirm.addEventListener('input', () => {
+      if (!pwConfirm.value) { msg.textContent = ''; return; }
+      if (pw.value === pwConfirm.value) {
+        msg.textContent = '비밀번호가 일치합니다.';
+        msg.style.color = '#22c55e';
+      } else {
+        msg.textContent = '비밀번호가 일치하지 않습니다.';
+        msg.style.color = '#ef4444';
+      }
+    });
+  </script>
+</body>
+</html>

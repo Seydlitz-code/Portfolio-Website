@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>전체 게시물 — 포트폴리오</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Inter:wght@300;400;500;700&display=swap" rel="stylesheet">
+</head>
+<body class="inner-page">
+
+  <header class="inner-header">
+    <div class="inner-header-inner">
+      <a href="/" class="inner-logo">← Donghawan Lee / @lilip</a>
+      <nav class="inner-nav">
+        <% if (user) { %>
+          <span class="nav-user"><%= user.nickname %></span>
+          <form action="/auth/logout" method="POST" class="inline-form">
+            <button type="submit" class="nav-btn">로그아웃</button>
+          </form>
+        <% } else { %>
+          <a href="/auth/login" class="nav-btn">로그인</a>
+          <a href="/auth/register" class="nav-btn nav-btn-outline">회원가입</a>
+        <% } %>
+      </nav>
+    </div>
+  </header>
+
+  <main class="inner-main">
+    <div class="inner-container">
+      <div class="page-heading">
+        <h1>전체 게시물 <span class="heading-ja">すべての投稿</span></h1>
+        <p class="page-sub">총 <%= total %>개의 게시물</p>
+      </div>
+
+      <% if (isAdmin) { %>
+        <div class="admin-controls">
+          <a href="/posts/new" class="admin-action-btn">
+            <i class="fas fa-plus"></i> 새 게시물 작성
+          </a>
+        </div>
+      <% } %>
+
+      <% if (posts.length === 0) { %>
+        <div class="empty-state-box">
+          <i class="fas fa-file-alt"></i>
+          <p>아직 게시물이 없습니다.</p>
+          <% if (isAdmin) { %>
+            <a href="/posts/new" class="btn-primary">첫 게시물 작성하기</a>
+          <% } %>
+        </div>
+      <% } else { %>
+        <div class="posts-list-full">
+          <% posts.forEach(post => { %>
+            <article class="post-list-item" onclick="location.href='/posts/<%= post.id %>'">
+              <div class="post-list-info">
+                <h2 class="post-list-title"><%= post.title %></h2>
+                <div class="post-list-meta">
+                  <% if (post.project_name) { %>
+                    <span class="post-project-tag"><%= post.project_name %></span>
+                  <% } %>
+                  <time><%= new Date(post.created_at).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' }) %></time>
+                </div>
+              </div>
+              <span class="post-arrow">→</span>
+            </article>
+          <% }) %>
+        </div>
+
+        <!-- 페이지네이션 -->
+        <% if (totalPages > 1) { %>
+          <nav class="pagination">
+            <% if (page > 1) { %>
+              <a href="/posts?page=<%= page - 1 %>" class="page-btn">← 이전</a>
+            <% } %>
+            <% for (let i = 1; i <= totalPages; i++) { %>
+              <a href="/posts?page=<%= i %>" class="page-btn <%= i === page ? 'active' : '' %>"><%= i %></a>
+            <% } %>
+            <% if (page < totalPages) { %>
+              <a href="/posts?page=<%= page + 1 %>" class="page-btn">다음 →</a>
+            <% } %>
+          </nav>
+        <% } %>
+      <% } %>
+    </div>
+  </main>
+</body>
+</html>

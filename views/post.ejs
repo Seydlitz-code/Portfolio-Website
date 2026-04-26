@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= post.title %> — 포트폴리오</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Inter:wght@300;400;500;700&display=swap" rel="stylesheet">
+</head>
+<body class="inner-page">
+
+  <header class="inner-header">
+    <div class="inner-header-inner">
+      <a href="/" class="inner-logo">← Donghawan Lee / @lilip</a>
+      <nav class="inner-nav">
+        <% if (user) { %>
+          <span class="nav-user"><%= user.nickname %></span>
+          <form action="/auth/logout" method="POST" class="inline-form">
+            <button type="submit" class="nav-btn">로그아웃</button>
+          </form>
+        <% } else { %>
+          <a href="/auth/login" class="nav-btn">로그인</a>
+          <a href="/auth/register" class="nav-btn nav-btn-outline">회원가입</a>
+        <% } %>
+      </nav>
+    </div>
+  </header>
+
+  <main class="inner-main">
+    <div class="inner-container post-container">
+
+      <!-- 게시물 본문 -->
+      <article class="post-article">
+        <div class="post-breadcrumb">
+          <a href="/posts">전체 게시물</a>
+          <% if (post.project_name) { %>
+            <span>/</span>
+            <span><%= post.project_name %></span>
+          <% } %>
+        </div>
+
+        <h1 class="post-title"><%= post.title %></h1>
+
+        <div class="post-meta">
+          <% if (post.project_name) { %>
+            <span class="post-project-tag"><%= post.project_name %></span>
+          <% } %>
+          <time class="post-date">
+            <%= new Date(post.created_at).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' }) %>
+          </time>
+          <% if (post.updated_at !== post.created_at) { %>
+            <span class="post-updated">(수정됨: <%= new Date(post.updated_at).toLocaleDateString('ko-KR') %>)</span>
+          <% } %>
+        </div>
+
+        <div class="post-content">
+          <%- post.content.replace(/\n/g, '<br>') %>
+        </div>
+
+        <!-- 관리자 수정/삭제 -->
+        <% if (isAdmin) { %>
+          <div class="post-admin-actions">
+            <a href="/posts/<%= post.id %>/edit" class="btn-secondary">
+              <i class="fas fa-pen"></i> 수정
+            </a>
+            <form action="/posts/<%= post.id %>?_method=DELETE" method="POST"
+                  onsubmit="return confirm('게시물을 삭제하시겠습니까?')">
+              <button type="submit" class="btn-danger">
+                <i class="fas fa-trash"></i> 삭제
+              </button>
+            </form>
+          </div>
+        <% } %>
+      </article>
+
+      <!-- 댓글 -->
+      <section class="comments-section" id="comments">
+        <h2 class="comments-title">댓글 <span class="comment-count"><%= comments.length %></span></h2>
+
+        <% if (comments.length === 0) { %>
+          <p class="no-comments">아직 댓글이 없습니다. 첫 댓글을 남겨보세요!</p>
+        <% } else { %>
+          <div class="comments-list">
+            <% comments.forEach(comment => { %>
+              <div class="comment-item">
+                <div class="comment-header">
+                  <span class="comment-author"><%= comment.nickname %></span>
+                  <time class="comment-date">
+                    <%= new Date(comment.created_at).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' }) %>
+                  </time>
+                  <% if (isAdmin) { %>
+                    <form action="/posts/<%= post.id %>/comments/<%= comment.id %>?_method=DELETE" method="POST"
+                          class="inline-form comment-delete"
+                          onsubmit="return confirm('댓글을 삭제하시겠습니까?')">
+                      <button type="submit" class="btn-delete-sm">삭제</button>
+                    </form>
+                  <% } %>
+                </div>
+                <p class="comment-body"><%- comment.content.replace(/\n/g, '<br>') %></p>
+              </div>
+            <% }) %>
+          </div>
+        <% } %>
+
+        <!-- 댓글 작성 폼 -->
+        <% if (user) { %>
+          <form action="/posts/<%= post.id %>/comments" method="POST" class="comment-form">
+            <div class="comment-form-header">
+              <span class="comment-form-user"><%= user.nickname %>으로 댓글 작성</span>
+            </div>
+            <textarea name="content" class="comment-textarea" rows="3"
+                      placeholder="댓글을 입력하세요..." required></textarea>
+            <button type="submit" class="btn-primary">댓글 등록</button>
+          </form>
+        <% } else { %>
+          <div class="comment-login-prompt">
+            <p>댓글을 작성하려면 <a href="/auth/login?next=/posts/<%= post.id %>">로그인</a>이 필요합니다.</p>
+          </div>
+        <% } %>
+      </section>
+
+    </div>
+  </main>
+</body>
+</html>
