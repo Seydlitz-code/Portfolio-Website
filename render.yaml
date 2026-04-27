@@ -1,3 +1,5 @@
+# Render: 영구 디스크는 프로젝트의 "data"에만 마운트합니다.
+# (이전에 "db"에 마운트하면 db/database.js가 볼륨에 가려져 Cannot find module 오류/500이 납니다)
 services:
   - type: web
     name: portfolio-lilip
@@ -9,7 +11,9 @@ services:
         value: production
       - key: SESSION_SECRET
         generateValue: true
+      - key: DATA_DIR
+        value: /opt/render/project/src/data
     disk:
       name: portfolio-data
-      mountPath: /opt/render/project/src/db
+      mountPath: /opt/render/project/src/data
       sizeGB: 1

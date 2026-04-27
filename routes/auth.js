@@ -1,7 +1,7 @@
 const express = require('express');
 const bcrypt = require('bcrypt');
 const router = express.Router();
-const { getDb } = require('../db/database');
+const { getDb } = require('../config/database');
 
 function generateCaptcha() {
   const a = Math.floor(Math.random() * 10) + 1;

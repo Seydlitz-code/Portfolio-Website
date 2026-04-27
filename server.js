@@ -3,7 +3,7 @@ const session = require('express-session');
 const methodOverride = require('method-override');
 const path = require('path');
 const SqliteStore = require('connect-sqlite3')(session);
-const { initializeDatabase } = require('./db/database');
+const { initializeDatabase, getDataDir } = require('./config/database');
 
 const authRoutes = require('./routes/auth');
 const postsRoutes = require('./routes/posts');
@@ -27,9 +27,9 @@ app.use(express.urlencoded({ extended: true }));
 app.use(methodOverride('_method'));
 app.use(express.static(path.join(__dirname, 'public')));
 
-const dbDir = path.join(__dirname, 'db');
+const dataDir = getDataDir();
 app.use(session({
-  store: new SqliteStore({ db: 'sessions.db', dir: dbDir }),
+  store: new SqliteStore({ db: 'sessions.db', dir: dataDir }),
   name: 'portfolio.sid',
   secret: process.env.SESSION_SECRET || 'portfolio-secret-lilip-change-in-prod',
   resave: false,
@@ -65,6 +65,6 @@ app.use((err, req, res, next) => {
   res.status(500).render('error', { code: 500, message: '서버 오류가 발생했습니다.' });
 });
 
-app.listen(PORT, () => {
-  console.log(`포트폴리오 서버 실행 중: http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`포트폴리오 서버 실행 중: port ${PORT}`);
 });

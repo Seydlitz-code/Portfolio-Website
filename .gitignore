@@ -1,4 +1,9 @@
 node_modules/
+# SQLite (새 경로: data/)
+data/*.db
+data/*.db-shm
+data/*.db-wal
+# 이전 경로(로컬 잔여)
 db/*.db
 db/*.db-shm
 db/*.db-wal
@@ -7,3 +12,4 @@ db/*.db-wal
 *.log
 public/uploads/*
 !public/uploads/.gitkeep
+!data/.gitkeep

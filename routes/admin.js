@@ -1,7 +1,7 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
-const { getDb } = require('../db/database');
+const { getDb } = require('../config/database');
 const { getSiteHomeData } = require('../lib/siteData');
 const { requireAdmin } = require('../middleware/auth');
 const multer = require('multer');

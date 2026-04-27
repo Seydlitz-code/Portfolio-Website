@@ -3,15 +3,30 @@ const bcrypt = require('bcrypt');
 const path = require('path');
 const fs = require('fs');
 
-const DB_DIR = path.join(__dirname);
-const DB_PATH = path.join(DB_DIR, 'portfolio.db');
+/**
+ * SQLite 및 세션 파일을 저장하는 디렉터리.
+ * - 로컬: <프로젝트>/data
+ * - Render: 영구 디스크를 /data 등에 마운트한 뒤 env DATA_DIR과 동일하게 설정
+ * 주의: 디스크를 "db" 폴더에 마운트하면 db/database.js 코드가 사라지므로 사용하지 말 것.
+ */
+function getDataDir() {
+  if (process.env.DATA_DIR) {
+    return process.env.DATA_DIR;
+  }
+  return path.join(__dirname, '..', 'data');
+}
 
+const DB_FILE = 'portfolio.db';
 let db;
 
 function getDb() {
   if (!db) {
-    if (!fs.existsSync(DB_DIR)) fs.mkdirSync(DB_DIR, { recursive: true });
-    db = new Database(DB_PATH);
+    const dataDir = getDataDir();
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+    }
+    const dbPath = path.join(dataDir, DB_FILE);
+    db = new Database(dbPath);
     db.pragma('journal_mode = WAL');
     db.pragma('foreign_keys = ON');
   }
@@ -90,10 +105,8 @@ function initializeDatabase() {
     ).run('seydlitz', '릴리프', hashedPassword, 1);
     console.log('관리자 계정 생성 완료');
   }
-  // 문서에 맞는 관리자 닉네임(릴리프)으로 동기화
   database.prepare("UPDATE users SET nickname = '릴리프' WHERE username = 'seydlitz'").run();
 
-  // 이전 DB에서 비밀번호·권한이 문서의 기본값과 다를 때(비번 불일치, is_admin=0 등) 1회 복구
   if (process.env.SYNC_SEED_ADMIN === '1' || process.env.SYNC_SEED_ADMIN === 'true') {
     const a = database.prepare("SELECT * FROM users WHERE username = 'seydlitz'").get();
     if (a) {
@@ -112,4 +125,4 @@ function initializeDatabase() {
   console.log('데이터베이스 초기화 완료');
 }
 
-module.exports = { getDb, initializeDatabase };
+module.exports = { getDb, initializeDatabase, getDataDir };

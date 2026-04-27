@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { getDb } = require('../db/database');
+const { getDb } = require('../config/database');
 const { requireAdmin, requireLogin } = require('../middleware/auth');
 
 // GET /posts - All posts
