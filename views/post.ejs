@@ -10,22 +10,7 @@
 </head>
 <body class="inner-page">
 
-  <header class="inner-header">
-    <div class="inner-header-inner">
-      <a href="/" class="inner-logo">← Donghawan Lee / @lilip</a>
-      <nav class="inner-nav">
-        <% if (user) { %>
-          <span class="nav-user"><%= user.nickname %></span>
-          <form action="/auth/logout" method="POST" class="inline-form">
-            <button type="submit" class="nav-btn">로그아웃</button>
-          </form>
-        <% } else { %>
-          <a href="/auth/login" class="nav-btn">로그인</a>
-          <a href="/auth/register" class="nav-btn nav-btn-outline">회원가입</a>
-        <% } %>
-      </nav>
-    </div>
-  </header>
+  <%- include('partials/inner-header') %>
 
   <main class="inner-main">
     <div class="inner-container post-container">

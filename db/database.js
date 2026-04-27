@@ -87,9 +87,11 @@ function initializeDatabase() {
     const hashedPassword = bcrypt.hashSync('renown0716**AA', 12);
     database.prepare(
       'INSERT INTO users (username, nickname, password, is_admin) VALUES (?, ?, ?, ?)'
-    ).run('seydlitz', '릴리프 야', hashedPassword, 1);
+    ).run('seydlitz', '릴리프', hashedPassword, 1);
     console.log('관리자 계정 생성 완료');
   }
+  // 문서에 맞는 관리자 닉네임(릴리프)으로 동기화
+  database.prepare("UPDATE users SET nickname = '릴리프' WHERE username = 'seydlitz'").run();
 
   // 이전 DB에서 비밀번호·권한이 문서의 기본값과 다를 때(비번 불일치, is_admin=0 등) 1회 복구
   if (process.env.SYNC_SEED_ADMIN === '1' || process.env.SYNC_SEED_ADMIN === 'true') {
@@ -100,7 +102,7 @@ function initializeDatabase() {
       const ok = bcrypt.compareSync('renown0716**AA', a.password) && isAdmin;
       if (!ok) {
         database.prepare(
-          "UPDATE users SET password = ?, is_admin = 1, nickname = '릴리프 야' WHERE username = 'seydlitz'"
+          "UPDATE users SET password = ?, is_admin = 1, nickname = '릴리프' WHERE username = 'seydlitz'"
         ).run(rehash);
         console.log('SYNC_SEED_ADMIN: seydlitz 계정이 기본 문서와 동일하게 갱신되었습니다. 환경변수를 끄세요.');
       }

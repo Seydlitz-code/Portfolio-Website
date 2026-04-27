@@ -68,6 +68,44 @@ router.post('/login', (req, res) => {
   });
 });
 
+// GET /auth/check-username (JSON)
+router.get('/check-username', (req, res) => {
+  const u = (req.query.username != null ? String(req.query.username) : '').trim();
+  if (!u) {
+    return res.json({ available: false, message: '아이디를 입력해주세요.' });
+  }
+  if (u.length < 3) {
+    return res.json({ available: false, message: '아이디는 3자 이상이어야 합니다.' });
+  }
+  if (u.length > 30) {
+    return res.json({ available: false, message: '아이디가 너무 깁니다.' });
+  }
+  if (!/^[a-zA-Z0-9_]+$/.test(u)) {
+    return res.json({ available: false, message: '영문, 숫자, 밑줄(_)만 사용할 수 있습니다.' });
+  }
+  const row = getDb().prepare('SELECT id FROM users WHERE username = ?').get(u);
+  if (row) {
+    return res.json({ available: false, duplicate: true });
+  }
+  return res.json({ available: true });
+});
+
+// GET /auth/check-nickname (JSON)
+router.get('/check-nickname', (req, res) => {
+  const n = (req.query.nickname != null ? String(req.query.nickname) : '').trim();
+  if (!n) {
+    return res.json({ available: false, message: '닉네임을 입력해주세요.' });
+  }
+  if (n.length > 20) {
+    return res.json({ available: false, message: '닉네임은 20자 이하로 입력해주세요.' });
+  }
+  const row = getDb().prepare('SELECT id FROM users WHERE nickname = ?').get(n);
+  if (row) {
+    return res.json({ available: false, duplicate: true });
+  }
+  return res.json({ available: true });
+});
+
 // GET /auth/register
 router.get('/register', (req, res) => {
   if (req.session.user) return res.redirect('/');
@@ -110,9 +148,13 @@ router.post('/register', (req, res) => {
   }
 
   const db = getDb();
-  const existing = db.prepare('SELECT id FROM users WHERE username = ?').get(username.trim());
-  if (existing) {
+  const existingUser = db.prepare('SELECT id FROM users WHERE username = ?').get(username.trim());
+  if (existingUser) {
     return fail('이미 사용 중인 아이디입니다.');
+  }
+  const existingNick = db.prepare('SELECT id FROM users WHERE nickname = ?').get(nickname.trim());
+  if (existingNick) {
+    return fail('이미 사용 중인 닉네임입니다.');
   }
 
   try {

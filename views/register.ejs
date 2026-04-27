@@ -19,19 +19,30 @@
         <div class="alert alert-error"><%= error %></div>
       <% } %>
 
-      <form action="/auth/register" method="POST" class="auth-form" id="registerForm">
+      <form action="/auth/register" method="POST" class="auth-form" id="registerForm" novalidate>
         <div class="form-group">
           <label class="form-label" for="nickname">닉네임 <span class="required">*</span></label>
-          <input type="text" id="nickname" name="nickname" class="form-input"
-                 placeholder="닉네임을 입력하세요" required maxlength="20">
+          <div class="register-dup-row">
+            <input type="text" id="nickname" name="nickname" class="form-input register-dup-input"
+                   placeholder="닉네임을 입력하세요" required maxlength="20" autocomplete="nickname">
+            <button type="button" class="nav-btn register-dup-btn" id="btnCheckNickname" title="닉네임 사용 가능 여부">
+              닉네임 중복 확인
+            </button>
+            <span class="dup-check-msg" id="nicknameCheckMsg" aria-live="polite"></span>
+          </div>
         </div>
 
         <div class="form-group">
           <label class="form-label" for="username">아이디 <span class="required">*</span></label>
-          <input type="text" id="username" name="username" class="form-input"
-                 placeholder="영문, 숫자, 밑줄(_)만 사용 (3자 이상)" required
-                 pattern="[a-zA-Z0-9_]+" minlength="3" maxlength="30"
-                 autocomplete="username">
+          <div class="register-dup-row">
+            <input type="text" id="username" name="username" class="form-input register-dup-input"
+                   placeholder="영문, 숫자, 밑줄(_)만 사용 (3자 이상)" required
+                   pattern="[a-zA-Z0-9_]+" minlength="3" maxlength="30" autocomplete="username">
+            <button type="button" class="nav-btn register-dup-btn" id="btnCheckUsername" title="아이디 사용 가능 여부">
+              아이디 중복 확인
+            </button>
+            <span class="dup-check-msg" id="usernameCheckMsg" aria-live="polite"></span>
+          </div>
           <small class="form-hint">영문, 숫자, 밑줄(_)만 사용 가능합니다.</small>
         </div>
 
@@ -40,7 +51,7 @@
           <div class="password-wrap">
             <input type="password" id="password" name="password" class="form-input"
                    placeholder="8자 이상" required minlength="8" autocomplete="new-password">
-            <button type="button" class="pw-toggle" onclick="togglePw('password')">👁</button>
+            <button type="button" class="pw-toggle" aria-label="비밀번호 표시" onclick="togglePw('password')">👁</button>
           </div>
           <small class="form-hint">최소 8자 이상이어야 합니다.</small>
         </div>
@@ -50,7 +61,7 @@
           <div class="password-wrap">
             <input type="password" id="passwordConfirm" name="passwordConfirm" class="form-input"
                    placeholder="비밀번호를 다시 입력하세요" required autocomplete="new-password">
-            <button type="button" class="pw-toggle" onclick="togglePw('passwordConfirm')">👁</button>
+            <button type="button" class="pw-toggle" aria-label="비밀번호 표시" onclick="togglePw('passwordConfirm')">👁</button>
           </div>
           <small id="pwMatchMsg" class="form-hint"></small>
         </div>
@@ -59,10 +70,11 @@
           <label class="form-label">로봇 방지 <span class="required">*</span></label>
           <div class="captcha-box">
             <span class="captcha-question"><%= captchaQuestion %></span>
-            <input type="number" name="captcha" class="form-input captcha-input"
-                   placeholder="답을 입력하세요" required>
+            <input type="number" name="captcha" class="form-input captcha-input" placeholder="답을 입력하세요" required>
           </div>
         </div>
+
+        <div id="registerClientError" class="register-top-error" role="alert" hidden></div>
 
         <button type="submit" class="btn-primary btn-full">회원가입</button>
       </form>
@@ -71,26 +83,6 @@
     </div>
   </div>
 
-  <script>
-    function togglePw(id) {
-      const input = document.getElementById(id);
-      input.type = input.type === 'password' ? 'text' : 'password';
-    }
-
-    const pw = document.getElementById('password');
-    const pwConfirm = document.getElementById('passwordConfirm');
-    const msg = document.getElementById('pwMatchMsg');
-
-    pwConfirm.addEventListener('input', () => {
-      if (!pwConfirm.value) { msg.textContent = ''; return; }
-      if (pw.value === pwConfirm.value) {
-        msg.textContent = '비밀번호가 일치합니다.';
-        msg.style.color = '#22c55e';
-      } else {
-        msg.textContent = '비밀번호가 일치하지 않습니다.';
-        msg.style.color = '#ef4444';
-      }
-    });
-  </script>
+  <script src="/js/register.js"></script>
 </body>
 </html>

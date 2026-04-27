@@ -9,6 +9,7 @@ const authRoutes = require('./routes/auth');
 const postsRoutes = require('./routes/posts');
 const adminRoutes = require('./routes/admin');
 const { isUserAdmin } = require('./middleware/auth');
+const { getSiteHomeData } = require('./lib/siteData');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -52,32 +53,7 @@ app.use('/posts', postsRoutes);
 app.use('/admin', adminRoutes);
 
 app.get('/', (req, res) => {
-  const db = require('./db/database').getDb();
-
-  const settingsRows = db.prepare('SELECT key, value FROM site_settings').all();
-  const settings = {};
-  settingsRows.forEach(row => { settings[row.key] = row.value; });
-
-  const recentPosts = db.prepare(`
-    SELECT p.*, pr.name as project_name
-    FROM posts p
-    LEFT JOIN projects pr ON p.project_id = pr.id
-    ORDER BY p.created_at DESC
-    LIMIT 5
-  `).all();
-
-  const projects = db.prepare(`
-    SELECT * FROM projects ORDER BY order_num ASC, created_at DESC
-  `).all();
-
-  const projectsWithPosts = projects.map(project => {
-    const posts = db.prepare(`
-      SELECT * FROM posts WHERE project_id = ? ORDER BY created_at DESC LIMIT 5
-    `).all(project.id);
-    return { ...project, posts };
-  });
-
-  res.render('index', { settings, recentPosts, projects: projectsWithPosts });
+  res.render('index', { ...getSiteHomeData() });
 });
 
 app.use((req, res) => {

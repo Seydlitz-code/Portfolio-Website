@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>마이페이지(편집) — 포트폴리오</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Inter:wght@300;400;500;700&display=swap" rel="stylesheet">
+</head>
+<body class="mypage-page">
+
+  <%- include('partials/topnav') %>
+
+  <div class="mypage-wrap">
+    <div class="mypage-toolstrip" role="region" aria-label="편집 도구">
+      <div class="mypage-toolstrip-left">
+        <button type="submit" class="btn-primary" form="mypageForm" id="mypageApplyBtn">적용하기</button>
+        <button type="button" class="btn-secondary" id="mypageResetBtn" title="이 페이지를 불러온 당시 저장값으로 되돌립니다">초기화</button>
+      </div>
+      <a href="/" class="mypage-back-home">← 메인 보기</a>
+    </div>
+
+    <% if (typeof saved !== 'undefined' && saved) { %>
+      <div class="mypage-alert"><div class="alert alert-success">적용이 완료되었습니다.</div></div>
+    <% } %>
+    <% if (typeof errMessage !== 'undefined' && errMessage) { %>
+      <div class="mypage-alert"><div class="alert alert-error"><%= errMessage %></div></div>
+    <% } %>
+
+    <form id="mypageForm" class="mypage-form" action="/admin/apply" method="POST" enctype="multipart/form-data">
+      <section class="mypage-section mypage-hero-like">
+        <h2 class="mypage-section-title">프로필 &amp; 메인 문구</h2>
+        <div class="mypage-hero-row">
+          <div class="profile-area">
+            <div class="profile-circle-wrap">
+              <img id="mypageProfilePreview" class="profile-img" alt="프로필 미리보기"
+                   src="<%= settings.profile_image || '' %>"
+                   style="<%= settings.profile_image ? '' : 'display:none' %>">
+              <div class="profile-placeholder" id="mypageNoImg" style="<%= settings.profile_image ? 'display:none' : 'display:flex' %>">
+                <i class="fas fa-user"></i>
+                <span class="placeholder-hint">프로필 이미지</span>
+              </div>
+            </div>
+            <label class="mypage-file-label">
+              <i class="fas fa-camera"></i> 이미지 파일 선택
+              <input type="file" name="profile_image" id="mypageFileInput" accept="image/*" class="mypage-file-input">
+            </label>
+            <p class="mypage-hint">비워 두면 기존 이미지를 유지합니다. 적용하기로 반영됩니다.</p>
+          </div>
+          <div class="mypage-fields">
+            <div class="form-group">
+              <label class="form-label" for="mypageSiteName">표시 이름 (메인)</label>
+              <input type="text" name="site_name" id="mypageSiteName" class="form-input" required
+                     value="<%= settings.site_name || 'Donghawan Lee / @lilip' %>">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="mypageBio">메인 메시지 (이력/소개)</label>
+              <textarea name="bio" id="mypageBio" class="form-input" rows="6" placeholder="각 이력 앞에 ' - '를 붙여 구분할 수 있습니다."><%= settings.bio || '' %></textarea>
+            </div>
+          </div>
+        </div>
+      </section>
+    </form>
+
+    <section class="mypage-section">
+      <h2 class="mypage-section-title">게시물 &amp; 프로젝트</h2>
+      <div class="admin-controls">
+        <a href="/posts/new" class="admin-action-btn"><i class="fas fa-plus"></i> 새 게시물 작성</a>
+        <button type="button" class="admin-action-btn" onclick="openModal('projectModal')"><i class="fas fa-folder-plus"></i> 프로젝트 추가</button>
+      </div>
+
+      <div class="portfolio-block">
+        <div class="block-header">
+          <div class="block-title-group">
+            <h3 class="block-title" style="font-size:1rem">전체 최근 5개</h3>
+          </div>
+          <a href="/posts" class="view-all-btn">전체 목록</a>
+        </div>
+        <div class="posts-grid">
+          <% if (recentPosts.length === 0) { %>
+            <p class="mypage-muted">게시물이 없습니다. 위에서 새 게시물을 추가하세요.</p>
+          <% } else { %>
+            <% recentPosts.forEach(function(post) { %>
+              <article class="post-card" onclick="location.href='/posts/<%= post.id %>'">
+                <h3 class="post-card-title"><%= post.title %></h3>
+                <div class="post-card-meta">
+                  <time class="post-card-date"><%= new Date(post.created_at).toLocaleDateString('ko-KR') %></time>
+                </div>
+              </article>
+            <% }); %>
+          <% } %>
+        </div>
+      </div>
+
+      <% projects.forEach(function(project) { %>
+        <div class="portfolio-block">
+          <div class="block-header">
+            <div class="block-title-group">
+              <h3 class="block-title"><%= project.name %></h3>
+            </div>
+            <form action="/admin/projects/<%= project.id %>?_method=DELETE" method="POST" class="inline-form" onsubmit="return confirm('프로젝트를 삭제하면 연결된 게시물의 분류가 해제됩니다. 계속하시겠습니까?')">
+              <button type="submit" class="btn-delete-sm">삭제</button>
+            </form>
+          </div>
+          <div class="posts-grid">
+            <% if (project.posts.length === 0) { %>
+              <p class="mypage-muted">이 프로젝트에 연결된 표시용 게시물이 없습니다.</p>
+            <% } else { %>
+              <% project.posts.forEach(function(post) { %>
+                <article class="post-card" onclick="location.href='/posts/<%= post.id %>'">
+                  <h3 class="post-card-title"><%= post.title %></h3>
+                  <time class="post-card-date"><%= new Date(post.created_at).toLocaleDateString('ko-KR') %></time>
+                </article>
+              <% }); %>
+            <% } %>
+          </div>
+        </div>
+      <% }); %>
+    </section>
+  </div>
+
+  <div id="projectModal" class="modal-overlay" onclick="closeModalOnOverlay(event, 'projectModal')" style="display:none">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>새 프로젝트 추가</h3>
+        <button type="button" class="modal-close" onclick="closeModal('projectModal')">&times;</button>
+      </div>
+      <form action="/admin/projects" method="POST">
+        <div class="form-group">
+          <label class="form-label">프로젝트명 <span class="required">*</span></label>
+          <input type="text" name="name" class="form-input" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">프로젝트명 (일본어, 선택)</label>
+          <input type="text" name="name_ja" class="form-input">
+        </div>
+        <div class="form-group">
+          <label class="form-label">설명 (선택)</label>
+          <textarea name="description" class="form-input" rows="3"></textarea>
+        </div>
+        <div class="modal-actions">
+          <button type="submit" class="btn-primary">추가하기</button>
+          <button type="button" class="btn-secondary" onclick="closeModal('projectModal')">취소</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    window.__MYPAGE_INITIAL__ = <%- JSON.stringify({
+      site_name: (settings && settings.site_name) ? settings.site_name : 'Donghawan Lee / @lilip',
+      bio: settings && settings.bio ? settings.bio : '',
+      profile_image: settings && settings.profile_image ? settings.profile_image : ''
+    }) %>;
+  </script>
+  <script src="/js/main.js"></script>
+  <script src="/js/mypage.js"></script>
+</body>
+</html>

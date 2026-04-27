@@ -1,0 +1,24 @@
+<div class="nav-cluster">
+  <span class="nav-nickname" title="닉네임">
+    <% if (user) { %>
+      <%= user.nickname %>
+    <% } else { %>
+      <span class="nav-nickname-mute" aria-label="로그인 전">—</span>
+    <% } %>
+  </span>
+  <div class="nav-actions">
+    <% if (!user) { %>
+      <a href="/auth/login" class="nav-btn">로그인</a>
+      <a href="/auth/register" class="nav-btn nav-btn-outline">회원가입</a>
+    <% } else if (isAdmin) { %>
+      <a href="/admin/mypage" class="nav-btn nav-btn-outline<% if (typeof mypageActive !== 'undefined' && mypageActive) { %> nav-btn-active<% } %>"<% if (typeof mypageActive !== 'undefined' && mypageActive) { %> aria-current="page"<% } %>>마이페이지</a>
+      <form action="/auth/logout" method="POST" class="inline-form">
+        <button type="submit" class="nav-btn">로그아웃</button>
+      </form>
+    <% } else { %>
+      <form action="/auth/logout" method="POST" class="inline-form">
+        <button type="submit" class="nav-btn">로그아웃</button>
+      </form>
+    <% } %>
+  </div>
+</div>
