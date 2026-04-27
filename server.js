@@ -2,7 +2,8 @@ const express = require('express');
 const session = require('express-session');
 const methodOverride = require('method-override');
 const path = require('path');
-const SqliteStore = require('connect-sqlite3')(session);
+const Database = require('better-sqlite3');
+const SqliteSessionStore = require('better-sqlite3-session-store')(session);
 const { initializeDatabase, getDataDir } = require('./config/database');
 
 const authRoutes = require('./routes/auth');
@@ -28,8 +29,16 @@ app.use(methodOverride('_method'));
 app.use(express.static(path.join(__dirname, 'public')));
 
 const dataDir = getDataDir();
+// connect-sqlite3는 별도의 node-sqlite3 네이티브 모듈을 써서 Render 등에서 실패하는 경우가 많음.
+// 앱과 동일한 better-sqlite3로 세션 DB를 연다.
+const sessionDbPath = path.join(dataDir, 'sessions.db');
+const sessionDb = new Database(sessionDbPath);
+sessionDb.pragma('journal_mode = WAL');
 app.use(session({
-  store: new SqliteStore({ db: 'sessions.db', dir: dataDir }),
+  store: new SqliteSessionStore({
+    client: sessionDb,
+    expired: { clear: true, intervalMs: 15 * 60 * 1000 }
+  }),
   name: 'portfolio.sid',
   secret: process.env.SESSION_SECRET || 'portfolio-secret-lilip-change-in-prod',
   resave: false,
