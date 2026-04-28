@@ -75,6 +75,10 @@
       const f = fileAvatar.files && fileAvatar.files[0];
       if (!f) return;
       if (typeof window.openRegisterAvatarCrop !== 'function') {
+        if (errTop) {
+          errTop.removeAttribute('hidden');
+          errTop.textContent = '이미지 편집 도구를 불러올 수 없습니다. 페이지를 새로고침해 주세요.';
+        }
         return;
       }
       window.openRegisterAvatarCrop(f, function (blob) {
@@ -84,6 +88,15 @@
       fileAvatar.value = '';
     });
   }
+
+  window.addEventListener('register-avatar-crop-error', function (e) {
+    const msg = (e.detail && e.detail.message) || '이미지를 불러올 수 없습니다.';
+    if (errTop) {
+      errTop.removeAttribute('hidden');
+      errTop.textContent = msg;
+      errTop.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  });
 
   inNick.addEventListener('input', function () {
     if (inNick.value.trim() !== nicknameVerifiedValue) {

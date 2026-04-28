@@ -233,8 +233,8 @@
   }
 
   function sizeCanvas(initial) {
-    const maxW = Math.min(520, window.innerWidth - 32);
-    const maxH = Math.min(420, window.innerHeight - 220);
+    const maxW = Math.min(520, window.innerWidth - 24);
+    const maxH = Math.min(480, Math.max(200, window.innerHeight - 200));
     cw = maxW;
     ch = maxH;
     canvas.width = cw;
@@ -249,16 +249,33 @@
     draw();
   }
 
+  function onCropEscape(e) {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      closeModal();
+    }
+  }
+
+  function attachModalChrome() {
+    document.body.classList.add('register-crop-modal-open');
+    document.addEventListener('keydown', onCropEscape);
+  }
+
+  function detachModalChrome() {
+    document.body.classList.remove('register-crop-modal-open');
+    document.removeEventListener('keydown', onCropEscape);
+  }
+
   function closeModal() {
     endWindowDrag();
     window.removeEventListener('resize', onCropResize);
+    detachModalChrome();
     if (objectUrl) {
       URL.revokeObjectURL(objectUrl);
       objectUrl = null;
     }
     if (modal) modal.hidden = true;
     img = null;
-    document.body.style.overflow = '';
   }
 
   function confirmCrop() {
@@ -271,8 +288,16 @@
     octx.drawImage(img, sx, sy, side, side, 0, 0, outSize, outSize);
     out.toBlob(
       function (blob) {
-        if (blob && onConfirmCb) onConfirmCb(blob);
-        closeModal();
+        if (blob && onConfirmCb) {
+          onConfirmCb(blob);
+          closeModal();
+        } else if (!blob) {
+          window.dispatchEvent(
+            new CustomEvent('register-avatar-crop-error', {
+              detail: { message: '이미지를 저장할 수 없습니다. 다시 시도해 주세요.' }
+            })
+          );
+        }
       },
       'image/png',
       0.92
@@ -300,14 +325,25 @@
       iw = im.naturalWidth;
       ih = im.naturalHeight;
       modal.hidden = false;
-      document.body.style.overflow = 'hidden';
+      attachModalChrome();
       sizeCanvas(true);
       window.addEventListener('resize', onCropResize);
+      const closeBtn = document.getElementById('registerCropClose');
+      if (closeBtn) {
+        requestAnimationFrame(function () {
+          closeBtn.focus();
+        });
+      }
     };
     im.onerror = function () {
       if (myGen !== loadGeneration) return;
       URL.revokeObjectURL(objectUrl);
       objectUrl = null;
+      window.dispatchEvent(
+        new CustomEvent('register-avatar-crop-error', {
+          detail: { message: '이미지를 불러올 수 없습니다. 다른 파일을 선택해 주세요.' }
+        })
+      );
     };
     im.src = objectUrl;
   }
@@ -316,6 +352,13 @@
   if (canvas) {
     canvas.addEventListener('mousedown', onPointerDown);
     canvas.addEventListener('touchstart', onPointerDown, { passive: false });
+  }
+
+  const backdrop = document.querySelector('.register-crop-backdrop');
+  if (backdrop) {
+    backdrop.addEventListener('click', function () {
+      closeModal();
+    });
   }
 
   const btnClose = document.getElementById('registerCropClose');
