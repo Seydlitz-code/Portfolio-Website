@@ -1141,7 +1141,7 @@ button {
 }
 
 .auth-card--register {
-  max-width: 960px;
+  max-width: 1000px;
   width: 100%;
   border: 1px solid var(--border);
   box-shadow: 0 8px 40px rgba(0, 0, 0, 0.06);
@@ -1150,18 +1150,53 @@ button {
 
 .register-grid {
   display: grid;
-  grid-template-columns: minmax(150px, 190px) minmax(280px, 1fr);
-  gap: 0.75rem 1.5rem;
+  grid-template-columns: minmax(260px, 36%) minmax(300px, 1fr);
+  gap: 1rem 1.75rem;
   align-items: start;
   margin-bottom: 0.55rem;
 }
 
-.register-span-row {
-  grid-column: 1 / -1;
-}
-
 .register-nickname-block .form-group {
   margin-bottom: 0;
+}
+
+.register-col--left {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  align-items: stretch;
+  min-width: 0;
+}
+
+.register-avatar-row {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 1rem 1.25rem;
+  width: 100%;
+}
+
+.register-avatar-side {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.42rem;
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  padding-top: 0.2rem;
+}
+
+.register-col--right {
+  min-width: 0;
+}
+
+.register-captcha-in-grid {
+  margin-bottom: 0;
+}
+
+.register-dup-row--nickname .dup-check-msg {
+  flex: 1 1 100%;
 }
 
 body.register-crop-modal-open {
@@ -1172,17 +1207,15 @@ body.register-crop-modal-open {
   gap: 0;
 }
 
-.register-col--avatar {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-}
-
 .register-avatar-preview-wrap {
   width: 140px;
   height: 140px;
   margin-bottom: 0.75rem;
+  flex-shrink: 0;
+}
+
+.register-avatar-row .register-avatar-preview-wrap {
+  margin-bottom: 0;
 }
 
 .register-avatar-preview {
@@ -1204,7 +1237,7 @@ body.register-crop-modal-open {
   font-size: 0.82rem;
   font-weight: 500;
   color: var(--text-primary);
-  margin: 0 0 0.5rem;
+  margin: 0;
 }
 
 .register-avatar-select-btn {
@@ -1274,15 +1307,18 @@ body.register-crop-modal-open {
 }
 
 .auth-page--register .register-grid {
-  grid-template-columns: minmax(130px, 170px) minmax(260px, 1fr);
-  gap: 0.55rem 1.25rem;
+  grid-template-columns: minmax(200px, 36%) minmax(260px, 1fr);
+  gap: 0.55rem 1.15rem;
   margin-bottom: 0.35rem;
 }
 
-.auth-page--register .register-avatar-preview-wrap {
-  width: 108px;
-  height: 108px;
-  margin-bottom: 0.28rem;
+.auth-page--register .register-avatar-row {
+  gap: 0.6rem 0.85rem;
+}
+
+.auth-page--register .register-avatar-row .register-avatar-preview-wrap {
+  width: 100px;
+  height: 100px;
 }
 
 .auth-page--register .register-avatar-label {
@@ -1482,14 +1518,28 @@ body.register-crop-modal-open {
   color: #111;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 720px) {
   .register-grid {
     grid-template-columns: 1fr;
-    justify-items: center;
+    justify-items: stretch;
   }
 
-  .register-col--fields {
+  .register-col--left,
+  .register-col--right {
     width: 100%;
+    max-width: 100%;
+  }
+
+  .register-avatar-row {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .register-avatar-side {
+    text-align: center;
+    align-items: center;
+    padding-top: 0;
   }
 }
 

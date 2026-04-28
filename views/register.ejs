@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>회원가입 — 포트폴리오</title>
-  <link rel="stylesheet" href="/css/style.css?v=20260427">
+  <link rel="stylesheet" href="/css/style.css?v=20260428">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Inter:wght@300;400;500;700&display=swap" rel="stylesheet">
 </head>
@@ -21,16 +21,34 @@
 
       <form action="/auth/register" method="POST" class="auth-form register-form" id="registerForm" novalidate enctype="multipart/form-data">
         <div class="register-grid">
-          <div class="register-col register-col--avatar">
-            <div class="register-avatar-preview-wrap">
-              <div class="register-avatar-preview" id="registerAvatarPreview" aria-hidden="true"></div>
+          <!-- 왼쪽: 프로필(원 + 옆 문구/버튼) + 닉네임 (가이드 PPT 배치) -->
+          <div class="register-col register-col--left">
+            <div class="register-avatar-row">
+              <div class="register-avatar-preview-wrap">
+                <div class="register-avatar-preview" id="registerAvatarPreview" aria-hidden="true"></div>
+              </div>
+              <div class="register-avatar-side">
+                <p class="register-avatar-label">프로필 이미지 설정</p>
+                <input type="file" id="registerAvatarFile" accept="image/jpeg,image/png,image/gif,image/webp" hidden>
+                <button type="button" class="register-avatar-select-btn" id="btnSelectAvatar">이미지 선택</button>
+              </div>
             </div>
-            <p class="register-avatar-label">프로필 이미지 설정</p>
-            <input type="file" id="registerAvatarFile" accept="image/jpeg,image/png,image/gif,image/webp" hidden>
-            <button type="button" class="register-avatar-select-btn" id="btnSelectAvatar">이미지 선택</button>
+
+            <div class="form-group register-nickname-block">
+              <label class="form-label" for="nickname">닉네임 <span class="required">*</span></label>
+              <div class="register-dup-row register-dup-row--nickname">
+                <input type="text" id="nickname" name="nickname" class="form-input register-dup-input"
+                       placeholder="닉네임을 입력하세요" required maxlength="20" autocomplete="nickname">
+                <button type="button" class="nav-btn register-dup-btn" id="btnCheckNickname" title="닉네임 사용 가능 여부">
+                  닉네임 중복 확인
+                </button>
+                <span class="dup-check-msg" id="nicknameCheckMsg" aria-live="polite"></span>
+              </div>
+            </div>
           </div>
 
-          <div class="register-col register-col--fields">
+          <!-- 오른쪽: 아이디 · 비밀번호 · 비밀번호 확인 · 로봇 방지 -->
+          <div class="register-col register-col--right">
             <div class="form-group">
               <label class="form-label" for="username">아이디 <span class="required">*</span></label>
               <div class="register-dup-row">
@@ -64,28 +82,14 @@
               </div>
               <small id="pwMatchMsg" class="form-hint"></small>
             </div>
-          </div>
 
-          <div class="register-span-row register-nickname-block">
-            <div class="form-group">
-              <label class="form-label" for="nickname">닉네임 <span class="required">*</span></label>
-              <div class="register-dup-row">
-                <input type="text" id="nickname" name="nickname" class="form-input register-dup-input"
-                       placeholder="닉네임을 입력하세요" required maxlength="20" autocomplete="nickname">
-                <button type="button" class="nav-btn register-dup-btn" id="btnCheckNickname" title="닉네임 사용 가능 여부">
-                  닉네임 중복 확인
-                </button>
-                <span class="dup-check-msg" id="nicknameCheckMsg" aria-live="polite"></span>
+            <div class="form-group captcha-group register-captcha-in-grid">
+              <label class="form-label">로봇 방지 <span class="required">*</span></label>
+              <div class="captcha-box">
+                <span class="captcha-question" id="registerCaptchaQuestion"><%= captchaQuestion %></span>
+                <input type="number" name="captcha" id="registerCaptchaInput" class="form-input captcha-input" placeholder="답을 입력하세요" required>
               </div>
             </div>
-          </div>
-        </div>
-
-        <div class="form-group captcha-group">
-          <label class="form-label">로봇 방지 <span class="required">*</span></label>
-          <div class="captcha-box">
-            <span class="captcha-question" id="registerCaptchaQuestion"><%= captchaQuestion %></span>
-            <input type="number" name="captcha" id="registerCaptchaInput" class="form-input captcha-input" placeholder="답을 입력하세요" required>
           </div>
         </div>
 
@@ -117,7 +121,7 @@
     </div>
   </div>
 
-  <script src="/js/register-crop.js?v=20260427"></script>
-  <script src="/js/register.js?v=20260427"></script>
+  <script src="/js/register-crop.js?v=20260428"></script>
+  <script src="/js/register.js?v=20260428"></script>
 </body>
 </html>
