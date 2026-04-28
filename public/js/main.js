@@ -5,6 +5,7 @@
   const hero = document.getElementById('hero');
   const portfolio = document.getElementById('portfolio');
   const dock = document.getElementById('portfolioDockHeader');
+  const topnav = document.getElementById('topnav');
   if (!hero || !portfolio) return;
 
   function onScroll() {
@@ -18,6 +19,9 @@
     const pastMain = scrollY >= vh * 0.92;
     if (dock) {
       dock.classList.toggle('portfolio-dock-header--visible', pastMain);
+    }
+    if (topnav) {
+      topnav.classList.toggle('topnav--dock-phase', pastMain);
     }
   }
 

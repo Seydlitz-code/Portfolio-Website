@@ -61,6 +61,12 @@ button {
   pointer-events: none;
 }
 
+/* 포트폴리오 구간: 도킹 바와 톤을 맞춰 한 줄 상단바처럼 보이게 */
+.topnav.topnav--dock-phase {
+  background: var(--header-bg);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
 .topnav-inner {
   display: flex;
   justify-content: flex-end;
@@ -496,7 +502,7 @@ button {
   min-height: 100vh;
 }
 
-/* 메인(히어로)을 넘긴 뒤에만 표시 — 뷰포트 최상단 고정(로그인 바는 z-index로 그 위에), 이름 중앙 */
+/* 메인(히어로)을 넘긴 뒤에만 표시 — 항상 top:0에 붙임(translate 슬라이드 제거: 중간에 떠 보이는 현상 방지) */
 .portfolio-dock-header {
   position: fixed;
   top: 0;
@@ -515,15 +521,13 @@ button {
   display: flex;
   align-items: center;
   justify-content: center;
-  transform: translateY(-100%);
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
-  transition: transform 0.32s ease, opacity 0.28s ease, visibility 0.32s ease;
+  transition: opacity 0.22s ease, visibility 0.22s ease;
 }
 
 .portfolio-dock-header.portfolio-dock-header--visible {
-  transform: translateY(0);
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
@@ -1137,10 +1141,27 @@ button {
 }
 
 .auth-card--register {
-  max-width: 720px;
+  max-width: 960px;
   width: 100%;
   border: 1px solid var(--border);
   box-shadow: 0 8px 40px rgba(0, 0, 0, 0.06);
+  padding: 1.15rem 1.6rem 1rem;
+}
+
+.register-grid {
+  display: grid;
+  grid-template-columns: minmax(150px, 190px) minmax(280px, 1fr);
+  gap: 0.75rem 1.5rem;
+  align-items: start;
+  margin-bottom: 0.55rem;
+}
+
+.register-span-row {
+  grid-column: 1 / -1;
+}
+
+.register-nickname-block .form-group {
+  margin-bottom: 0;
 }
 
 body.register-crop-modal-open {
@@ -1149,14 +1170,6 @@ body.register-crop-modal-open {
 
 .register-form {
   gap: 0;
-}
-
-.register-grid {
-  display: grid;
-  grid-template-columns: 200px 1fr;
-  gap: 1.5rem 2rem;
-  align-items: start;
-  margin-bottom: 1rem;
 }
 
 .register-col--avatar {
@@ -1209,8 +1222,120 @@ body.register-crop-modal-open {
   background: var(--hero-bg);
 }
 
-.register-nickname-block {
-  margin-bottom: 1rem;
+/* 회원가입 전용: 한 화면에 맞추기(데스크톱), 예시 가이드와 유사한 여밉·폭 */
+.auth-page--register .auth-container {
+  align-items: flex-start;
+  justify-content: center;
+  padding: 0.45rem 1rem 0.65rem;
+}
+
+.auth-page--register .auth-card--register {
+  padding: 0.85rem 1.35rem 0.75rem;
+}
+
+.auth-page--register .auth-back {
+  margin-bottom: 0.45rem;
+  font-size: 0.76rem;
+}
+
+.auth-page--register .auth-title {
+  font-size: 1.22rem;
+  margin-bottom: 0.08rem;
+}
+
+.auth-page--register .auth-sub {
+  font-size: 0.76rem;
+  margin-bottom: 0.55rem;
+}
+
+.auth-page--register .alert {
+  margin-bottom: 0.45rem;
+  padding: 0.45rem 0.7rem;
+  font-size: 0.8rem;
+}
+
+.auth-page--register .form-group {
+  margin-bottom: 0.42rem;
+}
+
+.auth-page--register .form-label {
+  margin-bottom: 0.18rem;
+  font-size: 0.76rem;
+}
+
+.auth-page--register .form-input {
+  padding: 0.38rem 0.65rem;
+  font-size: 0.8rem;
+}
+
+.auth-page--register .form-hint {
+  font-size: 0.64rem;
+  margin-top: 0.08rem;
+}
+
+.auth-page--register .register-grid {
+  grid-template-columns: minmax(130px, 170px) minmax(260px, 1fr);
+  gap: 0.55rem 1.25rem;
+  margin-bottom: 0.35rem;
+}
+
+.auth-page--register .register-avatar-preview-wrap {
+  width: 108px;
+  height: 108px;
+  margin-bottom: 0.28rem;
+}
+
+.auth-page--register .register-avatar-label {
+  font-size: 0.72rem;
+  margin-bottom: 0.28rem;
+}
+
+.auth-page--register .register-avatar-select-btn {
+  padding: 0.3rem 0.75rem;
+  font-size: 0.72rem;
+}
+
+.auth-page--register .register-dup-btn {
+  padding: 0.28rem 0.5rem;
+  font-size: 0.7rem;
+}
+
+.auth-page--register .dup-check-msg {
+  font-size: 0.66rem;
+  flex: 1 1 90px;
+  min-height: 1em;
+}
+
+.auth-page--register .register-dup-row {
+  gap: 0.28rem 0.45rem;
+}
+
+.auth-page--register .captcha-group .form-label {
+  margin-bottom: 0.2rem;
+}
+
+.auth-page--register .captcha-box {
+  gap: 0.45rem;
+}
+
+.auth-page--register .captcha-question {
+  padding: 0.32rem 0.65rem;
+  font-size: 0.82rem;
+}
+
+.auth-page--register .register-top-error {
+  margin-bottom: 0.32rem;
+  padding: 0.4rem 0.55rem;
+  font-size: 0.78rem;
+}
+
+.auth-page--register .register-submit-row {
+  margin-top: 0.2rem;
+}
+
+.auth-page--register .auth-switch {
+  margin-top: 0.45rem;
+  font-size: 0.74rem;
 }
 
 .register-submit-row {

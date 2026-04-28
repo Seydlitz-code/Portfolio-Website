@@ -121,16 +121,17 @@
 
     const dw = iw * fitScale;
     const dh = ih * fitScale;
-    ctx.drawImage(img, 0, 0, iw, ih, ox, oy, dw, dh);
-
     const { gx, gy, gs } = guideRect();
 
-    ctx.save();
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.58)';
+    // 1) 전체 이미지(원본 밝기)
+    ctx.drawImage(img, 0, 0, iw, ih, ox, oy, dw, dh);
+
+    // 2) 잘리는 영역(가이드 밖)은 어둡게
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
     ctx.fillRect(0, 0, cw, ch);
-    ctx.globalCompositeOperation = 'destination-out';
-    ctx.fillRect(gx, gy, gs, gs);
-    ctx.restore();
+
+    // 3) 가이드 안 = 프로필에 쓰일 부분만 다시 그려 밝게
+    ctx.drawImage(img, sx, sy, side, side, gx, gy, gs, gs);
 
     ctx.strokeStyle = 'rgba(255,255,255,0.55)';
     ctx.lineWidth = 1;
@@ -354,11 +355,25 @@
     canvas.addEventListener('touchstart', onPointerDown, { passive: false });
   }
 
-  const backdrop = document.querySelector('.register-crop-backdrop');
+  const backdrop = document.getElementById('registerCropBackdrop');
   if (backdrop) {
     backdrop.addEventListener('click', function () {
       closeModal();
     });
+  }
+
+  const cropPanel = document.querySelector('.register-crop-panel');
+  if (cropPanel) {
+    cropPanel.addEventListener('mousedown', function (e) {
+      e.stopPropagation();
+    });
+    cropPanel.addEventListener(
+      'touchstart',
+      function (e) {
+        e.stopPropagation();
+      },
+      { passive: true }
+    );
   }
 
   const btnClose = document.getElementById('registerCropClose');

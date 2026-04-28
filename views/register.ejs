@@ -4,11 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>회원가입 — 포트폴리오</title>
-  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/style.css?v=20260427">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Inter:wght@300;400;500;700&display=swap" rel="stylesheet">
 </head>
-<body class="auth-page">
+<body class="auth-page auth-page--register">
   <div class="auth-container">
     <div class="auth-card auth-card--register">
       <a href="/auth/login" class="auth-back"><span>←</span> 뒤로 가기</a>
@@ -65,17 +65,19 @@
               <small id="pwMatchMsg" class="form-hint"></small>
             </div>
           </div>
-        </div>
 
-        <div class="form-group register-nickname-block">
-          <label class="form-label" for="nickname">닉네임 <span class="required">*</span></label>
-          <div class="register-dup-row">
-            <input type="text" id="nickname" name="nickname" class="form-input register-dup-input"
-                   placeholder="닉네임을 입력하세요" required maxlength="20" autocomplete="nickname">
-            <button type="button" class="nav-btn register-dup-btn" id="btnCheckNickname" title="닉네임 사용 가능 여부">
-              닉네임 중복 확인
-            </button>
-            <span class="dup-check-msg" id="nicknameCheckMsg" aria-live="polite"></span>
+          <div class="register-span-row register-nickname-block">
+            <div class="form-group">
+              <label class="form-label" for="nickname">닉네임 <span class="required">*</span></label>
+              <div class="register-dup-row">
+                <input type="text" id="nickname" name="nickname" class="form-input register-dup-input"
+                       placeholder="닉네임을 입력하세요" required maxlength="20" autocomplete="nickname">
+                <button type="button" class="nav-btn register-dup-btn" id="btnCheckNickname" title="닉네임 사용 가능 여부">
+                  닉네임 중복 확인
+                </button>
+                <span class="dup-check-msg" id="nicknameCheckMsg" aria-live="polite"></span>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -99,8 +101,8 @@
   </div>
 
   <div id="registerCropModal" class="register-crop-modal" hidden role="dialog" aria-modal="true" aria-labelledby="registerCropTitle">
-    <div class="register-crop-backdrop"></div>
-    <div class="register-crop-panel">
+    <div id="registerCropBackdrop" class="register-crop-backdrop" aria-hidden="true"></div>
+    <div class="register-crop-panel" role="document">
       <header class="register-crop-header">
         <button type="button" class="register-crop-iconbtn" id="registerCropClose" aria-label="닫기">×</button>
         <h2 class="register-crop-title" id="registerCropTitle">이미지 편집하기</h2>
@@ -115,7 +117,7 @@
     </div>
   </div>
 
-  <script src="/js/register-crop.js"></script>
-  <script src="/js/register.js"></script>
+  <script src="/js/register-crop.js?v=20260427"></script>
+  <script src="/js/register.js?v=20260427"></script>
 </body>
 </html>

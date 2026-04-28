@@ -26,7 +26,14 @@ app.set('views', path.join(__dirname, 'views'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(methodOverride('_method'));
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), {
+  setHeaders(res, filePath) {
+    const ext = path.extname(filePath);
+    if (ext === '.css' || ext === '.js') {
+      res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
+    }
+  }
+}));
 
 const dataDir = getDataDir();
 // connect-sqlite3는 별도의 node-sqlite3 네이티브 모듈을 써서 Render 등에서 실패하는 경우가 많음.
