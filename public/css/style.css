@@ -496,15 +496,16 @@ button {
   min-height: 100vh;
 }
 
-/* 메인(히어로)을 넘긴 뒤에만 표시 — 뷰포트 상단 고정, 이름 중앙 */
+/* 메인(히어로)을 넘긴 뒤에만 표시 — 뷰포트 최상단 고정(로그인 바는 z-index로 그 위에), 이름 중앙 */
 .portfolio-dock-header {
   position: fixed;
-  top: 3.35rem;
+  top: 0;
   left: 0;
   right: 0;
   z-index: 55;
   min-height: 3.15rem;
   padding: 0.85rem 2rem;
+  padding-top: max(0.85rem, env(safe-area-inset-top, 0px));
   padding-right: max(2rem, env(safe-area-inset-right));
   padding-left: max(2rem, env(safe-area-inset-left));
   background: var(--header-bg);
