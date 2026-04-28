@@ -189,8 +189,8 @@ router.post('/register', (req, res, next) => {
   if (password !== passwordConfirm) {
     return fail('비밀번호가 일치하지 않습니다.');
   }
-  if (password.length < 8) {
-    return fail('비밀번호는 8자 이상이어야 합니다.');
+  if (password.length < 8 || password.length > 20) {
+    return fail('비밀번호는 8자 이상 20자 이하여야 합니다.');
   }
   if (username.length < 3) {
     return fail('아이디는 3자 이상이어야 합니다.');

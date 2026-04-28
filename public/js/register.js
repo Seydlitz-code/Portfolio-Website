@@ -18,6 +18,20 @@
 
   if (!form || !btnNick || !btnUser || !inNick || !inUser || !msgNick || !msgUser) return;
 
+  function clearClientError() {
+    if (!errTop) return;
+    errTop.textContent = '';
+    errTop.classList.add('is-hidden');
+  }
+
+  function setClientError(text) {
+    if (!errTop) return;
+    errTop.textContent = text;
+    errTop.classList.remove('is-hidden');
+  }
+
+  clearClientError();
+
   let nicknameVerified = false;
   let nicknameVerifiedValue = '';
   let usernameVerified = false;
@@ -75,10 +89,7 @@
       const f = fileAvatar.files && fileAvatar.files[0];
       if (!f) return;
       if (typeof window.openRegisterAvatarCrop !== 'function') {
-        if (errTop) {
-          errTop.removeAttribute('hidden');
-          errTop.textContent = '이미지 편집 도구를 불러올 수 없습니다. 페이지를 새로고침해 주세요.';
-        }
+        setClientError('이미지 편집 도구를 불러올 수 없습니다. 페이지를 새로고침해 주세요.');
         return;
       }
       window.openRegisterAvatarCrop(f, function (blob) {
@@ -91,11 +102,8 @@
 
   window.addEventListener('register-avatar-crop-error', function (e) {
     const msg = (e.detail && e.detail.message) || '이미지를 불러올 수 없습니다.';
-    if (errTop) {
-      errTop.removeAttribute('hidden');
-      errTop.textContent = msg;
-      errTop.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
+    setClientError(msg);
+    if (errTop) errTop.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   });
 
   inNick.addEventListener('input', function () {
@@ -184,10 +192,7 @@
 
   form.addEventListener('submit', async function (e) {
     e.preventDefault();
-    if (errTop) {
-      errTop.setAttribute('hidden', '');
-      errTop.textContent = '';
-    }
+    clearClientError();
     const lines = [];
     if (!nicknameVerified || inNick.value.trim() !== nicknameVerifiedValue) {
       lines.push('닉네임 중복 확인을 해주세요.');
@@ -196,21 +201,21 @@
       lines.push('아이디 중복 확인을 해주세요.');
     }
     if (lines.length) {
-      if (errTop) {
-        errTop.removeAttribute('hidden');
-        errTop.textContent = lines.join('\n');
-        errTop.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      }
+      setClientError(lines.join('\n'));
+      if (errTop) errTop.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       return;
     }
     const pw = document.getElementById('password');
     const pwc = document.getElementById('passwordConfirm');
+    const pwdVal = pw && pw.value ? pw.value : '';
+    if (pwdVal.length < 8 || pwdVal.length > 20) {
+      setClientError('비밀번호는 8자 이상 20자 이하여야 합니다.');
+      if (errTop) errTop.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      return;
+    }
     if (pw && pwc && pw.value !== pwc.value) {
-      if (errTop) {
-        errTop.removeAttribute('hidden');
-        errTop.textContent = '비밀번호가 일치하지 않습니다.';
-        errTop.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      }
+      setClientError('비밀번호가 일치하지 않습니다.');
+      if (errTop) errTop.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       return;
     }
     if (!form.checkValidity()) {
@@ -251,10 +256,9 @@
           captchaQ.textContent = data.captchaQuestion;
         }
         if (captchaIn) captchaIn.value = '';
-        if (errTop && data.error) {
-          errTop.removeAttribute('hidden');
-          errTop.textContent = data.error;
-          errTop.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        if (data.error) {
+          setClientError(data.error);
+          if (errTop) errTop.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
         return;
       }
@@ -264,15 +268,9 @@
         return;
       }
 
-      if (errTop) {
-        errTop.removeAttribute('hidden');
-        errTop.textContent = '회원가입 요청에 실패했습니다. 다시 시도해주세요.';
-      }
+      setClientError('회원가입 요청에 실패했습니다. 다시 시도해주세요.');
     } catch (err) {
-      if (errTop) {
-        errTop.removeAttribute('hidden');
-        errTop.textContent = '네트워크 오류가 발생했습니다.';
-      }
+      setClientError('네트워크 오류가 발생했습니다.');
     } finally {
       if (submitBtn) submitBtn.disabled = false;
     }
@@ -290,9 +288,22 @@ function togglePw(id) {
   const pwConfirm = document.getElementById('passwordConfirm');
   const msg = document.getElementById('pwMatchMsg');
   if (!pw || !pwConfirm || !msg) return;
-  pwConfirm.addEventListener('input', function () {
+
+  function updatePwHint() {
+    const p = pw.value;
+    if (p.length > 0 && p.length < 8) {
+      msg.textContent = '비밀번호는 8자 이상이어야 합니다.';
+      msg.style.color = '#ef4444';
+      return;
+    }
+    if (p.length > 20) {
+      msg.textContent = '비밀번호는 20자 이하여야 합니다.';
+      msg.style.color = '#ef4444';
+      return;
+    }
     if (!pwConfirm.value) {
       msg.textContent = '';
+      msg.style.color = '';
       return;
     }
     if (pw.value === pwConfirm.value) {
@@ -302,5 +313,8 @@ function togglePw(id) {
       msg.textContent = '비밀번호가 일치하지 않습니다.';
       msg.style.color = '#ef4444';
     }
-  });
+  }
+
+  pw.addEventListener('input', updatePwHint);
+  pwConfirm.addEventListener('input', updatePwHint);
 })();

@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>회원가입 — 포트폴리오</title>
-  <link rel="stylesheet" href="/css/style.css?v=20260428">
+  <link rel="stylesheet" href="/css/style.css?v=20260430">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Inter:wght@300;400;500;700&display=swap" rel="stylesheet">
 </head>
@@ -51,7 +51,7 @@
           <div class="register-col register-col--right">
             <div class="form-group">
               <label class="form-label" for="username">아이디 <span class="required">*</span></label>
-              <div class="register-dup-row">
+              <div class="register-dup-row register-dup-row--field">
                 <input type="text" id="username" name="username" class="form-input register-dup-input"
                        placeholder="영문, 숫자, 밑줄(_)만 사용 (3자 이상)" required
                        pattern="[a-zA-Z0-9_]+" minlength="3" maxlength="30" autocomplete="username">
@@ -65,20 +65,24 @@
 
             <div class="form-group">
               <label class="form-label" for="password">비밀번호 <span class="required">*</span></label>
-              <div class="password-wrap">
-                <input type="password" id="password" name="password" class="form-input"
-                       placeholder="8자 이상" required minlength="8" autocomplete="new-password">
-                <button type="button" class="pw-toggle" aria-label="비밀번호 표시" onclick="togglePw('password')">👁</button>
+              <div class="register-input-line">
+                <div class="password-wrap">
+                  <input type="password" id="password" name="password" class="form-input"
+                         placeholder="8~20자" required minlength="8" maxlength="20" autocomplete="new-password">
+                  <button type="button" class="pw-toggle" aria-label="비밀번호 표시" onclick="togglePw('password')">👁</button>
+                </div>
               </div>
-              <small class="form-hint">최소 8자 이상이어야 합니다.</small>
+              <small class="form-hint">8자 이상 20자 이하로 입력해 주세요.</small>
             </div>
 
             <div class="form-group">
               <label class="form-label" for="passwordConfirm">비밀번호 확인 <span class="required">*</span></label>
-              <div class="password-wrap">
-                <input type="password" id="passwordConfirm" name="passwordConfirm" class="form-input"
-                       placeholder="비밀번호를 다시 입력하세요" required autocomplete="new-password">
-                <button type="button" class="pw-toggle" aria-label="비밀번호 표시" onclick="togglePw('passwordConfirm')">👁</button>
+              <div class="register-input-line">
+                <div class="password-wrap">
+                  <input type="password" id="passwordConfirm" name="passwordConfirm" class="form-input"
+                         placeholder="비밀번호를 다시 입력하세요" required minlength="8" maxlength="20" autocomplete="new-password">
+                  <button type="button" class="pw-toggle" aria-label="비밀번호 표시" onclick="togglePw('passwordConfirm')">👁</button>
+                </div>
               </div>
               <small id="pwMatchMsg" class="form-hint"></small>
             </div>
@@ -93,7 +97,9 @@
           </div>
         </div>
 
-        <div id="registerClientError" class="register-top-error" role="alert" hidden></div>
+        <div class="register-error-slot" aria-live="polite">
+          <div id="registerClientError" class="register-top-error register-top-error--in-slot is-hidden" role="alert"></div>
+        </div>
 
         <div class="register-submit-row">
           <button type="submit" class="btn-primary register-submit-btn">회원가입</button>
@@ -121,7 +127,7 @@
     </div>
   </div>
 
-  <script src="/js/register-crop.js?v=20260428"></script>
-  <script src="/js/register.js?v=20260428"></script>
+  <script src="/js/register-crop.js?v=20260430"></script>
+  <script src="/js/register.js?v=20260430"></script>
 </body>
 </html>
