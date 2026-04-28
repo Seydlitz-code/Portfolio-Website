@@ -7,8 +7,8 @@
   const btnUser = document.getElementById('btnCheckUsername');
   const inNick = document.getElementById('nickname');
   const inUser = document.getElementById('username');
-  const msgNick = document.getElementById('nicknameCheckMsg');
-  const msgUser = document.getElementById('usernameCheckMsg');
+  const hintNick = document.getElementById('nicknameHint');
+  const hintUser = document.getElementById('usernameHint');
   const errTop = document.getElementById('registerClientError');
   const captchaQ = document.getElementById('registerCaptchaQuestion');
   const captchaIn = document.getElementById('registerCaptchaInput');
@@ -16,7 +16,14 @@
   const fileAvatar = document.getElementById('registerAvatarFile');
   const preview = document.getElementById('registerAvatarPreview');
 
-  if (!form || !btnNick || !btnUser || !inNick || !inUser || !msgNick || !msgUser) return;
+  if (!form || !btnNick || !btnUser || !inNick || !inUser || !hintNick || !hintUser) return;
+
+  const DUP_HINT_MS = 10000;
+  const GUIDE_NICK = '닉네임을 입력한 뒤 「닉네임 중복 확인」을 눌러주세요. (최대 20자)';
+  const GUIDE_USER = '영문, 숫자, 밑줄(_)만 사용할 수 있으며 3자 이상 30자 이하로 입력해 주세요.';
+
+  let nickHintTimer = null;
+  let userHintTimer = null;
 
   function clearClientError() {
     if (!errTop) return;
@@ -32,6 +39,44 @@
 
   clearClientError();
 
+  function applyHintClass(el, variant) {
+    el.className = 'form-hint register-field-hint';
+    if (variant === 'ok') el.classList.add('register-hint--ok');
+    else if (variant === 'bad') el.classList.add('register-hint--bad');
+  }
+
+  function showNickHint(text, variant, revertAfterMs) {
+    if (nickHintTimer) {
+      clearTimeout(nickHintTimer);
+      nickHintTimer = null;
+    }
+    hintNick.textContent = text;
+    applyHintClass(hintNick, variant);
+    if (revertAfterMs) {
+      nickHintTimer = setTimeout(function () {
+        nickHintTimer = null;
+        hintNick.textContent = GUIDE_NICK;
+        applyHintClass(hintNick, 'guide');
+      }, revertAfterMs);
+    }
+  }
+
+  function showUserHint(text, variant, revertAfterMs) {
+    if (userHintTimer) {
+      clearTimeout(userHintTimer);
+      userHintTimer = null;
+    }
+    hintUser.textContent = text;
+    applyHintClass(hintUser, variant);
+    if (revertAfterMs) {
+      userHintTimer = setTimeout(function () {
+        userHintTimer = null;
+        hintUser.textContent = GUIDE_USER;
+        applyHintClass(hintUser, 'guide');
+      }, revertAfterMs);
+    }
+  }
+
   let nicknameVerified = false;
   let nicknameVerifiedValue = '';
   let usernameVerified = false;
@@ -39,36 +84,34 @@
   let avatarBlob = null;
 
   const CFG = {
-    okNick: { text: '사용 가능한 닉네임입니다.', className: 'dup-check-msg dup-check-msg--ok' },
-    badNick: { text: '중복된 닉네임입니다.', className: 'dup-check-msg dup-check-msg--bad' },
-    okUser: { text: '사용 가능한 아이디입니다.', className: 'dup-check-msg dup-check-msg--ok' },
-    badUser: { text: '중복된 아이디입니다.', className: 'dup-check-msg dup-check-msg--bad' }
+    okNick: '사용 가능한 닉네임입니다.',
+    badNick: '중복된 닉네임입니다.',
+    okUser: '사용 가능한 아이디입니다.',
+    badUser: '중복된 아이디입니다.'
   };
-
-  function setMsg(el, text, isError) {
-    el.textContent = text;
-    el.className = isError
-      ? 'dup-check-msg dup-check-msg--bad'
-      : 'dup-check-msg dup-check-msg--ok';
-  }
-
-  function clearMsg(el) {
-    el.textContent = '';
-    el.className = 'dup-check-msg';
-  }
 
   function resetNickState() {
     nicknameVerified = false;
     nicknameVerifiedValue = '';
     btnNick.disabled = false;
-    clearMsg(msgNick);
+    if (nickHintTimer) {
+      clearTimeout(nickHintTimer);
+      nickHintTimer = null;
+    }
+    hintNick.textContent = GUIDE_NICK;
+    applyHintClass(hintNick, 'guide');
   }
 
   function resetUserState() {
     usernameVerified = false;
     usernameVerifiedValue = '';
     btnUser.disabled = false;
-    clearMsg(msgUser);
+    if (userHintTimer) {
+      clearTimeout(userHintTimer);
+      userHintTimer = null;
+    }
+    hintUser.textContent = GUIDE_USER;
+    applyHintClass(hintUser, 'guide');
   }
 
   function setPreviewFromBlob(blob) {
@@ -121,10 +164,9 @@
   btnNick.addEventListener('click', async function () {
     const v = inNick.value.trim();
     if (!v) {
-      setMsg(msgNick, '닉네임을 입력한 뒤 확인하세요.', true);
+      showNickHint('닉네임을 입력한 뒤 확인해 주세요.', 'bad', DUP_HINT_MS);
       return;
     }
-    clearMsg(msgNick);
     btnNick.disabled = true;
     try {
       const u = new URLSearchParams();
@@ -132,24 +174,24 @@
       const res = await fetch('/auth/check-nickname?' + u.toString());
       const data = await res.json();
       if (data.available) {
-        setMsg(msgNick, CFG.okNick.text, false);
+        showNickHint(CFG.okNick, 'ok', DUP_HINT_MS);
         btnNick.disabled = true;
         nicknameVerified = true;
         nicknameVerifiedValue = v;
       } else if (data.duplicate) {
-        setMsg(msgNick, CFG.badNick.text, true);
+        showNickHint(CFG.badNick, 'bad', DUP_HINT_MS);
         inNick.value = '';
         btnNick.disabled = false;
         nicknameVerified = false;
         nicknameVerifiedValue = '';
       } else {
-        setMsg(msgNick, data.message || '다시 시도해주세요.', true);
+        showNickHint(data.message || '다시 시도해주세요.', 'bad', DUP_HINT_MS);
         btnNick.disabled = false;
         nicknameVerified = false;
         nicknameVerifiedValue = '';
       }
     } catch (e) {
-      setMsg(msgNick, '확인 요청에 실패했습니다.', true);
+      showNickHint('확인 요청에 실패했습니다.', 'bad', DUP_HINT_MS);
       btnNick.disabled = false;
     }
   });
@@ -157,10 +199,9 @@
   btnUser.addEventListener('click', async function () {
     const v = inUser.value.trim();
     if (!v) {
-      setMsg(msgUser, '아이디를 입력한 뒤 확인하세요.', true);
+      showUserHint('아이디를 입력한 뒤 확인해 주세요.', 'bad', DUP_HINT_MS);
       return;
     }
-    clearMsg(msgUser);
     btnUser.disabled = true;
     try {
       const u = new URLSearchParams();
@@ -168,24 +209,24 @@
       const res = await fetch('/auth/check-username?' + u.toString());
       const data = await res.json();
       if (data.available) {
-        setMsg(msgUser, CFG.okUser.text, false);
+        showUserHint(CFG.okUser, 'ok', DUP_HINT_MS);
         btnUser.disabled = true;
         usernameVerified = true;
         usernameVerifiedValue = v;
       } else if (data.duplicate) {
-        setMsg(msgUser, CFG.badUser.text, true);
+        showUserHint(CFG.badUser, 'bad', DUP_HINT_MS);
         inUser.value = '';
         btnUser.disabled = false;
         usernameVerified = false;
         usernameVerifiedValue = '';
       } else {
-        setMsg(msgUser, data.message || '다시 시도해주세요.', true);
+        showUserHint(data.message || '다시 시도해주세요.', 'bad', DUP_HINT_MS);
         btnUser.disabled = false;
         usernameVerified = false;
         usernameVerifiedValue = '';
       }
     } catch (e) {
-      setMsg(msgUser, '확인 요청에 실패했습니다.', true);
+      showUserHint('확인 요청에 실패했습니다.', 'bad', DUP_HINT_MS);
       btnUser.disabled = false;
     }
   });
@@ -289,29 +330,33 @@ function togglePw(id) {
   const msg = document.getElementById('pwMatchMsg');
   if (!pw || !pwConfirm || !msg) return;
 
+  const guide = msg.getAttribute('data-guide') || '비밀번호를 한 번 더 입력해 주세요.';
+
+  function setMsg(text, variant) {
+    msg.textContent = text;
+    msg.className = 'form-hint register-field-hint';
+    if (variant === 'ok') msg.classList.add('register-hint--ok');
+    else if (variant === 'bad') msg.classList.add('register-hint--bad');
+  }
+
   function updatePwHint() {
     const p = pw.value;
     if (p.length > 0 && p.length < 8) {
-      msg.textContent = '비밀번호는 8자 이상이어야 합니다.';
-      msg.style.color = '#ef4444';
+      setMsg('비밀번호는 8자 이상이어야 합니다.', 'bad');
       return;
     }
     if (p.length > 20) {
-      msg.textContent = '비밀번호는 20자 이하여야 합니다.';
-      msg.style.color = '#ef4444';
+      setMsg('비밀번호는 20자 이하여야 합니다.', 'bad');
       return;
     }
     if (!pwConfirm.value) {
-      msg.textContent = '';
-      msg.style.color = '';
+      setMsg(guide, 'guide');
       return;
     }
     if (pw.value === pwConfirm.value) {
-      msg.textContent = '비밀번호가 일치합니다.';
-      msg.style.color = '#22c55e';
+      setMsg('비밀번호가 일치합니다.', 'ok');
     } else {
-      msg.textContent = '비밀번호가 일치하지 않습니다.';
-      msg.style.color = '#ef4444';
+      setMsg('비밀번호가 일치하지 않습니다.', 'bad');
     }
   }
 

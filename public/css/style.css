@@ -1167,9 +1167,25 @@ button {
   width: 100%;
 }
 
-.register-dup-row--nickname,
-.register-dup-row--field {
+.register-dup-btn-row {
   max-width: min(100%, var(--register-field-max, 22rem));
+  margin-top: 0.38rem;
+}
+
+.register-field-hint {
+  display: block;
+  min-height: 2.55em;
+  line-height: 1.45;
+}
+
+.register-hint--ok {
+  color: #16a34a;
+  font-weight: 500;
+}
+
+.register-hint--bad {
+  color: #dc2626;
+  font-weight: 500;
 }
 
 .auth-card--register {
@@ -1225,10 +1241,6 @@ button {
 
 .register-captcha-in-grid {
   margin-bottom: 0;
-}
-
-.register-dup-row--nickname .dup-check-msg {
-  flex: 1 1 100%;
 }
 
 body.register-crop-modal-open {
@@ -1372,16 +1384,6 @@ body.register-crop-modal-open {
   font-size: 0.76rem;
 }
 
-.auth-page--register .dup-check-msg {
-  font-size: 0.72rem;
-  flex: 1 1 100px;
-  min-height: 1em;
-}
-
-.auth-page--register .register-dup-row {
-  gap: 0.35rem 0.55rem;
-}
-
 .auth-page--register .captcha-group .form-label {
   margin-bottom: 0.25rem;
 }
@@ -1426,6 +1428,11 @@ body.register-crop-modal-open {
   background: #111;
   color: #fff;
   border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 0;
 }
 
 .register-submit-btn:hover {
