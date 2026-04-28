@@ -1,30 +1,38 @@
 /* ========================================
-   SCROLL ANIMATION — Hero fade out
+   SCROLL — 히어로 페이드 + 포트폴리오 상단 바(메인 이후에만 표시)
    ======================================== */
 (function () {
   const hero = document.getElementById('hero');
   const portfolio = document.getElementById('portfolio');
+  const dock = document.getElementById('portfolioDockHeader');
   if (!hero || !portfolio) return;
 
   function onScroll() {
     const scrollY = window.scrollY;
     const vh = window.innerHeight;
-    // Hero fades out over 60% of viewport height of scroll
     const opacity = Math.max(0, 1 - scrollY / (vh * 0.6));
     hero.style.opacity = opacity;
-
-    // Pointer events: disable hero clicks when almost gone
     hero.style.pointerEvents = opacity < 0.1 ? 'none' : 'all';
+
+    // 메인(히어로) 영역을 넘어 포트폴리오로 들어온 뒤에만 상단 바 표시
+    const pastMain = scrollY >= vh * 0.92;
+    if (dock) {
+      dock.classList.toggle('portfolio-dock-header--visible', pastMain);
+    }
   }
 
   window.addEventListener('scroll', onScroll, { passive: true });
-  onScroll(); // run once on load
+  onScroll();
 })();
 
 /* ========================================
-   SCROLL BACK TO HERO
+   SCROLL BACK TO HERO (새로고침 없이 부드러운 스크롤)
    ======================================== */
-function scrollToHero() {
+function scrollToHero(event) {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 

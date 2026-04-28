@@ -13,6 +13,18 @@
 
   <%- include('partials/topnav') %>
 
+  <!-- 두 번째 페이지용 상단 바: 메인(히어로)을 넘긴 뒤에만 표시 (fixed) -->
+  <div id="portfolioDockHeader"
+       class="portfolio-dock-header"
+       role="button"
+       tabindex="0"
+       onclick="scrollToHero()"
+       onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();scrollToHero();}"
+       title="메인으로 스크롤">
+    <span class="sticky-name"><%= settings.site_name || 'Donghawan Lee / @lilip' %></span>
+    <span class="sticky-hint" aria-hidden="true"><i class="fas fa-arrow-up"></i> 메인으로</span>
+  </div>
+
   <!-- ========== 히어로 섹션 (메인 화면, 읽기 전용) ========== -->
   <section id="hero" class="hero-section">
     <div class="hero-content">
@@ -58,19 +70,14 @@
   </section>
 
   <main id="portfolio" class="portfolio-section">
-    <div class="portfolio-sticky-header" id="portfolioHeader" onclick="scrollToHero()" title="메인으로 이동">
-      <span class="sticky-name"><%= settings.site_name || 'Donghawan Lee / @lilip' %></span>
-      <span class="sticky-hint"><i class="fas fa-arrow-up"></i> 메인으로</span>
-    </div>
-
     <div class="portfolio-body">
       <section class="portfolio-block">
-        <div class="block-header">
+        <div class="block-header block-header--centered">
           <div class="block-title-group">
             <h2 class="block-title">전체 보기</h2>
             <span class="block-title-ja">すべて見る</span>
           </div>
-          <a href="/posts" class="view-all-btn">전체 게시물 →</a>
+          <a href="/posts" class="view-all-btn view-all-btn--below">전체 게시물 →</a>
         </div>
         <div class="posts-grid">
           <% if (recentPosts.length === 0) { %>
@@ -95,7 +102,7 @@
 
       <% projects.forEach(function(project) { %>
         <section class="portfolio-block">
-          <div class="block-header">
+          <div class="block-header block-header--centered">
             <div class="block-title-group">
               <h2 class="block-title"><%= project.name %></h2>
               <% if (project.name_ja) { %>

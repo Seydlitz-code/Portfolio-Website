@@ -1,7 +1,33 @@
 const express = require('express');
+const path = require('path');
+const fs = require('fs');
 const bcrypt = require('bcrypt');
+const multer = require('multer');
 const router = express.Router();
 const { getDb } = require('../config/database');
+
+const avatarStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const dir = path.join(__dirname, '../public/uploads/avatars');
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    const safe = ['.png', '.jpg', '.jpeg', '.gif', '.webp'].includes(ext) ? ext : '.png';
+    cb(null, `user-${Date.now()}-${Math.random().toString(36).slice(2, 9)}${safe}`);
+  }
+});
+
+const uploadAvatar = multer({
+  storage: avatarStorage,
+  fileFilter: (req, file, cb) => {
+    const allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (allowed.includes(file.mimetype)) cb(null, true);
+    else cb(new Error('프로필 이미지는 JPG, PNG, GIF, WEBP만 가능합니다.'));
+  },
+  limits: { fileSize: 3 * 1024 * 1024 }
+});
 
 function generateCaptcha() {
   const a = Math.floor(Math.random() * 10) + 1;
@@ -12,6 +38,27 @@ function generateCaptcha() {
 function safeRedirectPath(v) {
   if (typeof v !== 'string' || !v.startsWith('/') || v.startsWith('//')) return null;
   return v;
+}
+
+function rollCaptcha(req) {
+  const c = generateCaptcha();
+  req.session.captchaAnswer = c.answer;
+  return c.question;
+}
+
+function registerFail(req, res, msg) {
+  const question = rollCaptcha(req);
+  if (req.file && req.file.path) {
+    try {
+      fs.unlinkSync(req.file.path);
+    } catch (e) {
+      /* ignore */
+    }
+  }
+  if (req.get('X-Register-Fetch') === '1') {
+    return res.status(400).json({ error: msg, captchaQuestion: question });
+  }
+  return res.render('register', { error: msg, captchaQuestion: question });
 }
 
 // GET /auth/login
@@ -48,10 +95,13 @@ router.post('/login', (req, res) => {
   // 쿠키/세션이 반영되지 않은 것처럼 보일 수 있으므로 반드시 save 후 응답
   const nextUrl = safeRedirectPath(req.body.next) || safeRedirectPath(req.query.next) || '/';
 
+  const avatar =
+    user.avatar != null && String(user.avatar).trim() !== '' ? String(user.avatar).trim() : null;
   req.session.user = {
     id: user.id,
     username: user.username,
     nickname: user.nickname,
+    avatar,
     is_admin: user.is_admin != null ? Number(user.is_admin) : 0
   };
 
@@ -115,23 +165,25 @@ router.get('/register', (req, res) => {
 });
 
 // POST /auth/register
-router.post('/register', (req, res) => {
+router.post('/register', (req, res, next) => {
+  uploadAvatar.single('avatar')(req, res, (err) => {
+    if (err) {
+      if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE') {
+        return registerFail(req, res, '프로필 이미지는 3MB 이하여야 합니다.');
+      }
+      return registerFail(req, res, err.message || '이미지 업로드에 실패했습니다.');
+    }
+    next();
+  });
+}, (req, res) => {
   const { nickname, username, password, passwordConfirm, captcha } = req.body;
 
-  const newCaptcha = () => {
-    const c = generateCaptcha();
-    req.session.captchaAnswer = c.answer;
-    return c.question;
-  };
-
-  const fail = (msg) => {
-    return res.render('register', { error: msg, captchaQuestion: newCaptcha() });
-  };
+  const fail = (msg) => registerFail(req, res, msg);
 
   if (!nickname || !username || !password || !passwordConfirm || !captcha) {
     return fail('모든 항목을 입력해주세요.');
   }
-  if (parseInt(captcha) !== req.session.captchaAnswer) {
+  if (parseInt(captcha, 10) !== req.session.captchaAnswer) {
     return fail('보안 문자가 올바르지 않습니다. 다시 시도해주세요.');
   }
   if (password !== passwordConfirm) {
@@ -157,11 +209,16 @@ router.post('/register', (req, res) => {
     return fail('이미 사용 중인 닉네임입니다.');
   }
 
+  let avatarPath = null;
+  if (req.file) {
+    avatarPath = `/uploads/avatars/${req.file.filename}`;
+  }
+
   try {
     const hashed = bcrypt.hashSync(password, 12);
     db.prepare(
-      'INSERT INTO users (username, nickname, password) VALUES (?, ?, ?)'
-    ).run(username.trim(), nickname.trim(), hashed);
+      'INSERT INTO users (username, nickname, password, avatar) VALUES (?, ?, ?, ?)'
+    ).run(username.trim(), nickname.trim(), hashed, avatarPath);
     res.redirect('/auth/login?registered=true');
   } catch (err) {
     console.error(err);

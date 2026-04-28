@@ -4,7 +4,7 @@ const methodOverride = require('method-override');
 const path = require('path');
 const Database = require('better-sqlite3');
 const SqliteSessionStore = require('better-sqlite3-session-store')(session);
-const { initializeDatabase, getDataDir } = require('./config/database');
+const { initializeDatabase, getDataDir, getDb } = require('./config/database');
 
 const authRoutes = require('./routes/auth');
 const postsRoutes = require('./routes/posts');
@@ -52,7 +52,25 @@ app.use(session({
 }));
 
 app.use((req, res, next) => {
-  res.locals.user = req.session.user || null;
+  const sess = req.session.user;
+  if (sess && sess.id != null) {
+    try {
+      const row = getDb().prepare('SELECT nickname, avatar FROM users WHERE id = ?').get(sess.id);
+      if (row) {
+        const av =
+          row.avatar != null && String(row.avatar).trim() !== ''
+            ? String(row.avatar).trim()
+            : null;
+        res.locals.user = { ...sess, nickname: row.nickname, avatar: av };
+      } else {
+        res.locals.user = sess;
+      }
+    } catch (e) {
+      res.locals.user = sess;
+    }
+  } else {
+    res.locals.user = null;
+  }
   res.locals.isAdmin = isUserAdmin(req.session.user);
   next();
 });

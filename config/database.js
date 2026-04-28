@@ -42,6 +42,7 @@ function initializeDatabase() {
       username TEXT UNIQUE NOT NULL,
       nickname TEXT NOT NULL,
       password TEXT NOT NULL,
+      avatar TEXT,
       is_admin INTEGER DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
@@ -81,6 +82,11 @@ function initializeDatabase() {
     );
   `);
 
+  const userCols = database.prepare('PRAGMA table_info(users)').all();
+  if (!userCols.some((c) => c.name === 'avatar')) {
+    database.exec('ALTER TABLE users ADD COLUMN avatar TEXT');
+  }
+
   const defaults = {
     site_name: 'Donghawan Lee / @lilip',
     bio: '',
@@ -101,11 +107,16 @@ function initializeDatabase() {
   if (!adminExists) {
     const hashedPassword = bcrypt.hashSync('renown0716**AA', 12);
     database.prepare(
-      'INSERT INTO users (username, nickname, password, is_admin) VALUES (?, ?, ?, ?)'
-    ).run('seydlitz', '릴리프', hashedPassword, 1);
+      'INSERT INTO users (username, nickname, password, is_admin, avatar) VALUES (?, ?, ?, ?, ?)'
+    ).run('seydlitz', '릴리프', hashedPassword, 1, '/images/default-admin-avatar.png');
     console.log('관리자 계정 생성 완료');
   }
   database.prepare("UPDATE users SET nickname = '릴리프' WHERE username = 'seydlitz'").run();
+  database
+    .prepare(
+      "UPDATE users SET avatar = ? WHERE username = 'seydlitz' AND (avatar IS NULL OR TRIM(avatar) = '')"
+    )
+    .run('/images/default-admin-avatar.png');
 
   if (process.env.SYNC_SEED_ADMIN === '1' || process.env.SYNC_SEED_ADMIN === 'true') {
     const a = database.prepare("SELECT * FROM users WHERE username = 'seydlitz'").get();

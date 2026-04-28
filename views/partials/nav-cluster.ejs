@@ -1,11 +1,18 @@
 <div class="nav-cluster">
-  <span class="nav-nickname" title="닉네임">
-    <% if (user) { %>
-      <%= user.nickname %>
-    <% } else { %>
+  <% if (user) { %>
+    <div class="nav-user-chip">
+      <% if (user.avatar) { %>
+        <img src="<%= user.avatar %>" alt="" class="nav-user-avatar" width="32" height="32" decoding="async" loading="lazy">
+      <% } else { %>
+        <span class="nav-user-avatar nav-user-avatar--placeholder" aria-hidden="true"><%= user.nickname && user.nickname.length ? user.nickname.charAt(0) : '?' %></span>
+      <% } %>
+      <span class="nav-nickname" title="닉네임"><%= user.nickname %></span>
+    </div>
+  <% } else { %>
+    <span class="nav-nickname" title="닉네임">
       <span class="nav-nickname-mute" aria-label="로그인 전">—</span>
-    <% } %>
-  </span>
+    </span>
+  <% } %>
   <div class="nav-actions">
     <% if (!user) { %>
       <a href="/auth/login" class="nav-btn">로그인</a>
