@@ -50,9 +50,10 @@ router.post('/', requireAdmin, (req, res) => {
   }
 
   const db = getDb();
+  const authorId = req.session.user && req.session.user.id != null ? req.session.user.id : null;
   const result = db.prepare(
-    'INSERT INTO posts (title, content, project_id) VALUES (?, ?, ?)'
-  ).run(title, content, project_id || null);
+    'INSERT INTO posts (title, content, project_id, author_id) VALUES (?, ?, ?, ?)'
+  ).run(title, content, project_id || null, authorId);
 
   res.redirect(`/posts/${result.lastInsertRowid}`);
 });

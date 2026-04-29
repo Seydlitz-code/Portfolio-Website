@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>마이페이지 — 포트폴리오</title>
+  <link rel="stylesheet" href="/css/style.css?v=20260432">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Inter:wght@300;400;500;700&display=swap" rel="stylesheet">
+</head>
+<body class="mypage-account-page">
+  <%- include('partials/topnav') %>
+
+  <div class="mypage-account-wrap">
+    <header class="mypage-account-header">
+      <h1 class="mypage-account-title"><%= headerNickname %> / @<%= profileUser.username %></h1>
+    </header>
+
+    <div class="mypage-account-body">
+      <aside class="mypage-account-nav" aria-label="마이페이지 메뉴">
+        <a href="/mypage" class="mypage-account-nav-item<% if (activeTab === 'profile') { %> is-active<% } %>">프로필</a>
+        <a href="/mypage/posts" class="mypage-account-nav-item<% if (activeTab === 'posts') { %> is-active<% } %>">작성한 글 보기</a>
+        <% if (isAdmin) { %>
+          <a href="/posts/new" class="mypage-account-nav-item">게시판 생성하기</a>
+          <a href="/admin/mypage" class="mypage-account-nav-item mypage-account-nav-item--sub">사이트 편집 (관리)</a>
+        <% } %>
+      </aside>
+
+      <main class="mypage-account-main">
+        <% if (activeTab === 'profile') { %>
+          <% if (typeof saved !== 'undefined' && saved) { %>
+            <div class="mypage-account-alert"><div class="alert alert-success">적용이 완료되었습니다.</div></div>
+          <% } %>
+          <% if (typeof profileError !== 'undefined' && profileError) { %>
+            <div class="mypage-account-alert"><div class="alert alert-error"><%= profileError %></div></div>
+          <% } %>
+
+          <div class="mypage-profile-head">
+            <h2 class="mypage-profile-section-title">프로필 설정 및 변경</h2>
+            <button type="submit" form="mypageAccountForm" class="btn-primary mypage-account-apply" id="mypageAccountApply" disabled>적용하기</button>
+          </div>
+
+          <form id="mypageAccountForm" class="mypage-account-form" action="/mypage/profile" method="POST" enctype="multipart/form-data">
+            <div class="mypage-profile-avatar-block">
+              <div class="mypage-profile-avatar-preview-wrap">
+                <img src="<%= profileUser.avatar || '' %>" alt="" class="mypage-profile-avatar-img<%= profileUser.avatar ? '' : ' is-hidden' %>" id="mypageAccountAvatarImg" width="160" height="160" decoding="async">
+                <div class="mypage-profile-avatar-placeholder<%= profileUser.avatar ? ' is-hidden' : '' %>" id="mypageAccountAvatarPlaceholder" aria-hidden="true">
+                  <%= profileUser.nickname && profileUser.nickname.length ? profileUser.nickname.charAt(0) : '?' %>
+                </div>
+              </div>
+              <div class="mypage-profile-avatar-side">
+                <p class="mypage-profile-avatar-label">프로필 이미지 설정</p>
+                <input type="file" id="mypageAccountAvatarFile" name="avatar" accept="image/jpeg,image/png,image/gif,image/webp" hidden>
+                <button type="button" class="register-avatar-select-btn" id="mypageAccountBtnSelectAvatar">이미지 선택</button>
+              </div>
+            </div>
+
+            <div class="form-group mypage-profile-nick-group">
+              <label class="form-label" for="mypageAccountNickname">닉네임 <span class="required">*</span></label>
+              <div class="register-input-line">
+                <input type="text" id="mypageAccountNickname" name="nickname" class="form-input" required maxlength="20" autocomplete="nickname"
+                       value="<%= profileUser.nickname %>">
+              </div>
+              <div class="register-dup-btn-row">
+                <button type="button" class="nav-btn register-dup-btn" id="mypageAccountBtnCheckNick">닉네임 중복 확인</button>
+              </div>
+              <small id="mypageAccountNickHint" class="form-hint register-field-hint" aria-live="polite">닉네임을 수정한 경우 「닉네임 중복 확인」을 누른 뒤 적용해 주세요.</small>
+              <% if (typeof nicknameDupWarning !== 'undefined' && nicknameDupWarning) { %>
+                <p class="mypage-nick-warn" id="mypageAccountNickWarn" role="alert">닉네임 중복 확인을 해주세요.</p>
+              <% } else { %>
+                <p class="mypage-nick-warn is-hidden" id="mypageAccountNickWarn" role="alert"></p>
+              <% } %>
+            </div>
+          </form>
+        <% } else { %>
+          <h2 class="mypage-profile-section-title">작성한 글</h2>
+          <p class="mypage-account-muted">본인이 작성으로 등록된 게시글만 표시됩니다.</p>
+          <div class="mypage-my-posts">
+            <% if (!myPosts || myPosts.length === 0) { %>
+              <p class="mypage-account-muted">아직 표시할 글이 없습니다.</p>
+            <% } else { %>
+              <ul class="mypage-my-posts-list">
+                <% myPosts.forEach(function (post) { %>
+                  <li>
+                    <a href="/posts/<%= post.id %>" class="mypage-my-posts-link"><%= post.title %></a>
+                    <time class="mypage-my-posts-date"><%= new Date(post.created_at).toLocaleDateString('ko-KR') %></time>
+                  </li>
+                <% }); %>
+              </ul>
+            <% } %>
+          </div>
+          <p class="mypage-account-muted"><a href="/posts">전체 게시판으로</a></p>
+        <% } %>
+      </main>
+    </div>
+  </div>
+
+  <script>
+    window.__MYPAGE_ACCOUNT__ = <%- JSON.stringify({
+      initialNickname: typeof initialNickname !== 'undefined' ? initialNickname : profileUser.nickname,
+      initialAvatar: typeof initialAvatar !== 'undefined' && initialAvatar ? initialAvatar : null,
+      activeTab: activeTab
+    }) %>;
+  </script>
+  <script src="/js/mypage-account.js?v=20260432"></script>
+</body>
+</html>

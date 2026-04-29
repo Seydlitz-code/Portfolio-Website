@@ -1641,6 +1641,226 @@ body.register-crop-modal-open {
   max-width: min(100%, 70vw);
 }
 
+.is-hidden {
+  display: none !important;
+}
+
+/* ========================================
+   MYPAGE ACCOUNT (로그인 사용자)
+   ======================================== */
+.mypage-account-page {
+  background: var(--hero-bg);
+  min-height: 100vh;
+  padding-top: 3.35rem;
+  --register-field-max: 22rem;
+}
+
+.mypage-account-wrap {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0.5rem 1.25rem 3rem;
+}
+
+.mypage-account-header {
+  margin-bottom: 1rem;
+}
+
+.mypage-account-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.mypage-account-body {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem 1.75rem;
+  align-items: flex-start;
+}
+
+.mypage-account-nav {
+  flex: 0 0 200px;
+  min-width: 160px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  background: #fff;
+  border-radius: 12px;
+  padding: 0.65rem;
+  box-shadow: var(--card-shadow);
+  border: 1px solid var(--border);
+}
+
+.mypage-account-nav-item {
+  display: block;
+  padding: 0.55rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  color: var(--text-primary);
+  text-decoration: none;
+  transition: background var(--transition), color var(--transition);
+}
+
+.mypage-account-nav-item:hover {
+  background: var(--hero-bg);
+}
+
+.mypage-account-nav-item.is-active {
+  background: rgba(0, 0, 0, 0.06);
+  font-weight: 600;
+}
+
+.mypage-account-nav-item--sub {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 0.35rem;
+}
+
+.mypage-account-main {
+  flex: 1 1 320px;
+  min-width: 0;
+  background: #fff;
+  border-radius: 12px;
+  padding: 1.25rem 1.35rem 1.75rem;
+  box-shadow: var(--card-shadow);
+  border: 1px solid var(--border);
+}
+
+.mypage-account-alert {
+  margin-bottom: 0.85rem;
+}
+
+.mypage-profile-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.mypage-profile-section-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+}
+
+.mypage-account-apply {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  text-align: center;
+}
+
+.mypage-account-apply:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.mypage-profile-avatar-block {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 1rem 1.25rem;
+  margin-bottom: 1.35rem;
+}
+
+.mypage-profile-avatar-preview-wrap {
+  width: 160px;
+  height: 160px;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.mypage-profile-avatar-img {
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--border);
+  display: block;
+}
+
+.mypage-profile-avatar-placeholder {
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.5rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: linear-gradient(145deg, #e8e4dc 0%, #d4cfc4 100%);
+  border: 2px solid var(--border);
+}
+
+.mypage-profile-avatar-side {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding-top: 0.25rem;
+}
+
+.mypage-profile-avatar-label {
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 500;
+}
+
+.mypage-profile-nick-group {
+  max-width: min(100%, var(--register-field-max, 22rem));
+}
+
+.mypage-nick-warn {
+  margin: 0.35rem 0 0;
+  font-size: 0.82rem;
+  color: #dc2626;
+  font-weight: 500;
+}
+
+.mypage-account-muted {
+  font-size: 0.86rem;
+  color: var(--text-muted);
+  margin: 0 0 0.75rem;
+}
+
+.mypage-my-posts-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.mypage-my-posts-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.55rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.mypage-my-posts-link {
+  font-size: 0.92rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+.mypage-my-posts-link:hover {
+  text-decoration: underline;
+}
+
+.mypage-my-posts-date {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
 /* ========================================
    MYPAGE (admin edit)
    ======================================== */

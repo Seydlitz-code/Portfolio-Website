@@ -34,7 +34,6 @@ const upload = multer({
 router.get('/mypage', requireAdmin, (req, res) => {
   res.render('mypage', {
     ...getSiteHomeData(),
-    mypageActive: true,
     saved: req.query.saved === '1',
     errMessage: null
   });
@@ -49,7 +48,6 @@ router.post(
       if (err) {
         return res.status(400).render('mypage', {
           ...getSiteHomeData(),
-          mypageActive: true,
           saved: false,
           errMessage: err.message || '이미지 업로드에 실패했습니다.'
         });

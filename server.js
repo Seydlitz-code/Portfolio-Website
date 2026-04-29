@@ -9,6 +9,7 @@ const { initializeDatabase, getDataDir, getDb } = require('./config/database');
 const authRoutes = require('./routes/auth');
 const postsRoutes = require('./routes/posts');
 const adminRoutes = require('./routes/admin');
+const mypageRoutes = require('./routes/mypage');
 const { isUserAdmin } = require('./middleware/auth');
 const { getSiteHomeData } = require('./lib/siteData');
 
@@ -85,6 +86,7 @@ app.use((req, res, next) => {
 app.use('/auth', authRoutes);
 app.use('/posts', postsRoutes);
 app.use('/admin', adminRoutes);
+app.use('/mypage', mypageRoutes);
 
 app.get('/', (req, res) => {
   res.render('index', { ...getSiteHomeData() });

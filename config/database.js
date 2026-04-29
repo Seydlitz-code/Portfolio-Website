@@ -82,6 +82,17 @@ function initializeDatabase() {
     );
   `);
 
+  const postCols = database.prepare('PRAGMA table_info(posts)').all();
+  if (!postCols.some((c) => c.name === 'author_id')) {
+    database.exec('ALTER TABLE posts ADD COLUMN author_id INTEGER');
+    const adminUser = database
+      .prepare('SELECT id FROM users WHERE is_admin = 1 ORDER BY id ASC LIMIT 1')
+      .get();
+    if (adminUser) {
+      database.prepare('UPDATE posts SET author_id = ? WHERE author_id IS NULL').run(adminUser.id);
+    }
+  }
+
   const userCols = database.prepare('PRAGMA table_info(users)').all();
   if (!userCols.some((c) => c.name === 'avatar')) {
     database.exec('ALTER TABLE users ADD COLUMN avatar TEXT');

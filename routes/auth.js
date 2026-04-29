@@ -140,20 +140,42 @@ router.get('/check-username', (req, res) => {
   return res.json({ available: true });
 });
 
-// GET /auth/check-nickname (JSON)
+// GET /auth/check-nickname (JSON) — 로그인 시 본인 닉네임은 사용 가능으로 처리, 마이페이지 적용용 세션에 검증값 저장
 router.get('/check-nickname', (req, res) => {
   const n = (req.query.nickname != null ? String(req.query.nickname) : '').trim();
   if (!n) {
+    if (req.session) delete req.session.mypageNicknameVerified;
     return res.json({ available: false, message: '닉네임을 입력해주세요.' });
   }
   if (n.length > 20) {
+    if (req.session) delete req.session.mypageNicknameVerified;
     return res.json({ available: false, message: '닉네임은 20자 이하로 입력해주세요.' });
   }
   const row = getDb().prepare('SELECT id FROM users WHERE nickname = ?').get(n);
+  const sessUser = req.session && req.session.user;
+
+  function sendJson(payload) {
+    if (req.session && typeof req.session.save === 'function') {
+      return req.session.save((err) => {
+        if (err) return res.status(500).json({ available: false, message: '세션 저장에 실패했습니다.' });
+        return res.json(payload);
+      });
+    }
+    return res.json(payload);
+  }
+
   if (row) {
+    if (sessUser && Number(row.id) === Number(sessUser.id)) {
+      if (req.session) req.session.mypageNicknameVerified = n;
+      return sendJson({ available: true, self: true });
+    }
+    if (req.session) delete req.session.mypageNicknameVerified;
     return res.json({ available: false, duplicate: true });
   }
-  return res.json({ available: true });
+  if (sessUser && req.session) {
+    req.session.mypageNicknameVerified = n;
+  }
+  return sendJson({ available: true });
 });
 
 // GET /auth/register
