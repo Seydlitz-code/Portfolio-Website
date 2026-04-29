@@ -1872,8 +1872,8 @@ body.register-crop-modal-open {
   flex: 0 0 auto;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 0.45rem;
+  align-items: center;
+  gap: 0.55rem;
 }
 
 .mypage-main-settings-circle {

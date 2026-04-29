@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>마이페이지 — 포트폴리오</title>
-  <link rel="stylesheet" href="/css/style.css?v=20260433">
+  <link rel="stylesheet" href="/css/style.css?v=20260434">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Inter:wght@300;400;500;700&display=swap" rel="stylesheet">
   <% if (typeof isAdmin !== 'undefined' && isAdmin && (activeTab === 'board' || activeTab === 'mainSettings')) { %>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -112,19 +112,16 @@
                 </div>
                 <input type="file" name="profile_image" id="mypageMainFileInput" accept="image/jpeg,image/png,image/gif,image/webp" hidden>
                 <button type="button" class="register-avatar-select-btn" id="mypageMainBtnSelectImage">이미지 선택</button>
-                <p class="form-hint register-field-hint" style="margin-top:0.5rem">비워 두면 기존 메인 프로필 이미지가 유지됩니다.</p>
               </div>
               <div class="mypage-main-settings-fields">
                 <div class="form-group">
                   <label class="form-label" for="mypageMainSiteName">메인 페이지 표기 이름</label>
                   <input type="text" name="site_name" id="mypageMainSiteName" class="form-input" required
                          value="<%= settings.site_name || 'Donghawan Lee / @lilip' %>">
-                  <small class="form-hint">메인 화면 상단 등에 표시되는 이름입니다.</small>
                 </div>
                 <div class="form-group">
                   <label class="form-label" for="mypageMainBio">자기소개 · 이력</label>
                   <textarea name="bio" id="mypageMainBio" class="form-input" rows="10" placeholder="내용을 입력하세요."><%= settings.bio || '' %></textarea>
-                  <small class="form-hint">Enter로 줄을 바꾸면 새 줄 앞에 <code> - </code>가 자동으로 붙습니다. (Shift+Enter는 줄바꿈만)</small>
                 </div>
               </div>
             </section>
