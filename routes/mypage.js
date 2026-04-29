@@ -4,7 +4,9 @@ const fs = require('fs');
 const multer = require('multer');
 const router = express.Router();
 const { getDb } = require('../config/database');
-const { requireLogin, isUserAdmin } = require('../middleware/auth');
+const { requireLogin, requireAdmin } = require('../middleware/auth');
+const { getAccountShell } = require('../lib/mypageShell');
+const { getSiteHomeData } = require('../lib/siteData');
 
 const avatarStorage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -30,32 +32,22 @@ const uploadAvatar = multer({
 });
 
 function profilePayload(req, extras) {
+  const shell = getAccountShell(req);
+  if (!shell) return null;
   const e = { ...(extras || {}) };
   const formNick = e.formNickname != null ? String(e.formNickname).trim() : '';
   delete e.formNickname;
-
-  const db = getDb();
-  const row = db.prepare('SELECT id, username, nickname, avatar FROM users WHERE id = ?').get(req.session.user.id);
-  if (!row) {
-    return null;
-  }
-  const avatar = row.avatar != null && String(row.avatar).trim() !== '' ? String(row.avatar).trim() : null;
-  const displayNickname = formNick !== '' ? formNick : String(row.nickname || '').trim();
-  const headerNickname = String(row.nickname || '').trim();
-
+  const dbNick = shell.initialNickname;
+  const displayNickname = formNick !== '' ? formNick : dbNick;
   return {
+    ...shell,
     activeTab: 'profile',
-    headerNickname,
     profileUser: {
-      id: row.id,
-      nickname: displayNickname,
-      username: row.username,
-      avatar
+      ...shell.profileUser,
+      nickname: displayNickname
     },
-    initialNickname: String(row.nickname || '').trim(),
-    initialAvatar: avatar,
-    mypageAccountActive: true,
-    isAdmin: isUserAdmin(req.session.user),
+    initialNickname: dbNick,
+    initialAvatar: shell.initialAvatar,
     saved: false,
     profileError: null,
     nicknameDupWarning: false,
@@ -64,14 +56,10 @@ function profilePayload(req, extras) {
 }
 
 function postsPayload(req, extras) {
+  const shell = getAccountShell(req);
+  if (!shell) return null;
   const db = getDb();
-  const row = db.prepare('SELECT id, username, nickname, avatar FROM users WHERE id = ?').get(req.session.user.id);
-  if (!row) {
-    return null;
-  }
-  const avatar = row.avatar != null && String(row.avatar).trim() !== '' ? String(row.avatar).trim() : null;
-  const uid = row.id;
-  const headerNickname = String(row.nickname || '').trim();
+  const uid = shell.profileUser.id;
   const myPosts = db
     .prepare(
       `
@@ -85,19 +73,9 @@ function postsPayload(req, extras) {
     .all(uid);
 
   return {
+    ...shell,
     activeTab: 'posts',
-    headerNickname,
-    profileUser: {
-      id: row.id,
-      nickname: row.nickname,
-      username: row.username,
-      avatar
-    },
-    initialNickname: String(row.nickname || '').trim(),
-    initialAvatar: avatar,
     myPosts,
-    mypageAccountActive: true,
-    isAdmin: isUserAdmin(req.session.user),
     ...(extras || {})
   };
 }
@@ -129,6 +107,29 @@ router.get('/posts', requireLogin, (req, res) => {
   res.render('mypage-account', data);
 });
 
+router.get('/main-settings', requireLogin, requireAdmin, (req, res) => {
+  const shell = getAccountShell(req);
+  if (!shell) return res.redirect('/auth/logout');
+  res.render('mypage-account', {
+    ...shell,
+    ...getSiteHomeData(),
+    activeTab: 'mainSettings',
+    saved: req.query.saved === '1',
+    errMessage: null
+  });
+});
+
+router.get('/board', requireLogin, requireAdmin, (req, res) => {
+  const shell = getAccountShell(req);
+  if (!shell) return res.redirect('/auth/logout');
+  res.render('mypage-account', {
+    ...shell,
+    ...getSiteHomeData(),
+    activeTab: 'board',
+    saved: req.query.saved === '1'
+  });
+});
+
 router.post(
   '/profile',
   requireLogin,
@@ -136,11 +137,11 @@ router.post(
     uploadAvatar.single('avatar')(req, res, (err) => {
       if (err) {
         if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE') {
-        const data = profilePayload(req, {
-          profileError: '프로필 이미지는 3MB 이하여야 합니다.',
-          nicknameDupWarning: false,
-          formNickname: (req.body && req.body.nickname) || ''
-        });
+          const data = profilePayload(req, {
+            profileError: '프로필 이미지는 3MB 이하여야 합니다.',
+            nicknameDupWarning: false,
+            formNickname: (req.body && req.body.nickname) || ''
+          });
           if (!data) return res.redirect('/auth/logout');
           return res.status(400).render('mypage-account', data);
         }
