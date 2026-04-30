@@ -1,9 +1,9 @@
 <% const tab = typeof activeTab !== 'undefined' ? activeTab : 'profile'; %>
-<aside class="mypage-account-nav" aria-label="마이페이지 메뉴">
+<nav class="mypage-account-nav" aria-label="마이페이지 하위 메뉴">
   <a href="/mypage" class="mypage-account-nav-item<% if (tab === 'profile') { %> is-active<% } %>">프로필</a>
   <a href="/mypage/posts" class="mypage-account-nav-item<% if (tab === 'posts') { %> is-active<% } %>">작성한 글 보기</a>
   <% if (typeof isAdmin !== 'undefined' && isAdmin) { %>
     <a href="/mypage/main-settings" class="mypage-account-nav-item<% if (tab === 'mainSettings') { %> is-active<% } %>">메인 페이지 설정</a>
     <a href="/mypage/board" class="mypage-account-nav-item<% if (tab === 'board') { %> is-active<% } %>">게시판 생성하기</a>
   <% } %>
-</aside>
+</nav>

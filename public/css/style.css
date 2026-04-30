@@ -1646,50 +1646,89 @@ body.register-crop-modal-open {
 }
 
 /* ========================================
-   MYPAGE ACCOUNT (로그인 사용자)
+   MYPAGE ACCOUNT (로그인 사용자) — 전체 화면: 좌 메뉴 + 우 콘텐츠
    ======================================== */
 .mypage-account-page {
   background: var(--hero-bg);
   min-height: 100vh;
   padding-top: 3.35rem;
   --register-field-max: 22rem;
+  display: flex;
+  flex-direction: column;
 }
 
-.mypage-account-wrap {
-  max-width: 960px;
-  margin: 0 auto;
-  padding: 0.5rem 1.25rem 3rem;
+.mypage-account-layout {
+  flex: 1;
+  display: flex;
+  width: 100%;
+  min-height: 0;
 }
 
-.mypage-account-header {
-  margin-bottom: 1rem;
+.mypage-account-sidebar {
+  flex: 0 0 clamp(200px, 20vw, 280px);
+  width: clamp(200px, 20vw, 280px);
+  background: #fff;
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.mypage-account-sidebar-inner {
+  padding: 1.1rem 0.85rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  position: sticky;
+  top: 3.35rem;
+  align-self: flex-start;
+  max-height: calc(100vh - 3.35rem);
+  overflow-y: auto;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.mypage-account-sidebar-label {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.mypage-account-stage {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--hero-bg);
+}
+
+.mypage-account-stage-header {
+  flex-shrink: 0;
+  background: #fff;
+  border-bottom: 1px solid var(--border);
+  padding: 1rem 1.5rem 1rem clamp(1rem, 2.5vw, 2.25rem);
 }
 
 .mypage-account-title {
-  font-size: 1.25rem;
+  font-size: 1.22rem;
   font-weight: 600;
   margin: 0;
   color: var(--text-primary);
 }
 
-.mypage-account-body {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1.25rem 1.75rem;
-  align-items: flex-start;
-}
-
 .mypage-account-nav {
-  flex: 0 0 200px;
-  min-width: 160px;
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
-  background: #fff;
-  border-radius: 12px;
-  padding: 0.65rem;
-  box-shadow: var(--card-shadow);
-  border: 1px solid var(--border);
+  gap: 0.2rem;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 0;
 }
 
 .mypage-account-nav-item {
@@ -1718,13 +1757,58 @@ body.register-crop-modal-open {
 }
 
 .mypage-account-main {
-  flex: 1 1 320px;
+  flex: 1;
+  min-height: 0;
   min-width: 0;
+  overflow-y: auto;
+  padding: 1.35rem clamp(1rem, 2.5vw, 2.25rem) 2.5rem;
   background: #fff;
-  border-radius: 12px;
-  padding: 1.25rem 1.35rem 1.75rem;
-  box-shadow: var(--card-shadow);
-  border: 1px solid var(--border);
+  border-radius: 0;
+  box-shadow: none;
+  border: none;
+}
+
+@media (max-width: 720px) {
+  .mypage-account-layout {
+    flex-direction: column;
+    min-height: auto;
+  }
+
+  .mypage-account-sidebar {
+    flex: none;
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .mypage-account-sidebar-inner {
+    position: relative;
+    top: auto;
+    max-height: none;
+    overflow: visible;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 1rem;
+    padding: 0.75rem 1rem;
+  }
+
+  .mypage-account-sidebar-label {
+    width: 100%;
+  }
+
+  .mypage-account-nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+    width: 100%;
+    gap: 0.35rem;
+  }
+
+  .mypage-account-nav-item {
+    flex: 1 1 auto;
+    text-align: center;
+    min-width: 0;
+  }
 }
 
 .mypage-account-alert {
@@ -1980,15 +2064,6 @@ body.register-crop-modal-open {
 .mypage-writings-more:disabled {
   opacity: 0.45;
   cursor: wait;
-}
-
-.mypage-writings-footer {
-  margin: 0;
-  font-size: 0.86rem;
-}
-
-.mypage-writings-footer a {
-  color: var(--text-secondary);
 }
 
 .mypage-main-settings-hero {

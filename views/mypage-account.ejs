@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>마이페이지 — 포트폴리오</title>
-  <link rel="stylesheet" href="/css/style.css?v=20260435">
+  <link rel="stylesheet" href="/css/style.css?v=20260436">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Inter:wght@300;400;500;700&display=swap" rel="stylesheet">
   <% if (typeof isAdmin !== 'undefined' && isAdmin && (activeTab === 'board' || activeTab === 'mainSettings')) { %>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -13,13 +13,18 @@
 <body class="mypage-account-page">
   <%- include('partials/topnav') %>
 
-  <div class="mypage-account-wrap">
-    <header class="mypage-account-header">
-      <h1 class="mypage-account-title"><%= headerNickname %> / @<%= profileUser.username %></h1>
-    </header>
+  <div class="mypage-account-layout">
+    <aside class="mypage-account-sidebar" aria-label="마이페이지 메뉴">
+      <div class="mypage-account-sidebar-inner">
+        <p class="mypage-account-sidebar-label">마이페이지</p>
+        <%- include('partials/mypage-account-nav') %>
+      </div>
+    </aside>
 
-    <div class="mypage-account-body">
-      <%- include('partials/mypage-account-nav') %>
+    <div class="mypage-account-stage">
+      <header class="mypage-account-stage-header">
+        <h1 class="mypage-account-title"><%= headerNickname %> / @<%= profileUser.username %></h1>
+      </header>
 
       <main class="mypage-account-main">
         <% if (activeTab === 'profile') { %>
@@ -116,8 +121,6 @@
                 <% } %>
               </div>
             </section>
-
-            <p class="mypage-writings-footer"><a href="/posts">전체 게시판으로</a></p>
           </div>
           <script>
             window.__MYPAGE_POSTS_PAGE__ = <%= typeof myWritingsPageSize !== 'undefined' ? myWritingsPageSize : 10 %>;
