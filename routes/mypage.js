@@ -55,11 +55,16 @@ function profilePayload(req, extras) {
   };
 }
 
+const MY_WRITINGS_PAGE = 10;
+
 function postsPayload(req, extras) {
   const shell = getAccountShell(req);
   if (!shell) return null;
   const db = getDb();
   const uid = shell.profileUser.id;
+
+  const myPostsTotal =
+    db.prepare('SELECT COUNT(*) as n FROM posts WHERE author_id = ?').get(uid).n || 0;
   const myPosts = db
     .prepare(
       `
@@ -68,14 +73,36 @@ function postsPayload(req, extras) {
     LEFT JOIN projects pr ON p.project_id = pr.id
     WHERE p.author_id = ?
     ORDER BY p.created_at DESC
+    LIMIT ?
   `
     )
-    .all(uid);
+    .all(uid, MY_WRITINGS_PAGE);
+
+  const myCommentsTotal =
+    db.prepare('SELECT COUNT(*) as n FROM comments WHERE user_id = ?').get(uid).n || 0;
+  const myComments = db
+    .prepare(
+      `
+    SELECT c.id, c.content, c.created_at, c.post_id, p.title as post_title
+    FROM comments c
+    JOIN posts p ON p.id = c.post_id
+    WHERE c.user_id = ?
+    ORDER BY c.created_at DESC
+    LIMIT ?
+  `
+    )
+    .all(uid, MY_WRITINGS_PAGE);
 
   return {
     ...shell,
     activeTab: 'posts',
     myPosts,
+    myPostsTotal,
+    myPostsHasMore: myPostsTotal > MY_WRITINGS_PAGE,
+    myComments,
+    myCommentsTotal,
+    myCommentsHasMore: myCommentsTotal > MY_WRITINGS_PAGE,
+    myWritingsPageSize: MY_WRITINGS_PAGE,
     ...(extras || {})
   };
 }
@@ -105,6 +132,56 @@ router.get('/posts', requireLogin, (req, res) => {
   const data = postsPayload(req);
   if (!data) return res.redirect('/auth/logout');
   res.render('mypage-account', data);
+});
+
+router.get('/api/my-posts', requireLogin, (req, res) => {
+  const uid = req.session.user.id;
+  const offset = Math.max(0, parseInt(req.query.offset, 10) || 0);
+  const limit = Math.min(50, Math.max(1, parseInt(req.query.limit, 10) || MY_WRITINGS_PAGE));
+  const db = getDb();
+  const total = db.prepare('SELECT COUNT(*) as n FROM posts WHERE author_id = ?').get(uid).n || 0;
+  const items = db
+    .prepare(
+      `
+    SELECT p.*, pr.name as project_name
+    FROM posts p
+    LEFT JOIN projects pr ON p.project_id = pr.id
+    WHERE p.author_id = ?
+    ORDER BY p.created_at DESC
+    LIMIT ? OFFSET ?
+  `
+    )
+    .all(uid, limit, offset);
+  res.json({
+    items,
+    total,
+    hasMore: offset + items.length < total
+  });
+});
+
+router.get('/api/my-comments', requireLogin, (req, res) => {
+  const uid = req.session.user.id;
+  const offset = Math.max(0, parseInt(req.query.offset, 10) || 0);
+  const limit = Math.min(50, Math.max(1, parseInt(req.query.limit, 10) || MY_WRITINGS_PAGE));
+  const db = getDb();
+  const total = db.prepare('SELECT COUNT(*) as n FROM comments WHERE user_id = ?').get(uid).n || 0;
+  const items = db
+    .prepare(
+      `
+    SELECT c.id, c.content, c.created_at, c.post_id, p.title as post_title
+    FROM comments c
+    JOIN posts p ON p.id = c.post_id
+    WHERE c.user_id = ?
+    ORDER BY c.created_at DESC
+    LIMIT ? OFFSET ?
+  `
+    )
+    .all(uid, limit, offset);
+  res.json({
+    items,
+    total,
+    hasMore: offset + items.length < total
+  });
 });
 
 router.get('/main-settings', requireLogin, requireAdmin, (req, res) => {
