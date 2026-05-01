@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { getDb } = require('../config/database');
 const { requireAdmin, requireLogin } = require('../middleware/auth');
+const { getSiteSettings } = require('../lib/siteData');
 
 // GET /posts - All posts
 router.get('/', (req, res) => {
@@ -21,7 +22,7 @@ router.get('/', (req, res) => {
   const total = db.prepare('SELECT COUNT(*) as count FROM posts').get().count;
   const totalPages = Math.ceil(total / limit);
 
-  res.render('posts', { posts, page, totalPages, total });
+  res.render('posts', { posts, page, totalPages, total, settings: getSiteSettings() });
 });
 
 // GET /posts/new - Create form (admin only)
@@ -32,7 +33,8 @@ router.get('/new', requireAdmin, (req, res) => {
     post: null,
     projects,
     formAction: '/posts',
-    formMethod: 'POST'
+    formMethod: 'POST',
+    settings: getSiteSettings()
   });
 });
 
@@ -45,7 +47,8 @@ router.post('/', requireAdmin, (req, res) => {
     return res.render('post-form', {
       post: null, projects,
       formAction: '/posts', formMethod: 'POST',
-      error: '제목과 내용을 입력해주세요.'
+      error: '제목과 내용을 입력해주세요.',
+      settings: getSiteSettings()
     });
   }
 
@@ -69,7 +72,8 @@ router.get('/:id/edit', requireAdmin, (req, res) => {
     post,
     projects,
     formAction: `/posts/${post.id}?_method=PUT`,
-    formMethod: 'POST'
+    formMethod: 'POST',
+    settings: getSiteSettings()
   });
 });
 
@@ -103,6 +107,9 @@ router.get('/:id', (req, res) => {
 
   if (!post) return res.status(404).render('error', { code: 404, message: '게시물을 찾을 수 없습니다.' });
 
+  db.prepare('UPDATE posts SET view_count = COALESCE(view_count, 0) + 1 WHERE id = ?').run(req.params.id);
+  post.view_count = (post.view_count != null ? Number(post.view_count) : 0) + 1;
+
   const comments = db.prepare(`
     SELECT c.*, u.nickname
     FROM comments c
@@ -111,7 +118,7 @@ router.get('/:id', (req, res) => {
     ORDER BY c.created_at ASC
   `).all(req.params.id);
 
-  res.render('post', { post, comments });
+  res.render('post', { post, comments, settings: getSiteSettings() });
 });
 
 // POST /posts/:id/comments - Add comment (login required)

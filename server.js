@@ -8,6 +8,7 @@ const { initializeDatabase, getDataDir, getDb } = require('./config/database');
 
 const authRoutes = require('./routes/auth');
 const postsRoutes = require('./routes/posts');
+const boardsRoutes = require('./routes/boards');
 const adminRoutes = require('./routes/admin');
 const mypageRoutes = require('./routes/mypage');
 const { isUserAdmin } = require('./middleware/auth');
@@ -84,6 +85,7 @@ app.use((req, res, next) => {
 });
 
 app.use('/auth', authRoutes);
+app.use('/boards', boardsRoutes);
 app.use('/posts', postsRoutes);
 app.use('/admin', adminRoutes);
 app.use('/mypage', mypageRoutes);

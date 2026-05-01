@@ -83,6 +83,9 @@ function initializeDatabase() {
   `);
 
   const postCols = database.prepare('PRAGMA table_info(posts)').all();
+  if (!postCols.some((c) => c.name === 'view_count')) {
+    database.exec('ALTER TABLE posts ADD COLUMN view_count INTEGER DEFAULT 0');
+  }
   if (!postCols.some((c) => c.name === 'author_id')) {
     database.exec('ALTER TABLE posts ADD COLUMN author_id INTEGER');
     const adminUser = database

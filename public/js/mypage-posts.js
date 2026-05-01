@@ -22,8 +22,13 @@
 
   function clearEmptyPlaceholder(ul) {
     if (!ul) return;
+    const prev = ul.previousElementSibling;
+    if (prev && prev.classList && prev.classList.contains('mypage-writings-empty-plain')) {
+      prev.remove();
+    }
     const empty = ul.querySelector('.mypage-writings-empty');
     if (empty) empty.remove();
+    ul.classList.remove('is-hidden');
   }
 
   function wirePostsMore() {

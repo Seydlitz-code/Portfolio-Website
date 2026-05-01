@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= project.name %> — <%= settings.site_name || '포트폴리오' %></title>
+  <link rel="stylesheet" href="/css/style.css?v=20260438">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Inter:wght@300;400;500;700&display=swap" rel="stylesheet">
+</head>
+<body class="inner-page board-page">
+
+  <%- include('partials/inner-header') %>
+
+  <main class="inner-main">
+    <div class="inner-container board-inner">
+      <header class="board-page-heading">
+        <h1 class="board-page-title"><%= project.name %></h1>
+        <% if (project.name_ja) { %>
+          <p class="board-page-title-ja"><%= project.name_ja %></p>
+        <% } %>
+        <% if (project.description) { %>
+          <p class="board-page-desc"><%= project.description %></p>
+        <% } %>
+      </header>
+
+      <div class="board-table-wrap" role="region" aria-label="게시글 목록">
+        <table class="board-table">
+          <thead>
+            <tr>
+              <th class="board-th board-th--title" scope="col">제목</th>
+              <th class="board-th board-th--author" scope="col">작성자</th>
+              <th class="board-th board-th--date" scope="col">작성일</th>
+              <th class="board-th board-th--views" scope="col">조회</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% if (posts.length === 0) { %>
+              <tr>
+                <td class="board-td board-td--empty" colspan="4">등록된 게시물이 없습니다.</td>
+              </tr>
+            <% } else { %>
+              <% posts.forEach(function (post) { %>
+                <tr class="board-row">
+                  <td class="board-td board-td--title">
+                    <a href="/posts/<%= post.id %>" class="board-title-link"><%= post.title %></a>
+                    <span class="board-comment-count" aria-label="댓글 <%= post.comment_count %>개">[<%= post.comment_count %>]</span>
+                  </td>
+                  <td class="board-td board-td--author"><%= post.author_nickname || '—' %></td>
+                  <td class="board-td board-td--date"><time datetime="<%= post.created_at %>"><%= post.display_time %></time></td>
+                  <td class="board-td board-td--views"><%= post.view_count %></td>
+                </tr>
+              <% }); %>
+            <% } %>
+          </tbody>
+        </table>
+      </div>
+
+      <nav class="board-pagination" aria-label="게시판 페이지">
+        <p class="board-pagination-summary">
+          전체 <strong><%= totalPages %></strong>페이지
+          <% if (total > 0) { %>
+            · 현재 <strong><%= page %></strong>페이지
+            <span class="board-pagination-count">(게시글 <%= total %>건)</span>
+          <% } %>
+        </p>
+        <% if (totalPages > 1) { %>
+          <div class="board-pagination-pages">
+            <% paginationItems.forEach(function (item) { %>
+              <% if (item.type === 'ellipsis') { %>
+                <span class="board-page-ellipsis" aria-hidden="true">…</span>
+              <% } else { %>
+                <% if (item.current) { %>
+                  <span class="board-page-num board-page-num--current" aria-current="page"><%= item.n %></span>
+                <% } else { %>
+                  <a class="board-page-num" href="/boards/<%= project.id %>?page=<%= item.n %>"><%= item.n %></a>
+                <% } %>
+              <% } %>
+            <% }); %>
+          </div>
+        <% } %>
+      </nav>
+    </div>
+  </main>
+</body>
+</html>

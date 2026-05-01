@@ -630,6 +630,15 @@ button {
   color: var(--text-primary);
 }
 
+.block-title-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.block-title-link:hover {
+  text-decoration: underline;
+}
+
 .block-title-ja {
   font-size: 0.78rem;
   color: var(--text-muted);
@@ -2034,6 +2043,18 @@ body.register-crop-modal-open {
   word-break: break-word;
 }
 
+.mypage-writings-empty-plain {
+  margin: 0.4rem 0 0;
+  padding: 0;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.mypage-writings-list.is-hidden {
+  display: none;
+}
+
 .mypage-writings-empty {
   padding: 0.75rem 0.25rem;
   font-size: 0.88rem;
@@ -2358,6 +2379,218 @@ body.register-crop-modal-open {
   background: var(--accent);
   border-color: var(--accent);
   color: white;
+}
+
+/* ========================================
+   BOARD PAGE (게시판별 목록)
+   ======================================== */
+.board-page .inner-container.board-inner {
+  max-width: 1000px;
+}
+
+.board-page-heading {
+  margin-bottom: 1.25rem;
+}
+
+.board-page-title {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+}
+
+.board-page-title-ja {
+  margin: 0.35rem 0 0;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+}
+
+.board-page-desc {
+  margin: 0.6rem 0 0;
+  font-size: 0.86rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.board-table-wrap {
+  overflow-x: auto;
+  background: #fff;
+  border: 2px solid #000;
+  border-radius: 2px;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.06);
+}
+
+.board-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.86rem;
+  min-width: 520px;
+}
+
+.board-table thead {
+  background: #f4f4f2;
+  border-bottom: 2px solid #1a1a2e;
+}
+
+.board-th {
+  padding: 0.55rem 0.65rem;
+  font-weight: 600;
+  font-size: 0.78rem;
+  color: var(--text-primary);
+  text-align: center;
+  border-bottom: 2px solid #1a1a2e;
+}
+
+.board-th--title {
+  text-align: left;
+  width: 52%;
+}
+
+.board-th--author {
+  width: 14%;
+}
+
+.board-th--date {
+  width: 18%;
+}
+
+.board-th--views {
+  width: 10%;
+}
+
+.board-row {
+  background: #fff;
+}
+
+.board-row:nth-child(even) {
+  background: #fafafa;
+}
+
+.board-row:hover {
+  background: #f0f4ff;
+}
+
+.board-td {
+  padding: 0.5rem 0.65rem;
+  border-bottom: 1px solid #ddd;
+  vertical-align: middle;
+  color: var(--text-primary);
+}
+
+.board-td--title {
+  text-align: left;
+}
+
+.board-td--author,
+.board-td--date,
+.board-td--views {
+  text-align: center;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+.board-td--views {
+  font-variant-numeric: tabular-nums;
+}
+
+.board-td--empty {
+  text-align: center;
+  padding: 2.5rem 1rem;
+  color: var(--text-muted);
+}
+
+.board-title-link {
+  color: var(--text-primary);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.board-title-link:hover {
+  text-decoration: underline;
+}
+
+.board-comment-count {
+  margin-left: 0.25rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #c2410c;
+  font-variant-numeric: tabular-nums;
+}
+
+.board-pagination {
+  margin-top: 1.35rem;
+  padding: 1rem 1.1rem;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.board-pagination-summary {
+  margin: 0 0 0.65rem;
+  font-size: 0.86rem;
+  color: var(--text-secondary);
+}
+
+.board-pagination-summary strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.board-pagination-count {
+  margin-left: 0.25rem;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.board-pagination-pages {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.45rem;
+}
+
+.board-page-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2rem;
+  height: 2rem;
+  padding: 0 0.4rem;
+  font-size: 0.84rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  text-decoration: none;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: #fff;
+  transition: border-color var(--transition), background var(--transition);
+}
+
+.board-page-num:hover {
+  border-color: #1a1a2e;
+  background: #f8f8f8;
+}
+
+.board-page-num--current {
+  min-width: 2rem;
+  height: 2rem;
+  padding: 0 0.4rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: #fff;
+  background: #1a1a2e;
+  border: 1px solid #1a1a2e;
+  border-radius: 4px;
+}
+
+.board-page-ellipsis {
+  padding: 0 0.15rem;
+  color: var(--text-muted);
+  user-select: none;
 }
 
 /* Empty state */

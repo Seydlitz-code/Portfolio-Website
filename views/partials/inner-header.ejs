@@ -1,6 +1,6 @@
 <header class="inner-header">
   <div class="inner-header-inner">
-    <a href="/" class="inner-logo">← Donghawan Lee / @lilip</a>
+    <a href="/" class="inner-logo">← <%= typeof settings !== 'undefined' && settings && settings.site_name ? settings.site_name : 'Donghawan Lee / @lilip' %></a>
     <nav class="inner-nav inner-nav--cluster" aria-label="사용자 메뉴">
       <%- include('nav-cluster') %>
     </nav>
