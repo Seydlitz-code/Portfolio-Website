@@ -1,5 +1,8 @@
-<nav class="topnav" id="topnav">
-  <div class="topnav-inner topnav-bar">
+<nav class="topnav <%= typeof topnavCenterHome !== 'undefined' && topnavCenterHome ? 'topnav--center-home' : '' %>" id="topnav">
+  <div class="topnav-inner topnav-bar <%= typeof topnavCenterHome !== 'undefined' && topnavCenterHome ? 'topnav-inner--center-home' : '' %>">
+    <% if (typeof topnavCenterHome !== 'undefined' && topnavCenterHome) { %>
+      <a href="/" class="topnav-home-link"><%= typeof settings !== 'undefined' && settings && settings.site_name ? settings.site_name : 'Donghawan Lee / @lilip' %></a>
+    <% } %>
     <div class="topnav-right topnav-right--cluster">
       <%- include('nav-cluster') %>
     </div>

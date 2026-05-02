@@ -6,7 +6,7 @@ const router = express.Router();
 const { getDb } = require('../config/database');
 const { requireLogin, requireAdmin } = require('../middleware/auth');
 const { getAccountShell } = require('../lib/mypageShell');
-const { getSiteHomeData } = require('../lib/siteData');
+const { getSiteHomeData, getSiteSettings } = require('../lib/siteData');
 
 const avatarStorage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -120,18 +120,26 @@ function tryUnlinkAvatar(publicPath) {
   }
 }
 
+function accountViewLocals(data) {
+  if (!data) return null;
+  return {
+    ...data,
+    settings: data.settings != null ? data.settings : getSiteSettings()
+  };
+}
+
 router.get('/', requireLogin, (req, res) => {
   const data = profilePayload(req, {
     saved: req.query.saved === '1'
   });
   if (!data) return res.redirect('/auth/logout');
-  res.render('mypage-account', data);
+  res.render('mypage-account', accountViewLocals(data));
 });
 
 router.get('/posts', requireLogin, (req, res) => {
   const data = postsPayload(req);
   if (!data) return res.redirect('/auth/logout');
-  res.render('mypage-account', data);
+  res.render('mypage-account', accountViewLocals(data));
 });
 
 router.get('/api/my-posts', requireLogin, (req, res) => {
@@ -187,24 +195,24 @@ router.get('/api/my-comments', requireLogin, (req, res) => {
 router.get('/main-settings', requireLogin, requireAdmin, (req, res) => {
   const shell = getAccountShell(req);
   if (!shell) return res.redirect('/auth/logout');
-  res.render('mypage-account', {
+  res.render('mypage-account', accountViewLocals({
     ...shell,
     ...getSiteHomeData(),
     activeTab: 'mainSettings',
     saved: req.query.saved === '1',
     errMessage: null
-  });
+  }));
 });
 
 router.get('/board', requireLogin, requireAdmin, (req, res) => {
   const shell = getAccountShell(req);
   if (!shell) return res.redirect('/auth/logout');
-  res.render('mypage-account', {
+  res.render('mypage-account', accountViewLocals({
     ...shell,
     ...getSiteHomeData(),
     activeTab: 'board',
     saved: req.query.saved === '1'
-  });
+  }));
 });
 
 router.post(
@@ -220,7 +228,7 @@ router.post(
             formNickname: (req.body && req.body.nickname) || ''
           });
           if (!data) return res.redirect('/auth/logout');
-          return res.status(400).render('mypage-account', data);
+          return res.status(400).render('mypage-account', accountViewLocals(data));
         }
         const data = profilePayload(req, {
           profileError: err.message || '이미지 업로드에 실패했습니다.',
@@ -228,7 +236,7 @@ router.post(
           formNickname: (req.body && req.body.nickname) || ''
         });
         if (!data) return res.redirect('/auth/logout');
-        return res.status(400).render('mypage-account', data);
+        return res.status(400).render('mypage-account', accountViewLocals(data));
       }
       next();
     });
@@ -258,7 +266,7 @@ router.post(
         nicknameDupWarning: false,
         formNickname: (req.body && req.body.nickname) || ''
       });
-      return res.status(400).render('mypage-account', data);
+      return res.status(400).render('mypage-account', accountViewLocals(data));
     }
 
     const prevNick = String(row.nickname || '').trim();
@@ -278,7 +286,7 @@ router.post(
           nicknameDupWarning: true,
           formNickname: newNick
         });
-        return res.status(400).render('mypage-account', data);
+        return res.status(400).render('mypage-account', accountViewLocals(data));
       }
       const taken = db.prepare('SELECT id FROM users WHERE nickname = ? AND id != ?').get(newNick, uid);
       if (taken) {
@@ -292,7 +300,7 @@ router.post(
           nicknameDupWarning: false,
           formNickname: newNick
         });
-        return res.status(400).render('mypage-account', data);
+        return res.status(400).render('mypage-account', accountViewLocals(data));
       }
     }
 

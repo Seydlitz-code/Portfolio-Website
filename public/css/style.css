@@ -92,6 +92,57 @@ button {
   justify-content: flex-end;
 }
 
+.topnav.topnav--center-home {
+  background: var(--header-bg);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  pointer-events: none;
+}
+
+.topnav-inner.topnav-inner--center-home {
+  position: relative;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  min-height: 2rem;
+  padding: 0 0.25rem;
+}
+
+.topnav-home-link {
+  font-family: 'Inter', 'Noto Sans KR', sans-serif;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-decoration: none;
+  text-align: center;
+  pointer-events: all;
+  max-width: min(65%, 26rem);
+  line-height: 1.3;
+}
+
+.topnav-home-link:hover {
+  opacity: 0.82;
+}
+
+.topnav-inner--center-home .topnav-right {
+  position: absolute;
+  right: 2rem;
+  top: 50%;
+  transform: translateY(-50%);
+  max-width: min(48vw, 20rem);
+}
+
+@media (max-width: 540px) {
+  .topnav-inner--center-home .topnav-right {
+    right: 1rem;
+    max-width: 42vw;
+  }
+
+  .topnav-home-link {
+    font-size: 0.8rem;
+    max-width: 50%;
+  }
+}
+
 /* 닉네임(텍스트) + 버튼 그룹 */
 .nav-cluster {
   display: flex;
@@ -2420,10 +2471,28 @@ body.register-crop-modal-open {
 }
 
 .board-page .inner-header-inner {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   max-width: none;
   width: 100%;
   padding-left: clamp(1rem, 4vw, 2.5rem);
   padding-right: clamp(1rem, 4vw, 2.5rem);
+  min-height: 2.75rem;
+}
+
+.board-page .inner-logo {
+  text-align: center;
+  font-weight: 600;
+}
+
+.board-page .inner-nav {
+  position: absolute;
+  top: 50%;
+  right: clamp(1rem, 4vw, 2.5rem);
+  transform: translateY(-50%);
+  max-width: min(50vw, 22rem);
 }
 
 .board-main.inner-main {
@@ -2455,13 +2524,16 @@ body.register-crop-modal-open {
   color: var(--text-primary);
   letter-spacing: -0.02em;
   line-height: 1.25;
+  font-family: 'Noto Sans KR', 'Inter', sans-serif;
 }
 
 .board-page-title-ja {
   margin: 0.45rem 0 0;
-  font-size: 0.92rem;
-  color: var(--text-muted);
-  font-weight: 400;
+  font-size: clamp(1.2rem, 2.8vw, 1.55rem);
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.35;
+  font-family: 'Noto Sans KR', 'Inter', sans-serif;
 }
 
 .board-page-desc {
@@ -2484,7 +2556,7 @@ body.register-crop-modal-open {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.86rem;
-  min-width: 520px;
+  min-width: 600px;
 }
 
 .board-table thead {
@@ -2501,9 +2573,18 @@ body.register-crop-modal-open {
   border-bottom: 2px solid #1a1a2e;
 }
 
+.board-th--num,
+.board-td--num {
+  width: 3.5rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
 .board-th--title {
   text-align: left;
-  width: 52%;
+  width: 46%;
 }
 
 .board-th--author {
@@ -2652,6 +2733,127 @@ body.register-crop-modal-open {
   padding: 0 0.15rem;
   color: var(--text-muted);
   user-select: none;
+}
+
+/* 전체 게시물 (/posts) — 전체 폭·게시판형 목록 */
+.posts-all-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.posts-all-page .inner-header-inner {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-width: none;
+  width: 100%;
+  padding-left: clamp(1rem, 4vw, 2.5rem);
+  padding-right: clamp(1rem, 4vw, 2.5rem);
+  min-height: 2.75rem;
+}
+
+.posts-all-page .inner-logo {
+  text-align: center;
+  font-weight: 600;
+}
+
+.posts-all-page .inner-nav {
+  position: absolute;
+  top: 50%;
+  right: clamp(1rem, 4vw, 2.5rem);
+  transform: translateY(-50%);
+  max-width: min(50vw, 22rem);
+}
+
+.posts-all-main.inner-main {
+  flex: 1;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 1.5rem clamp(1rem, 4vw, 2.5rem) 3.5rem;
+  box-sizing: border-box;
+}
+
+.posts-all-shell {
+  width: 100%;
+  max-width: min(1280px, 100%);
+  margin: 0 auto;
+}
+
+.posts-all-admin {
+  margin-bottom: 1rem;
+}
+
+.posts-all-heading {
+  margin: 0 0 1.25rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #000;
+  text-align: center;
+}
+
+.posts-all-title-ko {
+  margin: 0;
+  font-size: clamp(1.2rem, 2.8vw, 1.55rem);
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  font-family: 'Noto Sans KR', 'Inter', sans-serif;
+}
+
+.posts-all-title-ja {
+  margin: 0.45rem 0 0;
+  font-size: clamp(1.2rem, 2.8vw, 1.55rem);
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.35;
+  font-family: 'Noto Sans KR', 'Inter', sans-serif;
+}
+
+.posts-all-table-wrap {
+  margin-top: 0;
+}
+
+.posts-all-table {
+  min-width: 720px;
+}
+
+.posts-all-table .board-th--num,
+.posts-all-table .board-td--num {
+  width: 3.5rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+}
+
+.posts-all-table .board-th--title {
+  width: 36%;
+}
+
+.posts-all-table .board-th--board,
+.posts-all-table .board-td--board {
+  width: 12%;
+  text-align: center;
+  font-size: 0.82rem;
+}
+
+.posts-all-table .board-th--author {
+  width: 11%;
+}
+
+.posts-all-table .board-th--date {
+  width: 12%;
+}
+
+.posts-all-table .board-th--views {
+  width: 7%;
+}
+
+.posts-all-pagination {
+  margin-top: 1.5rem;
 }
 
 /* Empty state */

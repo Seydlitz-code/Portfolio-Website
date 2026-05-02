@@ -3,26 +3,56 @@ const router = express.Router();
 const { getDb } = require('../config/database');
 const { requireAdmin, requireLogin } = require('../middleware/auth');
 const { getSiteSettings } = require('../lib/siteData');
+const { formatListTime, buildPaginationItems } = require('../lib/listingHelpers');
+
+const ALL_POSTS_PAGE_SIZE = 200;
 
 // GET /posts - All posts
 router.get('/', (req, res) => {
   const db = getDb();
-  const page = Math.max(1, parseInt(req.query.page) || 1);
-  const limit = 10;
+  const limit = ALL_POSTS_PAGE_SIZE;
+  const page = Math.max(1, parseInt(req.query.page, 10) || 1);
   const offset = (page - 1) * limit;
 
-  const posts = db.prepare(`
-    SELECT p.*, pr.name as project_name
+  const total = db.prepare('SELECT COUNT(*) as count FROM posts').get().count;
+  const totalPages = total === 0 ? 1 : Math.ceil(total / limit);
+  if (page > totalPages) {
+    return res.redirect('/posts?page=' + totalPages);
+  }
+
+  const rows = db
+    .prepare(
+      `
+    SELECT p.*, pr.name as project_name,
+      (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id) AS comment_count,
+      u.nickname AS author_nickname
     FROM posts p
     LEFT JOIN projects pr ON p.project_id = pr.id
+    LEFT JOIN users u ON p.author_id = u.id
     ORDER BY p.created_at DESC
     LIMIT ? OFFSET ?
-  `).all(limit, offset);
+  `
+    )
+    .all(limit, offset);
 
-  const total = db.prepare('SELECT COUNT(*) as count FROM posts').get().count;
-  const totalPages = Math.ceil(total / limit);
+  const posts = rows.map((p) => ({
+    ...p,
+    display_time: formatListTime(p.created_at),
+    view_count: p.view_count != null ? Number(p.view_count) : 0,
+    comment_count: p.comment_count != null ? Number(p.comment_count) : 0
+  }));
 
-  res.render('posts', { posts, page, totalPages, total, settings: getSiteSettings() });
+  const paginationItems = buildPaginationItems(page, totalPages);
+
+  res.render('posts', {
+    posts,
+    page,
+    totalPages,
+    total,
+    pageSize: limit,
+    paginationItems,
+    settings: getSiteSettings()
+  });
 });
 
 // GET /posts/new - Create form (admin only)
