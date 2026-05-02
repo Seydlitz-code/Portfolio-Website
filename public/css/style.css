@@ -198,7 +198,10 @@ button {
 }
 
 html.index-scroll-snap {
+  /* 스냅·scrollIntoView 시 고정 상단바와 겹치지 않도록 */
+  --index-sticky-offset: max(3.55rem, calc(env(safe-area-inset-top, 0px) + 2.65rem));
   scroll-snap-type: y proximity;
+  scroll-padding-top: var(--index-sticky-offset);
 }
 
 body.index-page .hero-section {
@@ -208,6 +211,7 @@ body.index-page .hero-section {
 
 body.index-page .portfolio-section {
   scroll-snap-align: start;
+  scroll-margin-top: var(--index-sticky-offset, 3.55rem);
 }
 
 /* 닉네임(텍스트) + 버튼 그룹 */

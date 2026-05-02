@@ -5,15 +5,25 @@ const fs = require('fs');
 
 /**
  * SQLite 및 세션 파일을 저장하는 디렉터리.
- * - 로컬: <프로젝트>/data
- * - Render: 영구 디스크를 /data 등에 마운트한 뒤 env DATA_DIR과 동일하게 설정
+ * - 로컬: <프로젝트>/data (기본)
+ * - Render 등 PaaS: 영구 디스크를 마운트한 경로를 DATA_DIR로 지정하세요(DATA_DIR과 mountPath 일치).
+ *   DATA_DIR이 없으면 에페멀 파일시스템에 DB가 생겨 배포마다 계정·게시글이 초기화된 것처럼 보일 수 있습니다.
  * 주의: 디스크를 "db" 폴더에 마운트하면 db/database.js 코드가 사라지므로 사용하지 말 것.
  */
 function getDataDir() {
-  if (process.env.DATA_DIR) {
-    return process.env.DATA_DIR;
+  const fromEnv = process.env.DATA_DIR != null && String(process.env.DATA_DIR).trim();
+  if (fromEnv) {
+    return path.resolve(String(process.env.DATA_DIR).trim());
   }
-  return path.join(__dirname, '..', 'data');
+  const fallback = path.join(__dirname, '..', 'data');
+  if (process.env.NODE_ENV === 'production' || process.env.RENDER === 'true') {
+    console.warn(
+      '[database] DATA_DIR 미설정 — SQLite 경로: ' +
+        fallback +
+        ' (호스트가 에페멀 디스크이면 배포 시 DB가 비어 있습니다. 영구 디스크 + DATA_DIR 설정을 권장합니다.)'
+    );
+  }
+  return fallback;
 }
 
 const DB_FILE = 'portfolio.db';
@@ -149,6 +159,7 @@ function initializeDatabase() {
     }
   }
 
+  console.log('[database] SQLite 파일:', path.join(getDataDir(), DB_FILE));
   console.log('데이터베이스 초기화 완료');
 }
 

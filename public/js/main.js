@@ -26,7 +26,18 @@
   window.addEventListener('scroll', onScroll, { passive: true });
   onScroll();
 
-  // 메인(히어로)에서 아래로 스크롤할 때 중간에 멈추지 않고 포트폴리오 시작(100vh)에 맞춤
+  /** 도킹 상단바 높이(px) — 스크롤 스냅 시 첫 게시판이 바에 가리지 않도록 보정 */
+  function measureDockedTopnavHeight() {
+    if (!topnav) return 56;
+    const hadDock = topnav.classList.contains('topnav--dock-phase');
+    topnav.classList.add('topnav--dock-phase');
+    void topnav.offsetHeight;
+    const h = topnav.offsetHeight;
+    topnav.classList.toggle('topnav--dock-phase', hadDock);
+    return Math.max(Math.round(h), 48);
+  }
+
+  // 메인(히어로)에서 아래로 스크롤할 때 포트폴리오 첫 블록이 고정 상단바 아래에 오도록 정렬
   if (indexPage) {
     let heroSnapLockUntil = 0;
     window.addEventListener(
@@ -34,10 +45,11 @@
       function (e) {
         const y = window.scrollY;
         const vh = window.innerHeight;
-        const targetTop = hero.offsetHeight;
+        const bar = measureDockedTopnavHeight();
+        const targetTop = Math.max(0, hero.offsetHeight - bar);
         if (y >= vh - 20) return;
         if (e.deltaY <= 0) return;
-        if (Math.abs(y - targetTop) < 12) return;
+        if (Math.abs(y - targetTop) < 16) return;
         const now = performance.now();
         if (now < heroSnapLockUntil) return;
         heroSnapLockUntil = now + 780;
