@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><%= settings.site_name || 'Donghawan Lee / @lilip' %></title>
-  <link rel="stylesheet" href="/css/style.css?v=20260438">
+  <link rel="stylesheet" href="/css/style.css?v=20260439">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Inter:wght@300;400;500;700&display=swap" rel="stylesheet">
@@ -74,10 +74,11 @@
       <section class="portfolio-block">
         <div class="block-header block-header--centered">
           <div class="block-title-group">
-            <h2 class="block-title">전체 보기</h2>
-            <span class="block-title-ja">すべて見る</span>
+            <h2 class="block-title">
+              <a href="/posts" class="block-title-link">전체 게시물 보기</a>
+            </h2>
+            <span class="block-title-ja">全ての投稿を表示</span>
           </div>
-          <a href="/posts" class="view-all-btn view-all-btn--below">전체 게시물 →</a>
         </div>
         <div class="posts-grid">
           <% if (recentPosts.length === 0) { %>

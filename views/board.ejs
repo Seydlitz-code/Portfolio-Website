@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><%= project.name %> — <%= settings.site_name || '포트폴리오' %></title>
-  <link rel="stylesheet" href="/css/style.css?v=20260438">
+  <link rel="stylesheet" href="/css/style.css?v=20260439">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Inter:wght@300;400;500;700&display=swap" rel="stylesheet">
 </head>
@@ -12,8 +12,8 @@
 
   <%- include('partials/inner-header') %>
 
-  <main class="inner-main">
-    <div class="inner-container board-inner">
+  <main class="inner-main board-main">
+    <div class="board-page-shell">
       <header class="board-page-heading">
         <h1 class="board-page-title"><%= project.name %></h1>
         <% if (project.name_ja) { %>

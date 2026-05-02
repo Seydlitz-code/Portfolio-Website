@@ -2382,43 +2382,73 @@ body.register-crop-modal-open {
 }
 
 /* ========================================
-   BOARD PAGE (게시판별 목록)
+   BOARD PAGE (게시판별 목록) — 전체 폭·문서형 레이아웃
    ======================================== */
-.board-page .inner-container.board-inner {
-  max-width: 1000px;
+.board-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.board-page .inner-header-inner {
+  max-width: none;
+  width: 100%;
+  padding-left: clamp(1rem, 4vw, 2.5rem);
+  padding-right: clamp(1rem, 4vw, 2.5rem);
+}
+
+.board-main.inner-main {
+  flex: 1;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 1.75rem clamp(1rem, 4vw, 2.5rem) 3.5rem;
+  box-sizing: border-box;
+}
+
+.board-page-shell {
+  width: 100%;
+  max-width: min(1180px, 100%);
+  margin: 0 auto;
 }
 
 .board-page-heading {
-  margin-bottom: 1.25rem;
+  margin: 0 0 1.25rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #000;
+  text-align: center;
 }
 
 .board-page-title {
   margin: 0;
-  font-size: 1.35rem;
+  font-size: clamp(1.2rem, 2.8vw, 1.55rem);
   font-weight: 700;
   color: var(--text-primary);
   letter-spacing: -0.02em;
+  line-height: 1.25;
 }
 
 .board-page-title-ja {
-  margin: 0.35rem 0 0;
-  font-size: 0.88rem;
+  margin: 0.45rem 0 0;
+  font-size: 0.92rem;
   color: var(--text-muted);
+  font-weight: 400;
 }
 
 .board-page-desc {
-  margin: 0.6rem 0 0;
-  font-size: 0.86rem;
+  margin: 0.65rem auto 0;
+  font-size: 0.88rem;
   color: var(--text-secondary);
-  line-height: 1.5;
+  line-height: 1.55;
+  max-width: 42rem;
 }
 
 .board-table-wrap {
   overflow-x: auto;
   background: #fff;
   border: 2px solid #000;
-  border-radius: 2px;
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.06);
+  border-radius: 0;
+  box-shadow: none;
 }
 
 .board-table {
@@ -2519,16 +2549,18 @@ body.register-crop-modal-open {
 }
 
 .board-pagination {
-  margin-top: 1.35rem;
-  padding: 1rem 1.1rem;
-  background: #fff;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  margin-top: 1.5rem;
+  padding: 1rem 0 0;
+  background: transparent;
+  border: none;
+  border-top: 2px solid #000;
+  border-radius: 0;
+  text-align: center;
 }
 
 .board-pagination-summary {
-  margin: 0 0 0.65rem;
-  font-size: 0.86rem;
+  margin: 0 0 0.75rem;
+  font-size: 0.88rem;
   color: var(--text-secondary);
 }
 
@@ -2547,6 +2579,7 @@ body.register-crop-modal-open {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: center;
   gap: 0.35rem 0.45rem;
 }
 
@@ -2561,15 +2594,14 @@ body.register-crop-modal-open {
   font-weight: 500;
   color: var(--text-primary);
   text-decoration: none;
-  border: 1px solid var(--border);
-  border-radius: 4px;
+  border: 1px solid #000;
+  border-radius: 0;
   background: #fff;
-  transition: border-color var(--transition), background var(--transition);
+  transition: background var(--transition), color var(--transition);
 }
 
 .board-page-num:hover {
-  border-color: #1a1a2e;
-  background: #f8f8f8;
+  background: #f4f4f2;
 }
 
 .board-page-num--current {
@@ -2582,9 +2614,9 @@ body.register-crop-modal-open {
   font-size: 0.84rem;
   font-weight: 700;
   color: #fff;
-  background: #1a1a2e;
-  border: 1px solid #1a1a2e;
-  border-radius: 4px;
+  background: #000;
+  border: 1px solid #000;
+  border-radius: 0;
 }
 
 .board-page-ellipsis {
