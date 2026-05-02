@@ -348,10 +348,11 @@ body.index-page .portfolio-section {
 .hero-content {
   display: flex;
   align-items: center;
-  gap: 5vw;
-  padding: 5rem 8vw 3rem;
+  gap: clamp(1.25rem, 3.5vw, 2.75rem);
+  padding: 5rem clamp(1.25rem, 5vw, 3rem) 3rem;
   width: 100%;
-  max-width: 1100px;
+  max-width: min(1320px, 96vw);
+  box-sizing: border-box;
 }
 
 /* Profile */
@@ -361,8 +362,8 @@ body.index-page .portfolio-section {
 
 .profile-circle-wrap {
   position: relative;
-  width: clamp(160px, 22vw, 260px);
-  height: clamp(160px, 22vw, 260px);
+  width: clamp(130px, 17vw, 220px);
+  height: clamp(130px, 17vw, 220px);
   border-radius: 50%;
   background: white;
   border: 3px solid rgba(0,0,0,0.12);
@@ -421,14 +422,13 @@ body.index-page .portfolio-section {
   background: rgba(0,0,0,0.85);
 }
 
-/* Hero Info */
+/* Hero Info — 이름 한 줄·소개문에 충분한 가로 공간(가로 스크롤 최소화) */
 .hero-info {
-  flex: 1;
+  flex: 1 1 48%;
   min-width: 0;
-  overflow-x: auto;
+  overflow-x: visible;
   overflow-y: visible;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: thin;
+  max-width: min(52rem, 100%);
 }
 
 .hero-name-wrap {
@@ -445,7 +445,7 @@ body.index-page .portfolio-section {
 
 .hero-name {
   font-family: 'Inter', sans-serif;
-  font-size: clamp(1.15rem, 2.4vw + 0.55rem, 2.6rem);
+  font-size: clamp(1.15rem, 2.2vw + 0.55rem, 2.5rem);
   font-weight: 400;
   letter-spacing: -0.01em;
   color: var(--text-primary);
@@ -458,7 +458,7 @@ body.index-page .portfolio-section {
   color: var(--text-secondary);
   line-height: 1.7;
   white-space: pre-wrap;
-  max-width: 520px;
+  max-width: min(42rem, 100%);
 }
 
 .bio-empty {
@@ -468,6 +468,7 @@ body.index-page .portfolio-section {
 
 .hero-bio-wrap {
   margin-bottom: 1.5rem;
+  max-width: min(42rem, 100%);
 }
 
 /* Social Links */
@@ -3391,6 +3392,12 @@ body.register-crop-modal-open {
   text-decoration: underline;
 }
 
+@media (min-width: 769px) {
+  .hero-info {
+    min-width: min(100%, 26rem);
+  }
+}
+
 /* ========================================
    RESPONSIVE
    ======================================== */
@@ -3412,10 +3419,12 @@ body.register-crop-modal-open {
     display: flex;
     flex-direction: column;
     align-items: center;
-    max-width: 100%;
+    max-width: min(36rem, 100%);
     width: 100%;
-    padding-inline: 0.5rem;
+    flex: none;
+    padding-inline: 0.75rem;
     box-sizing: border-box;
+    overflow-x: visible;
   }
 
   .hero-name {
