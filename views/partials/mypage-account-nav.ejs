@@ -4,6 +4,6 @@
   <a href="/mypage/posts" class="mypage-account-nav-item<% if (tab === 'posts') { %> is-active<% } %>">작성한 글 보기</a>
   <% if (typeof isAdmin !== 'undefined' && isAdmin) { %>
     <a href="/mypage/main-settings" class="mypage-account-nav-item<% if (tab === 'mainSettings') { %> is-active<% } %>">메인 페이지 설정</a>
-    <a href="/mypage/board" class="mypage-account-nav-item<% if (tab === 'board') { %> is-active<% } %>">게시판 생성하기</a>
+    <a href="/mypage/boards" class="mypage-account-nav-item<% if (tab === 'boardsManage') { %> is-active<% } %>">게시판 생성&amp;삭제</a>
   <% } %>
 </nav>

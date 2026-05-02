@@ -44,6 +44,18 @@ router.get('/', (req, res) => {
 
   const paginationItems = buildPaginationItems(page, totalPages);
 
+  const settings = getSiteSettings();
+  const DEFAULT_ALL_POSTS_INTRO_KO = '작성된 모든 게시물을 확인할 수 있는 게시판 입니다.';
+  const DEFAULT_ALL_POSTS_INTRO_JA = '作成された全ての投稿を確認できる掲示板です。';
+  const allPostsIntroKo =
+    settings.all_posts_intro_ko != null && String(settings.all_posts_intro_ko).trim() !== ''
+      ? String(settings.all_posts_intro_ko).trim()
+      : DEFAULT_ALL_POSTS_INTRO_KO;
+  const allPostsIntroJa =
+    settings.all_posts_intro_ja != null && String(settings.all_posts_intro_ja).trim() !== ''
+      ? String(settings.all_posts_intro_ja).trim()
+      : DEFAULT_ALL_POSTS_INTRO_JA;
+
   res.render('posts', {
     posts,
     page,
@@ -51,7 +63,9 @@ router.get('/', (req, res) => {
     total,
     pageSize: limit,
     paginationItems,
-    settings: getSiteSettings()
+    settings,
+    allPostsIntroKo,
+    allPostsIntroJa
   });
 });
 

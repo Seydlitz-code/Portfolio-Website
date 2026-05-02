@@ -7,6 +7,7 @@ const { getDb } = require('../config/database');
 const { requireLogin, requireAdmin } = require('../middleware/auth');
 const { getAccountShell } = require('../lib/mypageShell');
 const { getSiteHomeData, getSiteSettings } = require('../lib/siteData');
+const { buildPaginationItems } = require('../lib/listingHelpers');
 
 const avatarStorage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -204,15 +205,53 @@ router.get('/main-settings', requireLogin, requireAdmin, (req, res) => {
   }));
 });
 
-router.get('/board', requireLogin, requireAdmin, (req, res) => {
+const BOARDS_ADMIN_PAGE_SIZE = 20;
+
+router.get('/boards', requireLogin, requireAdmin, (req, res) => {
   const shell = getAccountShell(req);
   if (!shell) return res.redirect('/auth/logout');
-  res.render('mypage-account', accountViewLocals({
-    ...shell,
-    ...getSiteHomeData(),
-    activeTab: 'board',
-    saved: req.query.saved === '1'
-  }));
+  const db = getDb();
+  const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+  const total = db.prepare('SELECT COUNT(*) as c FROM projects').get().c || 0;
+  const totalPages = total === 0 ? 1 : Math.ceil(total / BOARDS_ADMIN_PAGE_SIZE);
+  if (page > totalPages) {
+    return res.redirect('/mypage/boards?page=' + totalPages);
+  }
+  const offset = (page - 1) * BOARDS_ADMIN_PAGE_SIZE;
+  const boardsList = db
+    .prepare(
+      `
+    SELECT pr.*,
+      (SELECT COUNT(*) FROM posts p WHERE p.project_id = pr.id) AS post_count
+    FROM projects pr
+    ORDER BY pr.order_num ASC, pr.id ASC
+    LIMIT ? OFFSET ?
+  `
+    )
+    .all(BOARDS_ADMIN_PAGE_SIZE, offset);
+  const boardsPaginationItems = buildPaginationItems(page, totalPages);
+  res.render(
+    'mypage-account',
+    accountViewLocals({
+      ...shell,
+      ...getSiteHomeData(),
+      activeTab: 'boardsManage',
+      boardsList,
+      boardsPage: page,
+      boardsTotalPages: totalPages,
+      boardsTotal: total,
+      boardsPageSize: BOARDS_ADMIN_PAGE_SIZE,
+      boardsPaginationItems,
+      boardsSaved: req.query.saved === '1',
+      boardsDeleted: req.query.deleted === '1',
+      boardsDeleteBlocked: req.query.deleteBlocked === '1',
+      boardsCreateErr: req.query.createErr === '1'
+    })
+  );
+});
+
+router.get('/board', requireLogin, requireAdmin, (req, res) => {
+  res.redirect(302, '/mypage/boards');
 });
 
 router.post(

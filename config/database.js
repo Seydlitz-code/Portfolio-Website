@@ -104,7 +104,9 @@ function initializeDatabase() {
   const defaults = {
     site_name: 'Donghawan Lee / @lilip',
     bio: '',
-    profile_image: ''
+    profile_image: '',
+    all_posts_intro_ko: '작성된 모든 게시물을 확인할 수 있는 게시판 입니다.',
+    all_posts_intro_ja: '作成された全ての投稿を確認できる掲示板です。'
   };
 
   const insertSetting = database.prepare(

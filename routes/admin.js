@@ -101,22 +101,31 @@ router.post('/profile-image', requireAdmin, (req, res) => {
 
 // POST /admin/projects
 router.post('/projects', requireAdmin, (req, res) => {
-  const { name, name_ja, description } = req.body;
-  if (!name || !name.trim()) return res.redirect('/mypage/board');
+  const name = (req.body.name != null ? String(req.body.name) : '').trim();
+  const nameJa = (req.body.name_ja != null ? String(req.body.name_ja) : '').trim();
+  const description = (req.body.description != null ? String(req.body.description) : '').trim();
+  if (!name || !nameJa || !description) {
+    return res.redirect('/mypage/boards?createErr=1');
+  }
   const db = getDb();
   const maxOrder = db.prepare('SELECT MAX(order_num) as m FROM projects').get().m || 0;
   db.prepare(
     'INSERT INTO projects (name, name_ja, description, order_num) VALUES (?, ?, ?, ?)'
-  ).run(name.trim(), name_ja ? name_ja.trim() : null, description ? description.trim() : null, maxOrder + 1);
-  res.redirect('/mypage/board?saved=1');
+  ).run(name, nameJa, description, maxOrder + 1);
+  res.redirect('/mypage/boards?saved=1');
 });
 
 // DELETE /admin/projects/:id
 router.delete('/projects/:id', requireAdmin, (req, res) => {
   const db = getDb();
-  db.prepare('UPDATE posts SET project_id = NULL WHERE project_id = ?').run(req.params.id);
-  db.prepare('DELETE FROM projects WHERE id = ?').run(req.params.id);
-  res.redirect('/mypage/board?saved=1');
+  const id = req.params.id;
+  const row = db.prepare('SELECT COUNT(*) as c FROM posts WHERE project_id = ?').get(id);
+  const cnt = row && row.c != null ? Number(row.c) : 0;
+  if (cnt > 0) {
+    return res.redirect('/mypage/boards?deleteBlocked=1');
+  }
+  db.prepare('DELETE FROM projects WHERE id = ?').run(id);
+  res.redirect('/mypage/boards?deleted=1');
 });
 
 module.exports = router;
