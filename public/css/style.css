@@ -687,6 +687,35 @@ button {
   text-align: center;
 }
 
+/* 메인 스크롤 영역: 게시판 KO/JP 제목 동일 스타일·JP도 링크, 제목 아래 검은 구분선 */
+.portfolio-section .portfolio-block .block-header--centered.block-header {
+  margin-bottom: 0;
+  padding-bottom: 0.65rem;
+}
+
+.portfolio-section .portfolio-block .block-header--centered .block-title {
+  font-weight: 700;
+}
+
+.portfolio-section .portfolio-block .block-title-ja.block-title-link {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  text-decoration: none;
+  line-height: 1.35;
+}
+
+.portfolio-section .portfolio-block .block-title-ja.block-title-link:hover {
+  text-decoration: underline;
+}
+
+.portfolio-section .portfolio-block .portfolio-block-posts {
+  border-top: 2px solid #000;
+  padding-top: 1rem;
+}
+
 .view-all-btn--below {
   margin-top: 0.15rem;
 }

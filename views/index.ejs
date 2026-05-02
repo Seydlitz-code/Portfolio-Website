@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><%= settings.site_name || 'Donghawan Lee / @lilip' %></title>
-  <link rel="stylesheet" href="/css/style.css?v=20260439">
+  <link rel="stylesheet" href="/css/style.css?v=20260440">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Inter:wght@300;400;500;700&display=swap" rel="stylesheet">
@@ -77,13 +77,14 @@
             <h2 class="block-title">
               <a href="/posts" class="block-title-link">전체 게시물 보기</a>
             </h2>
-            <span class="block-title-ja">全ての投稿を表示</span>
+            <a href="/posts" class="block-title-link block-title-ja">全ての投稿を表示</a>
           </div>
         </div>
+        <div class="portfolio-block-posts">
         <div class="posts-grid">
           <% if (recentPosts.length === 0) { %>
             <div class="empty-posts">
-              <p>최근 게시물 순서대로 5개의 게시물이 표시됩니다.</p>
+              <p>게시물이 존재하지 않습니다.</p>
             </div>
           <% } else { %>
             <% recentPosts.forEach(function(post) { %>
@@ -99,6 +100,7 @@
             <% }); %>
           <% } %>
         </div>
+        </div>
       </section>
 
       <% projects.forEach(function(project) { %>
@@ -109,17 +111,18 @@
                 <a href="/boards/<%= project.id %>" class="block-title-link"><%= project.name %></a>
               </h2>
               <% if (project.name_ja) { %>
-                <span class="block-title-ja"><%= project.name_ja %></span>
+                <a href="/boards/<%= project.id %>" class="block-title-link block-title-ja"><%= project.name_ja %></a>
               <% } %>
               <% if (project.description) { %>
                 <p class="block-desc"><%= project.description %></p>
               <% } %>
             </div>
           </div>
+          <div class="portfolio-block-posts">
           <div class="posts-grid">
             <% if (project.posts.length === 0) { %>
               <div class="empty-posts">
-                <p>최근 게시물 순서대로 5개의 게시물이 표시됩니다.</p>
+                <p>게시물이 존재하지 않습니다.</p>
               </div>
             <% } else { %>
               <% project.posts.forEach(function(post) { %>
@@ -130,12 +133,13 @@
               <% }); %>
             <% } %>
           </div>
+          </div>
         </section>
       <% }); %>
 
     </div>
   </main>
 
-  <script src="/js/main.js?v=20260426"></script>
+  <script src="/js/main.js?v=20260440"></script>
 </body>
 </html>
