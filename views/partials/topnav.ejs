@@ -1,7 +1,12 @@
 <nav class="topnav <%= typeof topnavCenterHome !== 'undefined' && topnavCenterHome ? 'topnav--center-home' : '' %>" id="topnav">
-  <div class="topnav-inner topnav-bar <%= typeof topnavCenterHome !== 'undefined' && topnavCenterHome ? 'topnav-inner--center-home' : '' %>">
+  <div class="topnav-inner topnav-bar <%= typeof topnavCenterHome !== 'undefined' && topnavCenterHome ? 'topnav-inner--center-home' : '' %> <%= typeof topnavIndexHeroLink !== 'undefined' && topnavIndexHeroLink ? 'topnav-inner--index-home' : '' %>">
     <% if (typeof topnavCenterHome !== 'undefined' && topnavCenterHome) { %>
       <a href="/" class="topnav-home-link"><%= typeof settings !== 'undefined' && settings && settings.site_name ? settings.site_name : 'Donghawan Lee / @lilip' %></a>
+    <% } %>
+    <% if (typeof topnavIndexHeroLink !== 'undefined' && topnavIndexHeroLink) { %>
+      <button type="button" class="topnav-index-home-btn" id="topnavIndexHomeBtn" onclick="scrollToHero(event)" aria-label="메인 화면으로 스크롤">
+        <%= typeof settings !== 'undefined' && settings && settings.site_name ? settings.site_name : 'Donghawan Lee / @lilip' %>
+      </button>
     <% } %>
     <div class="topnav-right topnav-right--cluster">
       <%- include('nav-cluster') %>

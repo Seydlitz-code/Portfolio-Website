@@ -143,6 +143,73 @@ button {
   }
 }
 
+/* 메인(index): 상단바 가운데 사이트명 — 포트폴리오 구간에서 표시, 클릭 시 히어로로 스크롤 */
+.topnav-inner--index-home {
+  position: relative;
+  justify-content: flex-end;
+  align-items: center;
+  min-height: 2rem;
+}
+
+.topnav-index-home-btn {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  margin: 0;
+  padding: 0.2rem 0.5rem;
+  max-width: min(70vw, 22rem);
+  border: none;
+  background: transparent;
+  font-family: 'Inter', 'Noto Sans KR', sans-serif;
+  font-size: 0.92rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+  text-align: center;
+  cursor: pointer;
+  line-height: 1.25;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+
+.topnav.topnav--dock-phase .topnav-index-home-btn {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.topnav.topnav--dock-phase .topnav-index-home-btn:hover {
+  opacity: 0.82;
+}
+
+.topnav-inner--index-home .topnav-right {
+  position: relative;
+  z-index: 1;
+}
+
+@media (max-width: 640px) {
+  .topnav-index-home-btn {
+    font-size: 0.78rem;
+    max-width: 46vw;
+  }
+}
+
+html.index-scroll-snap {
+  scroll-snap-type: y proximity;
+}
+
+body.index-page .hero-section {
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+}
+
+body.index-page .portfolio-section {
+  scroll-snap-align: start;
+}
+
 /* 닉네임(텍스트) + 버튼 그룹 */
 .nav-cluster {
   display: flex;
@@ -354,6 +421,10 @@ button {
 .hero-info {
   flex: 1;
   min-width: 0;
+  overflow-x: auto;
+  overflow-y: visible;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
 }
 
 .hero-name-wrap {
@@ -370,11 +441,12 @@ button {
 
 .hero-name {
   font-family: 'Inter', sans-serif;
-  font-size: clamp(1.6rem, 3.5vw, 2.6rem);
+  font-size: clamp(1.15rem, 2.4vw + 0.55rem, 2.6rem);
   font-weight: 400;
   letter-spacing: -0.01em;
   color: var(--text-primary);
   line-height: 1.2;
+  white-space: nowrap;
 }
 
 .hero-bio {
@@ -2653,14 +2725,15 @@ body.register-crop-modal-open {
 .board-page-heading--split {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem 2.5rem;
+  align-items: center;
+  justify-content: flex-start;
+  column-gap: 1.25rem;
+  row-gap: 0.65rem;
   text-align: left;
 }
 
 .board-page-heading--split .board-page-titles {
-  flex: 0 1 auto;
+  flex: 0 0 auto;
   min-width: 0;
 }
 
@@ -2670,11 +2743,13 @@ body.register-crop-modal-open {
 }
 
 .board-page-intro {
-  flex: 1 1 14rem;
-  max-width: min(100%, 38rem);
+  flex: 1 1 12rem;
+  min-width: min(100%, 11rem);
+  max-width: min(100%, 36rem);
   margin: 0;
-  font-size: 0.88rem;
+  font-size: 0.92rem;
   line-height: 1.55;
+  font-weight: 500;
   color: var(--text-secondary);
   text-align: left;
   white-space: pre-wrap;
@@ -2685,6 +2760,10 @@ body.register-crop-modal-open {
   .board-page-heading--split {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .board-page-intro {
+    max-width: none;
   }
 }
 
@@ -2981,14 +3060,15 @@ body.register-crop-modal-open {
 .posts-all-heading--split {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem 2.5rem;
+  align-items: center;
+  justify-content: flex-start;
+  column-gap: 1.25rem;
+  row-gap: 0.65rem;
   text-align: left;
 }
 
 .posts-all-heading--split .posts-all-titles {
-  flex: 0 1 auto;
+  flex: 0 0 auto;
   min-width: 0;
 }
 
@@ -2998,11 +3078,13 @@ body.register-crop-modal-open {
 }
 
 .posts-all-intro {
-  flex: 1 1 14rem;
-  max-width: min(100%, 38rem);
+  flex: 1 1 12rem;
+  min-width: min(100%, 11rem);
+  max-width: min(100%, 36rem);
   margin: 0;
-  font-size: 0.88rem;
+  font-size: 0.92rem;
   line-height: 1.55;
+  font-weight: 500;
   color: var(--text-secondary);
   text-align: left;
 }
@@ -3016,12 +3098,17 @@ body.register-crop-modal-open {
 }
 
 .posts-all-intro-line--ja {
-  font-size: 0.86rem;
+  font-size: 0.9rem;
 }
 
 @media (max-width: 720px) {
   .posts-all-heading--split {
     flex-direction: column;
+    align-items: stretch;
+  }
+
+  .posts-all-intro {
+    max-width: none;
   }
 }
 
@@ -3321,6 +3408,14 @@ body.register-crop-modal-open {
     display: flex;
     flex-direction: column;
     align-items: center;
+    max-width: 100%;
+    width: 100%;
+    padding-inline: 0.5rem;
+    box-sizing: border-box;
+  }
+
+  .hero-name {
+    font-size: clamp(0.88rem, 3.5vw + 0.35rem, 1.65rem);
   }
 
   .name-display,

@@ -1,29 +1,17 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="ko" class="index-scroll-snap">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><%= settings.site_name || 'Donghawan Lee / @lilip' %></title>
-  <link rel="stylesheet" href="/css/style.css?v=20260441">
+  <link rel="stylesheet" href="/css/style.css?v=20260447">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Inter:wght@300;400;500;700&display=swap" rel="stylesheet">
 </head>
-<body>
+<body class="index-page">
 
-  <%- include('partials/topnav') %>
-
-  <!-- 두 번째 페이지용 상단 바: 메인(히어로)을 넘긴 뒤에만 표시 (fixed) -->
-  <div id="portfolioDockHeader"
-       class="portfolio-dock-header"
-       role="button"
-       tabindex="0"
-       onclick="scrollToHero()"
-       onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();scrollToHero();}"
-       title="메인으로 스크롤">
-    <span class="sticky-name"><%= settings.site_name || 'Donghawan Lee / @lilip' %></span>
-    <span class="sticky-hint" aria-hidden="true"><i class="fas fa-arrow-up"></i> 메인으로</span>
-  </div>
+  <%- include('partials/topnav', { topnavIndexHeroLink: true }) %>
 
   <!-- ========== 히어로 섹션 (메인 화면, 읽기 전용) ========== -->
   <section id="hero" class="hero-section">
@@ -140,6 +128,6 @@
     </div>
   </main>
 
-  <script src="/js/main.js?v=20260440"></script>
+  <script src="/js/main.js?v=20260442"></script>
 </body>
 </html>

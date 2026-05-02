@@ -1,12 +1,13 @@
 /* ========================================
-   SCROLL — 히어로 페이드 + 포트폴리오 상단 바(메인 이후에만 표시)
+   SCROLL — 히어로 페이드 + 상단바(포트폴리오 구간 도킹)
    ======================================== */
 (function () {
   const hero = document.getElementById('hero');
   const portfolio = document.getElementById('portfolio');
-  const dock = document.getElementById('portfolioDockHeader');
   const topnav = document.getElementById('topnav');
   if (!hero || !portfolio) return;
+
+  const indexPage = document.body.classList.contains('index-page');
 
   function onScroll() {
     const scrollY = window.scrollY;
@@ -15,11 +16,8 @@
     hero.style.opacity = opacity;
     hero.style.pointerEvents = opacity < 0.1 ? 'none' : 'all';
 
-    // 메인(히어로) 영역을 넘어 포트폴리오로 들어온 뒤에만 상단 바 표시
-    const pastMain = scrollY >= vh * 0.92;
-    if (dock) {
-      dock.classList.toggle('portfolio-dock-header--visible', pastMain);
-    }
+    // 포트폴리오가 눈에 들어오기 시작하면 상단바(배경 + 가운데 사이트명) 표시
+    const pastMain = scrollY >= vh * (indexPage ? 0.48 : 0.92);
     if (topnav) {
       topnav.classList.toggle('topnav--dock-phase', pastMain);
     }
@@ -27,6 +25,28 @@
 
   window.addEventListener('scroll', onScroll, { passive: true });
   onScroll();
+
+  // 메인(히어로)에서 아래로 스크롤할 때 중간에 멈추지 않고 포트폴리오 시작(100vh)에 맞춤
+  if (indexPage) {
+    let heroSnapLockUntil = 0;
+    window.addEventListener(
+      'wheel',
+      function (e) {
+        const y = window.scrollY;
+        const vh = window.innerHeight;
+        const targetTop = hero.offsetHeight;
+        if (y >= vh - 20) return;
+        if (e.deltaY <= 0) return;
+        if (Math.abs(y - targetTop) < 12) return;
+        const now = performance.now();
+        if (now < heroSnapLockUntil) return;
+        heroSnapLockUntil = now + 780;
+        e.preventDefault();
+        window.scrollTo({ top: targetTop, behavior: 'smooth' });
+      },
+      { passive: false }
+    );
+  }
 })();
 
 /* ========================================
