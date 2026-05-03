@@ -346,26 +346,25 @@ body.index-page .portfolio-section {
 }
 
 .hero-content {
-  display: flex;
-  justify-content: center;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto minmax(0, 1fr);
   align-items: center;
-  gap: clamp(1.5rem, 4vw, 3rem);
+  column-gap: clamp(2.25rem, 6vw, 4.5rem);
   padding: 5rem clamp(1.25rem, 5vw, 3rem) 3rem;
   width: 100%;
-  max-width: min(1320px, 96vw);
-  margin-inline: auto;
+  max-width: 100%;
   box-sizing: border-box;
 }
 
-/* Profile */
 .profile-area {
   flex-shrink: 0;
+  grid-column: 2;
 }
 
 .profile-circle-wrap {
   position: relative;
-  width: clamp(160px, 20vw, 280px);
-  height: clamp(160px, 20vw, 280px);
+  width: clamp(240px, 30vw, 420px);
+  height: clamp(240px, 30vw, 420px);
   border-radius: 50%;
   background: white;
   border: 3px solid rgba(0,0,0,0.12);
@@ -392,12 +391,12 @@ body.index-page .portfolio-section {
 }
 
 .profile-placeholder i {
-  font-size: 3rem;
+  font-size: 4.5rem;
   color: #bbb;
 }
 
 .placeholder-hint {
-  font-size: 0.75rem;
+  font-size: 1.125rem;
   color: var(--text-muted);
   line-height: 1.4;
 }
@@ -424,8 +423,9 @@ body.index-page .portfolio-section {
   background: rgba(0,0,0,0.85);
 }
 
-/* Hero Info — 프로필과 함께 한 덩어리로 중앙에 오도록 flex-grow 없음 */
+/* Hero Info — grid 3열: 텍스트 블록 */
 .hero-info {
+  grid-column: 3;
   flex: 0 1 auto;
   display: flex;
   flex-direction: column;
@@ -434,7 +434,7 @@ body.index-page .portfolio-section {
   min-width: 0;
   overflow-x: visible;
   overflow-y: visible;
-  max-width: min(52rem, 100%);
+  max-width: min(78rem, 100%);
 }
 
 .hero-name-wrap {
@@ -451,7 +451,7 @@ body.index-page .portfolio-section {
 
 .hero-name {
   font-family: 'Inter', sans-serif;
-  font-size: clamp(1.45rem, 2.85vw + 0.6rem, 3rem);
+  font-size: clamp(2.175rem, 4.275vw + 0.9rem, 4.5rem);
   font-weight: 400;
   letter-spacing: -0.01em;
   color: var(--text-primary);
@@ -460,11 +460,11 @@ body.index-page .portfolio-section {
 }
 
 .hero-bio {
-  font-size: clamp(0.95rem, 1.55vw, 1.12rem);
+  font-size: clamp(1.425rem, 2.325vw, 1.68rem);
   color: var(--text-secondary);
   line-height: 1.7;
   white-space: pre-wrap;
-  max-width: min(42rem, 100%);
+  max-width: min(63rem, 100%);
   text-align: center;
 }
 
@@ -475,7 +475,7 @@ body.index-page .portfolio-section {
 
 .hero-bio-wrap {
   margin-bottom: 1.5rem;
-  max-width: min(42rem, 100%);
+  max-width: min(63rem, 100%);
 }
 
 /* Social Links */
@@ -483,18 +483,18 @@ body.index-page .portfolio-section {
   display: flex;
   justify-content: center;
   flex-wrap: wrap;
-  gap: clamp(0.85rem, 2vw, 1.15rem);
+  gap: clamp(1.275rem, 3vw, 1.725rem);
 }
 
 .social-btn {
-  width: clamp(50px, 7.5vw, 62px);
-  height: clamp(50px, 7.5vw, 62px);
+  width: clamp(75px, 11.25vw, 93px);
+  height: clamp(75px, 11.25vw, 93px);
   border: 1.5px solid rgba(0,0,0,0.2);
   border-radius: var(--radius);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: clamp(1.2rem, 2.6vw, 1.5rem);
+  font-size: clamp(1.8rem, 3.9vw, 2.25rem);
   color: var(--text-primary);
   background: rgba(255,255,255,0.6);
   backdrop-filter: blur(4px);
@@ -3403,7 +3403,7 @@ body.register-crop-modal-open {
 
 @media (min-width: 769px) {
   .hero-info {
-    min-width: min(100%, 26rem);
+    min-width: min(100%, 39rem);
   }
 }
 
@@ -3412,6 +3412,7 @@ body.register-crop-modal-open {
    ======================================== */
 @media (max-width: 768px) {
   .hero-content {
+    display: flex;
     flex-direction: column;
     align-items: center;
     text-align: center;
@@ -3419,16 +3420,16 @@ body.register-crop-modal-open {
     gap: 2rem;
   }
 
-  .profile-circle-wrap {
-    width: 200px;
-    height: 200px;
+  .profile-area {
+    grid-column: auto;
   }
 
   .hero-info {
+    grid-column: auto;
     display: flex;
     flex-direction: column;
     align-items: center;
-    max-width: min(36rem, 100%);
+    max-width: min(54rem, 100%);
     width: 100%;
     flex: none;
     padding-inline: 0.75rem;
@@ -3437,8 +3438,13 @@ body.register-crop-modal-open {
     text-align: center;
   }
 
+  .profile-circle-wrap {
+    width: 300px;
+    height: 300px;
+  }
+
   .hero-name {
-    font-size: clamp(1rem, 4.2vw + 0.45rem, 1.85rem);
+    font-size: clamp(1.5rem, 6.3vw + 0.675rem, 2.775rem);
   }
 
   .name-display,
