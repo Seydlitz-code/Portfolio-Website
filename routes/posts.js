@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../lib/db');
-const { requireAdmin, requireLogin } = require('../middleware/auth');
+const { requireAdmin, requireLogin, isUserAdmin } = require('../middleware/auth');
 const { getSiteSettings } = require('../lib/siteData');
 const { formatListTime, buildPaginationItems } = require('../lib/listingHelpers');
 const { asyncRoute } = require('../lib/asyncRoute');
@@ -66,7 +66,8 @@ router.get(
       paginationItems,
       settings,
       allPostsIntroKo,
-      allPostsIntroJa
+      allPostsIntroJa,
+      isAdmin: isUserAdmin(req.session && req.session.user)
     });
   })
 );
