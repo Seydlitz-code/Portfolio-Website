@@ -10,21 +10,8 @@ const { getSiteHomeData, getSiteSettings } = require('../lib/siteData');
 const { buildPaginationItems } = require('../lib/listingHelpers');
 const { asyncRoute } = require('../lib/asyncRoute');
 
-const avatarStorage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const dir = path.join(__dirname, '../public/uploads/avatars');
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    cb(null, dir);
-  },
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
-    const safe = ['.png', '.jpg', '.jpeg', '.gif', '.webp'].includes(ext) ? ext : '.png';
-    cb(null, `user-${Date.now()}-${Math.random().toString(36).slice(2, 9)}${safe}`);
-  }
-});
-
 const uploadAvatar = multer({
-  storage: avatarStorage,
+  storage: multer.memoryStorage(),
   fileFilter: (req, file, cb) => {
     const allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
     if (allowed.includes(file.mimetype)) cb(null, true);
@@ -317,25 +304,11 @@ router.post(
     const uid = req.session.user.id;
     const row = await db.get('SELECT id, username, nickname, avatar FROM users WHERE id = ?', [uid]);
     if (!row) {
-      if (req.file && req.file.path) {
-        try {
-          fs.unlinkSync(req.file.path);
-        } catch (e) {
-          /* ignore */
-        }
-      }
       return res.redirect('/auth/logout');
     }
 
     const newNick = (req.body.nickname != null ? String(req.body.nickname) : '').trim();
     if (!newNick || newNick.length > 20) {
-      if (req.file && req.file.path) {
-        try {
-          fs.unlinkSync(req.file.path);
-        } catch (e) {
-          /* ignore */
-        }
-      }
       const data = await profilePayload(req, {
         profileError: '닉네임을 1자 이상 20자 이하로 입력해주세요.',
         nicknameDupWarning: false,
@@ -346,18 +319,11 @@ router.post(
 
     const prevNick = String(row.nickname || '').trim();
     const nickChanged = newNick !== prevNick;
-    const hadFile = Boolean(req.file);
+    const hadFile = Boolean(req.file && req.file.buffer && req.file.buffer.length);
 
     if (nickChanged) {
       const verified = req.session.mypageNicknameVerified;
       if (verified !== newNick) {
-        if (req.file && req.file.path) {
-          try {
-            fs.unlinkSync(req.file.path);
-          } catch (e) {
-            /* ignore */
-          }
-        }
         const data = await profilePayload(req, {
           profileError: null,
           nicknameDupWarning: true,
@@ -367,13 +333,6 @@ router.post(
       }
       const taken = await db.get('SELECT id FROM users WHERE nickname = ? AND id != ?', [newNick, uid]);
       if (taken) {
-        if (req.file && req.file.path) {
-          try {
-            fs.unlinkSync(req.file.path);
-          } catch (e) {
-            /* ignore */
-          }
-        }
         const data = await profilePayload(req, {
           profileError: '이미 사용 중인 닉네임입니다. 다시 중복 확인해주세요.',
           nicknameDupWarning: false,
@@ -385,14 +344,19 @@ router.post(
 
     let nextAvatar = row.avatar != null && String(row.avatar).trim() !== '' ? String(row.avatar).trim() : null;
     if (hadFile) {
-      const newPath = `/uploads/avatars/${req.file.filename}`;
+      const buf = req.file.buffer;
+      const mime = req.file.mimetype;
       if (nextAvatar && nextAvatar.startsWith('/uploads/avatars/')) {
         tryUnlinkAvatar(nextAvatar);
       }
-      nextAvatar = newPath;
+      nextAvatar = `/media/user/${uid}/avatar`;
+      await db.run(
+        'UPDATE users SET nickname = ?, avatar = ?, avatar_mime = ?, avatar_blob = ? WHERE id = ?',
+        [newNick, nextAvatar, mime, buf, uid]
+      );
+    } else {
+      await db.run('UPDATE users SET nickname = ?, avatar = ? WHERE id = ?', [newNick, nextAvatar, uid]);
     }
-
-    await db.run('UPDATE users SET nickname = ?, avatar = ? WHERE id = ?', [newNick, nextAvatar, uid]);
 
     if (req.session) {
       delete req.session.mypageNicknameVerified;

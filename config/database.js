@@ -5,8 +5,10 @@ const path = require('path');
 const fs = require('fs');
 
 /**
- * 로컬: SQLite 파일 (<프로젝트>/data)
- * Railway 등: 환경변수 DATABASE_URL 이 있으면 PostgreSQL만 사용(영구 저장).
+ * 로컬: SQLite 파일 (<프로젝트>/data, DATA_DIR로 경로 지정 가능)
+ * Railway 등: 환경변수 DATABASE_URL 이 있으면 PostgreSQL만 사용(게시물·계정·세션 등 영구 저장).
+ * 업로드 프로필 이미지는 DB(persisted_binaries / users.avatar_blob)에 저장해 배포 시 컨테이너 디스크가
+ * 초기화돼도 이미지가 사라지지 않습니다.
  *
  * 관리자 계정: 소스에 비밀번호를 두지 않습니다. DB에 is_admin=1 사용자가 없을 때만
  * 서버 환경변수 ADMIN_BOOTSTRAP_USERNAME, ADMIN_BOOTSTRAP_PASSWORD(평문·서버에서 bcrypt 해시)로
@@ -87,6 +89,8 @@ function initializeSqliteSync() {
       nickname TEXT NOT NULL,
       password TEXT NOT NULL,
       avatar TEXT,
+      avatar_mime TEXT,
+      avatar_blob BLOB,
       is_admin INTEGER DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
@@ -124,6 +128,12 @@ function initializeSqliteSync() {
       key TEXT PRIMARY KEY,
       value TEXT
     );
+
+    CREATE TABLE IF NOT EXISTS persisted_binaries (
+      kind TEXT PRIMARY KEY,
+      mime TEXT NOT NULL,
+      data BLOB NOT NULL
+    );
   `);
 
   const postCols = database.prepare('PRAGMA table_info(posts)').all();
@@ -140,9 +150,17 @@ function initializeSqliteSync() {
     }
   }
 
-  const userCols = database.prepare('PRAGMA table_info(users)').all();
+  let userCols = database.prepare('PRAGMA table_info(users)').all();
   if (!userCols.some((c) => c.name === 'avatar')) {
     database.exec('ALTER TABLE users ADD COLUMN avatar TEXT');
+    userCols = database.prepare('PRAGMA table_info(users)').all();
+  }
+  if (!userCols.some((c) => c.name === 'avatar_mime')) {
+    database.exec('ALTER TABLE users ADD COLUMN avatar_mime TEXT');
+    userCols = database.prepare('PRAGMA table_info(users)').all();
+  }
+  if (!userCols.some((c) => c.name === 'avatar_blob')) {
+    database.exec('ALTER TABLE users ADD COLUMN avatar_blob');
   }
 
   console.log('[database] SQLite 파일:', path.join(getDataDir(), DB_FILE));
@@ -167,6 +185,8 @@ async function initializePostgres() {
       nickname TEXT NOT NULL,
       password TEXT NOT NULL,
       avatar TEXT,
+      avatar_mime TEXT,
+      avatar_blob BYTEA,
       is_admin SMALLINT DEFAULT 0,
       created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
     );
@@ -213,6 +233,14 @@ async function initializePostgres() {
     );
   `);
 
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS persisted_binaries (
+      kind TEXT PRIMARY KEY,
+      mime TEXT NOT NULL,
+      data BYTEA NOT NULL
+    );
+  `);
+
   if (!(await pgColumnExists(pool, 'posts', 'view_count'))) {
     await pool.query('ALTER TABLE posts ADD COLUMN view_count INTEGER DEFAULT 0');
   }
@@ -229,6 +257,12 @@ async function initializePostgres() {
   }
   if (!(await pgColumnExists(pool, 'users', 'avatar'))) {
     await pool.query('ALTER TABLE users ADD COLUMN avatar TEXT');
+  }
+  if (!(await pgColumnExists(pool, 'users', 'avatar_mime'))) {
+    await pool.query('ALTER TABLE users ADD COLUMN avatar_mime TEXT');
+  }
+  if (!(await pgColumnExists(pool, 'users', 'avatar_blob'))) {
+    await pool.query('ALTER TABLE users ADD COLUMN avatar_blob BYTEA');
   }
 
   await seedDefaultsPg(pool);

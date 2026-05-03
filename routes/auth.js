@@ -1,5 +1,4 @@
 const express = require('express');
-const path = require('path');
 const fs = require('fs');
 const bcrypt = require('bcrypt');
 const multer = require('multer');
@@ -7,21 +6,8 @@ const router = express.Router();
 const db = require('../lib/db');
 const { asyncRoute } = require('../lib/asyncRoute');
 
-const avatarStorage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const dir = path.join(__dirname, '../public/uploads/avatars');
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    cb(null, dir);
-  },
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
-    const safe = ['.png', '.jpg', '.jpeg', '.gif', '.webp'].includes(ext) ? ext : '.png';
-    cb(null, `user-${Date.now()}-${Math.random().toString(36).slice(2, 9)}${safe}`);
-  }
-});
-
 const uploadAvatar = multer({
-  storage: avatarStorage,
+  storage: multer.memoryStorage(),
   fileFilter: (req, file, cb) => {
     const allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
     if (allowed.includes(file.mimetype)) cb(null, true);
@@ -242,19 +228,31 @@ router.post(
       return fail('이미 사용 중인 닉네임입니다.');
     }
 
-    let avatarPath = null;
-    if (req.file) {
-      avatarPath = `/uploads/avatars/${req.file.filename}`;
+    let avatarMime = null;
+    let avatarBuf = null;
+    if (req.file && req.file.buffer && req.file.buffer.length) {
+      avatarMime = req.file.mimetype;
+      avatarBuf = req.file.buffer;
     }
 
     try {
       const hashed = bcrypt.hashSync(password, 12);
-      await db.run('INSERT INTO users (username, nickname, password, avatar) VALUES (?, ?, ?, ?)', [
+      const ins = await db.run('INSERT INTO users (username, nickname, password, avatar) VALUES (?, ?, ?, ?)', [
         username.trim(),
         nickname.trim(),
         hashed,
-        avatarPath
+        null
       ]);
+      const newId = ins.lastInsertRowid;
+      if (avatarBuf && newId != null) {
+        const mediaPath = `/media/user/${newId}/avatar`;
+        await db.run('UPDATE users SET avatar = ?, avatar_mime = ?, avatar_blob = ? WHERE id = ?', [
+          mediaPath,
+          avatarMime,
+          avatarBuf,
+          newId
+        ]);
+      }
       res.redirect('/auth/login?registered=true');
     } catch (err) {
       console.error(err);

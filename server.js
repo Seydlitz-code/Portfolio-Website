@@ -16,6 +16,7 @@ const adminRoutes = require('./routes/admin');
 const mypageRoutes = require('./routes/mypage');
 const { isUserAdmin } = require('./middleware/auth');
 const { getSiteHomeData } = require('./lib/siteData');
+const mediaRoutes = require('./routes/media');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -28,6 +29,7 @@ app.set('views', path.join(__dirname, 'views'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(methodOverride('_method'));
+app.use('/media', mediaRoutes);
 app.use(
   express.static(path.join(__dirname, 'public'), {
     setHeaders(res, filePath) {

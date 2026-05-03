@@ -1,29 +1,16 @@
 const express = require('express');
-const path = require('path');
-const fs = require('fs');
 const db = require('../lib/db');
 const { getSiteHomeData } = require('../lib/siteData');
 const { getAccountShell } = require('../lib/mypageShell');
 const { requireAdmin } = require('../middleware/auth');
 const multer = require('multer');
 const { asyncRoute } = require('../lib/asyncRoute');
+const { upsertSiteProfileImage } = require('../lib/binaryAssets');
 
 const router = express.Router();
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadDir = path.join(__dirname, '../public/uploads');
-    if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
-    cb(null, `profile-${Date.now()}${ext}`);
-  }
-});
-
 const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   fileFilter: (req, file, cb) => {
     const allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
     if (allowed.includes(file.mimetype)) cb(null, true);
@@ -73,9 +60,9 @@ router.post(
     if (bio !== undefined) {
       await db.upsertSiteSetting('bio', (bio + '').trim());
     }
-    if (req.file) {
-      const imgPath = `/uploads/${req.file.filename}`;
-      await db.upsertSiteSetting('profile_image', imgPath);
+    if (req.file && req.file.buffer && req.file.buffer.length) {
+      await upsertSiteProfileImage(req.file.buffer, req.file.mimetype);
+      await db.upsertSiteSetting('profile_image', '/media/site/profile-image');
     }
     res.redirect('/mypage/main-settings?saved=1');
   })
@@ -101,9 +88,11 @@ router.post(
     } catch (err) {
       return res.status(400).send(err.message || '업로드 오류');
     }
-    if (!req.file) return res.redirect('/mypage/main-settings');
-    const imgPath = `/uploads/${req.file.filename}`;
-    await db.upsertSiteSetting('profile_image', imgPath);
+    if (!req.file || !req.file.buffer || !req.file.buffer.length) {
+      return res.redirect('/mypage/main-settings');
+    }
+    await upsertSiteProfileImage(req.file.buffer, req.file.mimetype);
+    await db.upsertSiteSetting('profile_image', '/media/site/profile-image');
     res.redirect('/mypage/main-settings?saved=1');
   })
 );
