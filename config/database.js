@@ -7,6 +7,11 @@ const fs = require('fs');
 /**
  * 로컬: SQLite 파일 (<프로젝트>/data)
  * Railway 등: 환경변수 DATABASE_URL 이 있으면 PostgreSQL만 사용(영구 저장).
+ *
+ * 관리자 계정: 소스에 비밀번호를 두지 않습니다. DB에 is_admin=1 사용자가 없을 때만
+ * 서버 환경변수 ADMIN_BOOTSTRAP_USERNAME, ADMIN_BOOTSTRAP_PASSWORD(평문·서버에서 bcrypt 해시)로
+ * 최초 1명을 생성합니다. 선택: ADMIN_BOOTSTRAP_NICKNAME.
+ * 프로덕션에서 관리자가 없는데 위 변수가 없으면 기동을 중단합니다.
  */
 function usePostgres() {
   return Boolean(process.env.DATABASE_URL && String(process.env.DATABASE_URL).trim());
@@ -231,7 +236,46 @@ async function initializePostgres() {
   console.log('[database] PostgreSQL 연결됨 (DATABASE_URL)');
 }
 
-function seedDefaults({ insertSetting, getAdmin, insertAdmin, run, get }) {
+function trimEnv(name) {
+  const v = process.env[name];
+  return v != null ? String(v).trim() : '';
+}
+
+function isProductionLike() {
+  return (
+    process.env.NODE_ENV === 'production' ||
+    process.env.RAILWAY_ENVIRONMENT === 'production' ||
+    process.env.RENDER === 'true'
+  );
+}
+
+function validateBootstrapUsername(u) {
+  if (!u || u.length < 3 || u.length > 30) {
+    return 'ADMIN_BOOTSTRAP_USERNAME은 3~30자여야 합니다.';
+  }
+  if (!/^[a-zA-Z0-9_]+$/.test(u)) {
+    return 'ADMIN_BOOTSTRAP_USERNAME은 영문, 숫자, 밑줄(_)만 사용할 수 있습니다.';
+  }
+  return null;
+}
+
+function validateBootstrapPassword(p) {
+  if (!p || p.length < 8) {
+    return 'ADMIN_BOOTSTRAP_PASSWORD는 8자 이상이어야 합니다.';
+  }
+  if (p.length > 72) {
+    return 'bcrypt 호환을 위해 ADMIN_BOOTSTRAP_PASSWORD는 72자 이하여야 합니다.';
+  }
+  return null;
+}
+
+function readBootstrapPasswordRaw() {
+  return process.env.ADMIN_BOOTSTRAP_PASSWORD != null
+    ? String(process.env.ADMIN_BOOTSTRAP_PASSWORD)
+    : '';
+}
+
+function seedSiteSettingsSqlite(database) {
   const defaults = {
     site_name: 'Donghawan Lee / @lilip',
     bio: '',
@@ -239,41 +283,59 @@ function seedDefaults({ insertSetting, getAdmin, insertAdmin, run, get }) {
     all_posts_intro_ko: '작성된 모든 게시물을 확인할 수 있는 게시판 입니다.',
     all_posts_intro_ja: '作成された全ての投稿を確認できる掲示板です。'
   };
-
-  for (const [key, value] of Object.entries(defaults)) {
-    insertSetting(key, value);
-  }
-
-  if (!getAdmin()) {
-    const hashedPassword = bcrypt.hashSync('renown0716**AA', 12);
-    insertAdmin(hashedPassword);
-    console.log('관리자 계정 생성 완료');
-  }
-
-  run("UPDATE users SET nickname = '릴리프' WHERE username = 'seydlitz'");
-  run(
-    "UPDATE users SET avatar = ? WHERE username = 'seydlitz' AND (avatar IS NULL OR TRIM(avatar) = '')",
-    '/images/default-admin-avatar.png'
+  const insertSetting = database.prepare(
+    'INSERT OR IGNORE INTO site_settings (key, value) VALUES (?, ?)'
   );
-
-  if (process.env.SYNC_SEED_ADMIN === '1' || process.env.SYNC_SEED_ADMIN === 'true') {
-    const a = get("SELECT * FROM users WHERE username = 'seydlitz'");
-    if (a) {
-      const rehash = bcrypt.hashSync('renown0716**AA', 12);
-      const isAdmin = Number(a.is_admin) === 1 || a.is_admin === true;
-      const ok = bcrypt.compareSync('renown0716**AA', a.password) && isAdmin;
-      if (!ok) {
-        run(
-          "UPDATE users SET password = ?, is_admin = 1, nickname = '릴리프' WHERE username = 'seydlitz'",
-          rehash
-        );
-        console.log('SYNC_SEED_ADMIN: seydlitz 계정이 기본 문서와 동일하게 갱신되었습니다. 환경변수를 끄세요.');
-      }
-    }
+  for (const [key, value] of Object.entries(defaults)) {
+    insertSetting.run(key, value);
   }
 }
 
-async function seedDefaultsPg(pool) {
+function ensureBootstrapAdminSqlite(database) {
+  const anyAdmin = database.prepare('SELECT id FROM users WHERE is_admin = 1 LIMIT 1').get();
+  if (anyAdmin) return;
+
+  const username = trimEnv('ADMIN_BOOTSTRAP_USERNAME');
+  const password = readBootstrapPasswordRaw();
+  const nickname = trimEnv('ADMIN_BOOTSTRAP_NICKNAME') || username || 'Admin';
+
+  let vErr = validateBootstrapUsername(username);
+  if (!vErr) vErr = validateBootstrapPassword(password);
+  if (vErr) {
+    if (isProductionLike()) {
+      console.error('[database] ' + vErr);
+      console.error(
+        '[database] 관리자(is_admin=1)가 없습니다. ADMIN_BOOTSTRAP_USERNAME·ADMIN_BOOTSTRAP_PASSWORD를 비밀 환경변수로 설정한 뒤 재시작하세요.'
+      );
+      process.exit(1);
+    }
+    console.warn('[database] 관리자 부트스트랩 생략: ' + vErr);
+    console.warn(
+      '[database] 개발: 위 환경변수를 설정하면 최초 관리자 1명이 생성됩니다(소스·Git에 비밀번호를 넣지 마세요).'
+    );
+    return;
+  }
+
+  const taken = database.prepare('SELECT id FROM users WHERE username = ?').get(username);
+  if (taken) {
+    const msg = `아이디 "${username}"가 이미 사용 중입니다. 다른 ADMIN_BOOTSTRAP_USERNAME을 쓰세요.`;
+    console.error('[database] ' + msg);
+    if (isProductionLike()) process.exit(1);
+    return;
+  }
+
+  const hash = bcrypt.hashSync(password, 12);
+  database
+    .prepare(
+      'INSERT INTO users (username, nickname, password, is_admin, avatar) VALUES (?, ?, ?, ?, ?)'
+    )
+    .run(username, nickname, hash, 1, '/images/default-admin-avatar.png');
+  console.log(
+    '[database] 부트스트랩 관리자가 생성되었습니다. 로그인 후 비밀번호를 변경하고, 가능하면 ADMIN_BOOTSTRAP_* 환경변수를 제거하세요.'
+  );
+}
+
+async function seedSiteSettingsPg(pool) {
   const defaults = {
     site_name: 'Donghawan Lee / @lilip',
     bio: '',
@@ -281,63 +343,66 @@ async function seedDefaultsPg(pool) {
     all_posts_intro_ko: '작성된 모든 게시물을 확인할 수 있는 게시판 입니다.',
     all_posts_intro_ja: '作成された全ての投稿を確認できる掲示板です。'
   };
-
   for (const [key, value] of Object.entries(defaults)) {
     await pool.query(
       `INSERT INTO site_settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO NOTHING`,
       [key, value]
     );
   }
-
-  const adminExists = await pool.query('SELECT id FROM users WHERE username = $1', ['seydlitz']);
-  if (adminExists.rows.length === 0) {
-    const hashedPassword = bcrypt.hashSync('renown0716**AA', 12);
-    await pool.query(
-      `INSERT INTO users (username, nickname, password, is_admin, avatar) VALUES ($1, $2, $3, $4, $5)`,
-      ['seydlitz', '릴리프', hashedPassword, 1, '/images/default-admin-avatar.png']
-    );
-    console.log('관리자 계정 생성 완료');
-  }
-
-  await pool.query("UPDATE users SET nickname = '릴리프' WHERE username = 'seydlitz'");
-  await pool.query(
-    "UPDATE users SET avatar = $1 WHERE username = 'seydlitz' AND (avatar IS NULL OR TRIM(avatar) = '')",
-    ['/images/default-admin-avatar.png']
-  );
-
-  if (process.env.SYNC_SEED_ADMIN === '1' || process.env.SYNC_SEED_ADMIN === 'true') {
-    const ar = await pool.query("SELECT * FROM users WHERE username = 'seydlitz'");
-    const a = ar.rows[0];
-    if (a) {
-      const rehash = bcrypt.hashSync('renown0716**AA', 12);
-      const isAdmin = Number(a.is_admin) === 1 || a.is_admin === true;
-      const ok = bcrypt.compareSync('renown0716**AA', a.password) && isAdmin;
-      if (!ok) {
-        await pool.query(
-          "UPDATE users SET password = $1, is_admin = 1, nickname = '릴리프' WHERE username = 'seydlitz'",
-          [rehash]
-        );
-        console.log('SYNC_SEED_ADMIN: seydlitz 계정이 기본 문서와 동일하게 갱신되었습니다. 환경변수를 끄세요.');
-      }
-    }
-  }
 }
 
-/** SQLite 기본 설정·관리자 시드 */
+async function ensureBootstrapAdminPg(pool) {
+  const adminRow = await pool.query('SELECT id FROM users WHERE is_admin = 1 LIMIT 1');
+  if (adminRow.rows.length > 0) return;
+
+  const username = trimEnv('ADMIN_BOOTSTRAP_USERNAME');
+  const password = readBootstrapPasswordRaw();
+  const nickname = trimEnv('ADMIN_BOOTSTRAP_NICKNAME') || username || 'Admin';
+
+  let vErr = validateBootstrapUsername(username);
+  if (!vErr) vErr = validateBootstrapPassword(password);
+  if (vErr) {
+    if (isProductionLike()) {
+      console.error('[database] ' + vErr);
+      console.error(
+        '[database] 관리자(is_admin=1)가 없습니다. ADMIN_BOOTSTRAP_USERNAME·ADMIN_BOOTSTRAP_PASSWORD를 비밀 환경변수로 설정한 뒤 재시작하세요.'
+      );
+      process.exit(1);
+    }
+    console.warn('[database] 관리자 부트스트랩 생략: ' + vErr);
+    console.warn(
+      '[database] 개발: 위 환경변수를 설정하면 최초 관리자 1명이 생성됩니다(소스·Git에 비밀번호를 넣지 마세요).'
+    );
+    return;
+  }
+
+  const taken = await pool.query('SELECT id FROM users WHERE username = $1', [username]);
+  if (taken.rows.length > 0) {
+    const msg = `아이디 "${username}"가 이미 사용 중입니다. 다른 ADMIN_BOOTSTRAP_USERNAME을 쓰세요.`;
+    console.error('[database] ' + msg);
+    if (isProductionLike()) process.exit(1);
+    return;
+  }
+
+  const hash = bcrypt.hashSync(password, 12);
+  await pool.query(
+    `INSERT INTO users (username, nickname, password, is_admin, avatar) VALUES ($1, $2, $3, $4, $5)`,
+    [username, nickname, hash, 1, '/images/default-admin-avatar.png']
+  );
+  console.log(
+    '[database] 부트스트랩 관리자가 생성되었습니다. 로그인 후 비밀번호를 변경하고, 가능하면 ADMIN_BOOTSTRAP_* 환경변수를 제거하세요.'
+  );
+}
+
+async function seedDefaultsPg(pool) {
+  await seedSiteSettingsPg(pool);
+  await ensureBootstrapAdminPg(pool);
+}
+
+/** SQLite: 사이트 기본값 + 관리자 부트스트랩 */
 function seedDefaultsSqliteWrap(database) {
-  seedDefaults({
-    insertSetting: (k, v) =>
-      database.prepare('INSERT OR IGNORE INTO site_settings (key, value) VALUES (?, ?)').run(k, v),
-    getAdmin: () => database.prepare('SELECT id FROM users WHERE username = ?').get('seydlitz'),
-    insertAdmin: (hash) =>
-      database
-        .prepare(
-          'INSERT INTO users (username, nickname, password, is_admin, avatar) VALUES (?, ?, ?, ?, ?)'
-        )
-        .run('seydlitz', '릴리프', hash, 1, '/images/default-admin-avatar.png'),
-    run: (sql, ...args) => database.prepare(sql).run(...args),
-    get: (sql, ...args) => database.prepare(sql).get(...args)
-  });
+  seedSiteSettingsSqlite(database);
+  ensureBootstrapAdminSqlite(database);
 }
 
 async function initializeDatabase() {

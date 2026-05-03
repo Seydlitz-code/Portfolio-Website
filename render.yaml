@@ -1,5 +1,6 @@
 # Render: SQLite 유지 시 영구 디스크 mountPath와 DATA_DIR을 동일하게 두세요.
 # Railway: PostgreSQL 플러그인을 쓰면 DATABASE_URL이 주입됩니다. 이 변수가 있으면 앱은 Postgres만 사용합니다(디스크 SQLite 불필요).
+# 최초 관리자: DB에 is_admin=1 사용자가 없을 때만, 비밀 환경변수 ADMIN_BOOTSTRAP_USERNAME + ADMIN_BOOTSTRAP_PASSWORD 로 1명 생성(선택: ADMIN_BOOTSTRAP_NICKNAME).
 # (이전에 "db" 폴더에 마운트하면 db/database.js가 가려져 Cannot find module 오류가 납니다.)
 # 대시보드만으로 만든 서비스: Disk 추가 후 Environment에 DATA_DIR = 디스크 mount 경로.
 services:
