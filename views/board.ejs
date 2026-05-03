@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><%= project.name %> — <%= settings.site_name || '포트폴리오' %></title>
-  <link rel="stylesheet" href="/css/style.css?v=20260446">
+  <link rel="stylesheet" href="/css/style.css?v=20260453">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Inter:wght@300;400;500;700&display=swap" rel="stylesheet">
 </head>
@@ -14,17 +14,26 @@
 
   <main class="inner-main board-main">
     <div class="board-page-shell">
-      <header class="board-page-heading board-page-heading--split">
-        <div class="board-page-titles">
-          <h1 class="board-page-title"><%= project.name %></h1>
-          <% if (project.name_ja) { %>
-            <p class="board-page-title-ja" lang="ja"><%= project.name_ja %></p>
+      <div class="board-list-header-zone<%= (typeof isAdmin !== 'undefined' && isAdmin) ? ' board-list-header-zone--has-toolbar' : '' %>">
+        <header class="board-page-heading board-page-heading--split">
+          <div class="board-page-titles">
+            <h1 class="board-page-title"><%= project.name %></h1>
+            <% if (project.name_ja) { %>
+              <p class="board-page-title-ja" lang="ja"><%= project.name_ja %></p>
+            <% } %>
+          </div>
+          <% if (project.description && String(project.description).trim()) { %>
+            <p class="board-page-intro" lang="ko"><%= String(project.description).trim() %></p>
           <% } %>
-        </div>
-        <% if (project.description && String(project.description).trim()) { %>
-          <p class="board-page-intro" lang="ko"><%= String(project.description).trim() %></p>
+        </header>
+        <% if (typeof isAdmin !== 'undefined' && isAdmin) { %>
+          <div class="board-list-admin-toolbar">
+            <a href="/posts/new?project_id=<%= project.id %>&amp;cancel=<%= encodeURIComponent('/boards/' + project.id) %>" class="admin-action-btn">
+              <i class="fas fa-plus"></i> 새 게시물 작성
+            </a>
+          </div>
         <% } %>
-      </header>
+      </div>
 
       <div class="board-table-wrap" role="region" aria-label="게시글 목록">
         <table class="board-table">

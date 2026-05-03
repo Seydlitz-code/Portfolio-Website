@@ -32,7 +32,7 @@
           <select name="project_id" class="form-input form-select">
             <option value="">-- 분류 없음 --</option>
             <% projects.forEach(p => { %>
-              <option value="<%= p.id %>" <%= (post && post.project_id === p.id) ? 'selected' : '' %>>
+              <option value="<%= p.id %>" <%= (post && post.project_id === p.id) || (!post && typeof defaultProjectId !== 'undefined' && defaultProjectId != null && Number(defaultProjectId) === Number(p.id)) ? 'selected' : '' %>>
                 <%= p.name %>
               </option>
             <% }) %>
@@ -49,7 +49,7 @@
           <button type="submit" class="btn-primary">
             <i class="fas fa-save"></i> <%= post ? '수정 완료' : '게시물 등록' %>
           </button>
-          <a href="<%= post ? '/posts/' + post.id : '/posts' %>" class="btn-secondary">취소</a>
+          <a href="<%= post ? '/posts/' + post.id : (typeof cancelHref !== 'undefined' && cancelHref ? cancelHref : '/posts') %>" class="btn-secondary">취소</a>
         </div>
       </form>
     </div>

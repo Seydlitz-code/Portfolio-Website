@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>전체 게시물 — <%= settings.site_name || '포트폴리오' %></title>
-  <link rel="stylesheet" href="/css/style.css?v=20260452">
+  <link rel="stylesheet" href="/css/style.css?v=20260453">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Inter:wght@300;400;500;700&display=swap" rel="stylesheet">
 </head>
@@ -14,7 +14,7 @@
 
   <main class="inner-main posts-all-main">
     <div class="posts-all-shell">
-      <div class="posts-all-top-bar">
+      <div class="board-list-header-zone<%= (typeof isAdmin !== 'undefined' && isAdmin) ? ' board-list-header-zone--has-toolbar' : '' %>">
         <header class="posts-all-heading posts-all-heading--split">
           <div class="posts-all-titles">
             <h1 class="posts-all-title-ko">전체 게시물</h1>
@@ -26,7 +26,7 @@
           </div>
         </header>
         <% if (typeof isAdmin !== 'undefined' && isAdmin) { %>
-          <div class="posts-all-actions">
+          <div class="board-list-admin-toolbar">
             <a href="/posts/new" class="admin-action-btn">
               <i class="fas fa-plus"></i> 새 게시물 작성
             </a>

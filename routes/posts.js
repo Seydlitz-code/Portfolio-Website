@@ -8,6 +8,23 @@ const { asyncRoute } = require('../lib/asyncRoute');
 
 const ALL_POSTS_PAGE_SIZE = 200;
 
+function safeNewPostCancel(queryCancel) {
+  if (queryCancel == null || typeof queryCancel !== 'string') return '/posts';
+  const t = queryCancel.trim();
+  if (!t.startsWith('/boards/')) return '/posts';
+  const rest = t.slice('/boards/'.length).split('?')[0];
+  const id = parseInt(rest, 10);
+  if (!Number.isFinite(id) || id < 1) return '/posts';
+  return `/boards/${id}`;
+}
+
+function pickDefaultProjectId(projects, queryProjectId) {
+  const qid = parseInt(queryProjectId, 10);
+  if (!Number.isFinite(qid) || qid < 1) return null;
+  const ok = projects.some((p) => Number(p.id) === qid);
+  return ok ? qid : null;
+}
+
 router.get(
   '/',
   asyncRoute(async (req, res) => {
@@ -77,12 +94,16 @@ router.get(
   requireAdmin,
   asyncRoute(async (req, res) => {
     const projects = await db.all('SELECT * FROM projects ORDER BY order_num ASC, name ASC');
+    const cancelHref = safeNewPostCancel(req.query.cancel);
+    const defaultProjectId = pickDefaultProjectId(projects, req.query.project_id);
     res.render('post-form', {
       post: null,
       projects,
       formAction: '/posts',
       formMethod: 'POST',
-      settings: await getSiteSettings()
+      settings: await getSiteSettings(),
+      cancelHref,
+      defaultProjectId
     });
   })
 );
@@ -100,7 +121,9 @@ router.post(
         formAction: '/posts',
         formMethod: 'POST',
         error: '제목과 내용을 입력해주세요.',
-        settings: await getSiteSettings()
+        settings: await getSiteSettings(),
+        cancelHref: '/posts',
+        defaultProjectId: null
       });
     }
 

@@ -4,6 +4,7 @@ const db = require('../lib/db');
 const { getSiteSettings } = require('../lib/siteData');
 const { formatListTime, buildPaginationItems } = require('../lib/listingHelpers');
 const { asyncRoute } = require('../lib/asyncRoute');
+const { isUserAdmin } = require('../middleware/auth');
 
 const PAGE_SIZE = 200;
 
@@ -61,7 +62,8 @@ router.get(
       totalPages,
       total,
       pageSize: PAGE_SIZE,
-      paginationItems
+      paginationItems,
+      isAdmin: isUserAdmin(req.session && req.session.user)
     });
   })
 );
