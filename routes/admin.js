@@ -1,11 +1,12 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
-const { getDb } = require('../config/database');
+const db = require('../lib/db');
 const { getSiteHomeData } = require('../lib/siteData');
 const { getAccountShell } = require('../lib/mypageShell');
 const { requireAdmin } = require('../middleware/auth');
 const multer = require('multer');
+const { asyncRoute } = require('../lib/asyncRoute');
 
 const router = express.Router();
 
@@ -31,101 +32,117 @@ const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024 }
 });
 
-// GET /admin/mypage — 기존 URL 호환: 메인 페이지 설정으로 이동
+function runUploadSingle(field) {
+  return (req, res) =>
+    new Promise((resolve, reject) => {
+      upload.single(field)(req, res, (err) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
+}
+
 router.get('/mypage', requireAdmin, (req, res) => {
   res.redirect(302, '/mypage/main-settings');
 });
 
-// POST /admin/apply — 프로필·이름·소개 한 번에 반영(적용하기)
 router.post(
   '/apply',
   requireAdmin,
-  (req, res, next) => {
-    upload.single('profile_image')(req, res, (err) => {
-      if (err) {
-        const shell = getAccountShell(req);
-        if (!shell) return res.status(400).send(err.message || '업로드 오류');
-        return res.status(400).render('mypage-account', {
-          ...shell,
-          ...getSiteHomeData(),
-          activeTab: 'mainSettings',
-          saved: false,
-          errMessage: err.message || '이미지 업로드에 실패했습니다.'
-        });
-      }
-      next();
-    });
-  },
-  (req, res) => {
+  asyncRoute(async (req, res) => {
+    try {
+      await runUploadSingle('profile_image')(req, res);
+    } catch (err) {
+      const shell = await getAccountShell(req);
+      if (!shell) return res.status(400).send(err.message || '업로드 오류');
+      const home = await getSiteHomeData();
+      return res.status(400).render('mypage-account', {
+        ...shell,
+        ...home,
+        activeTab: 'mainSettings',
+        saved: false,
+        errMessage: err.message || '이미지 업로드에 실패했습니다.'
+      });
+    }
+
     const { site_name, bio } = req.body;
-    const db = getDb();
-    const upsert = db.prepare('INSERT OR REPLACE INTO site_settings (key, value) VALUES (?, ?)');
     if (site_name !== undefined) {
       const v = (site_name + '').trim();
-      upsert.run('site_name', v);
+      await db.upsertSiteSetting('site_name', v);
     }
     if (bio !== undefined) {
-      upsert.run('bio', (bio + '').trim());
+      await db.upsertSiteSetting('bio', (bio + '').trim());
     }
     if (req.file) {
       const imgPath = `/uploads/${req.file.filename}`;
-      db.prepare('INSERT OR REPLACE INTO site_settings (key, value) VALUES (?, ?)').run('profile_image', imgPath);
+      await db.upsertSiteSetting('profile_image', imgPath);
     }
     res.redirect('/mypage/main-settings?saved=1');
-  }
+  })
 );
 
-// POST /admin/settings — (호환) 마이페이지로 유도
-router.post('/settings', requireAdmin, (req, res) => {
-  const { site_name, bio } = req.body;
-  const db = getDb();
-  const upsert = db.prepare('INSERT OR REPLACE INTO site_settings (key, value) VALUES (?, ?)');
-  if (site_name !== undefined) upsert.run('site_name', (site_name + '').trim());
-  if (bio !== undefined) upsert.run('bio', (bio + '').trim());
-  res.redirect('/mypage/main-settings?saved=1');
-});
+router.post(
+  '/settings',
+  requireAdmin,
+  asyncRoute(async (req, res) => {
+    const { site_name, bio } = req.body;
+    if (site_name !== undefined) await db.upsertSiteSetting('site_name', (site_name + '').trim());
+    if (bio !== undefined) await db.upsertSiteSetting('bio', (bio + '').trim());
+    res.redirect('/mypage/main-settings?saved=1');
+  })
+);
 
-// POST /admin/profile-image — (호환) 단일 이미지 업로드
-router.post('/profile-image', requireAdmin, (req, res) => {
-  upload.single('profile_image')(req, res, (err) => {
-    if (err) {
+router.post(
+  '/profile-image',
+  requireAdmin,
+  asyncRoute(async (req, res) => {
+    try {
+      await runUploadSingle('profile_image')(req, res);
+    } catch (err) {
       return res.status(400).send(err.message || '업로드 오류');
     }
     if (!req.file) return res.redirect('/mypage/main-settings');
-    const db = getDb();
     const imgPath = `/uploads/${req.file.filename}`;
-    db.prepare('INSERT OR REPLACE INTO site_settings (key, value) VALUES (?, ?)').run('profile_image', imgPath);
+    await db.upsertSiteSetting('profile_image', imgPath);
     res.redirect('/mypage/main-settings?saved=1');
-  });
-});
+  })
+);
 
-// POST /admin/projects
-router.post('/projects', requireAdmin, (req, res) => {
-  const name = (req.body.name != null ? String(req.body.name) : '').trim();
-  const nameJa = (req.body.name_ja != null ? String(req.body.name_ja) : '').trim();
-  const description = (req.body.description != null ? String(req.body.description) : '').trim();
-  if (!name || !nameJa || !description) {
-    return res.redirect('/mypage/boards?createErr=1');
-  }
-  const db = getDb();
-  const maxOrder = db.prepare('SELECT MAX(order_num) as m FROM projects').get().m || 0;
-  db.prepare(
-    'INSERT INTO projects (name, name_ja, description, order_num) VALUES (?, ?, ?, ?)'
-  ).run(name, nameJa, description, maxOrder + 1);
-  res.redirect('/mypage/boards?saved=1');
-});
+router.post(
+  '/projects',
+  requireAdmin,
+  asyncRoute(async (req, res) => {
+    const name = (req.body.name != null ? String(req.body.name) : '').trim();
+    const nameJa = (req.body.name_ja != null ? String(req.body.name_ja) : '').trim();
+    const description = (req.body.description != null ? String(req.body.description) : '').trim();
+    if (!name || !nameJa || !description) {
+      return res.redirect('/mypage/boards?createErr=1');
+    }
+    const maxRow = await db.get('SELECT MAX(order_num) as m FROM projects');
+    const maxOrder = maxRow && maxRow.m != null ? Number(maxRow.m) : 0;
+    await db.run('INSERT INTO projects (name, name_ja, description, order_num) VALUES (?, ?, ?, ?)', [
+      name,
+      nameJa,
+      description,
+      maxOrder + 1
+    ]);
+    res.redirect('/mypage/boards?saved=1');
+  })
+);
 
-// DELETE /admin/projects/:id
-router.delete('/projects/:id', requireAdmin, (req, res) => {
-  const db = getDb();
-  const id = req.params.id;
-  const row = db.prepare('SELECT COUNT(*) as c FROM posts WHERE project_id = ?').get(id);
-  const cnt = row && row.c != null ? Number(row.c) : 0;
-  if (cnt > 0) {
-    return res.redirect('/mypage/boards?deleteBlocked=1');
-  }
-  db.prepare('DELETE FROM projects WHERE id = ?').run(id);
-  res.redirect('/mypage/boards?deleted=1');
-});
+router.delete(
+  '/projects/:id',
+  requireAdmin,
+  asyncRoute(async (req, res) => {
+    const id = req.params.id;
+    const row = await db.get('SELECT COUNT(*) as c FROM posts WHERE project_id = ?', [id]);
+    const cnt = row && row.c != null ? Number(row.c) : 0;
+    if (cnt > 0) {
+      return res.redirect('/mypage/boards?deleteBlocked=1');
+    }
+    await db.run('DELETE FROM projects WHERE id = ?', [id]);
+    res.redirect('/mypage/boards?deleted=1');
+  })
+);
 
 module.exports = router;

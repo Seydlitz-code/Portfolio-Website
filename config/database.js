@@ -1,26 +1,31 @@
 const Database = require('better-sqlite3');
+const { Pool } = require('pg');
 const bcrypt = require('bcrypt');
 const path = require('path');
 const fs = require('fs');
 
 /**
- * SQLite 및 세션 파일을 저장하는 디렉터리.
- * - 로컬: <프로젝트>/data (기본)
- * - Render 등 PaaS: 영구 디스크를 마운트한 경로를 DATA_DIR로 지정하세요(DATA_DIR과 mountPath 일치).
- *   DATA_DIR이 없으면 에페멀 파일시스템에 DB가 생겨 배포마다 계정·게시글이 초기화된 것처럼 보일 수 있습니다.
- * 주의: 디스크를 "db" 폴더에 마운트하면 db/database.js 코드가 사라지므로 사용하지 말 것.
+ * 로컬: SQLite 파일 (<프로젝트>/data)
+ * Railway 등: 환경변수 DATABASE_URL 이 있으면 PostgreSQL만 사용(영구 저장).
  */
+function usePostgres() {
+  return Boolean(process.env.DATABASE_URL && String(process.env.DATABASE_URL).trim());
+}
+
 function getDataDir() {
   const fromEnv = process.env.DATA_DIR != null && String(process.env.DATA_DIR).trim();
   if (fromEnv) {
     return path.resolve(String(process.env.DATA_DIR).trim());
   }
   const fallback = path.join(__dirname, '..', 'data');
-  if (process.env.NODE_ENV === 'production' || process.env.RENDER === 'true') {
+  if (
+    !usePostgres() &&
+    (process.env.NODE_ENV === 'production' || process.env.RENDER === 'true')
+  ) {
     console.warn(
-      '[database] DATA_DIR 미설정 — SQLite 경로: ' +
+      '[database] SQLite — DATA_DIR 미설정: ' +
         fallback +
-        ' (호스트가 에페멀 디스크이면 배포 시 DB가 비어 있습니다. 영구 디스크 + DATA_DIR 설정을 권장합니다.)'
+        ' (에페멀 디스크면 배포 시 초기화될 수 있습니다. PostgreSQL은 DATABASE_URL을 사용하세요.)'
     );
   }
   return fallback;
@@ -28,8 +33,12 @@ function getDataDir() {
 
 const DB_FILE = 'portfolio.db';
 let db;
+let pgPool;
 
 function getDb() {
+  if (usePostgres()) {
+    throw new Error('PostgreSQL 모드에서는 getDb() 대신 lib/db.js의 get/all/run을 사용하세요.');
+  }
   if (!db) {
     const dataDir = getDataDir();
     if (!fs.existsSync(dataDir)) {
@@ -43,7 +52,27 @@ function getDb() {
   return db;
 }
 
-function initializeDatabase() {
+function getPool() {
+  if (!usePostgres()) {
+    throw new Error('SQLite 모드에서는 getPool()을 사용할 수 없습니다.');
+  }
+  if (!pgPool) {
+    pgPool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+      max: 20,
+      idleTimeoutMillis: 30000,
+      ssl:
+        process.env.PGSSLMODE === 'disable'
+          ? false
+          : process.env.NODE_ENV === 'production'
+            ? { rejectUnauthorized: false }
+            : undefined
+    });
+  }
+  return pgPool;
+}
+
+function initializeSqliteSync() {
   const database = getDb();
 
   database.exec(`
@@ -111,6 +140,98 @@ function initializeDatabase() {
     database.exec('ALTER TABLE users ADD COLUMN avatar TEXT');
   }
 
+  console.log('[database] SQLite 파일:', path.join(getDataDir(), DB_FILE));
+}
+
+async function pgColumnExists(pool, table, column) {
+  const r = await pool.query(
+    `SELECT 1 FROM information_schema.columns
+     WHERE table_schema = 'public' AND table_name = $1 AND column_name = $2`,
+    [table, column]
+  );
+  return r.rows.length > 0;
+}
+
+async function initializePostgres() {
+  const pool = getPool();
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS users (
+      id SERIAL PRIMARY KEY,
+      username TEXT UNIQUE NOT NULL,
+      nickname TEXT NOT NULL,
+      password TEXT NOT NULL,
+      avatar TEXT,
+      is_admin SMALLINT DEFAULT 0,
+      created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS projects (
+      id SERIAL PRIMARY KEY,
+      name TEXT NOT NULL,
+      name_ja TEXT,
+      description TEXT,
+      order_num INTEGER DEFAULT 0,
+      created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS posts (
+      id SERIAL PRIMARY KEY,
+      title TEXT NOT NULL,
+      content TEXT NOT NULL,
+      project_id INTEGER REFERENCES projects(id),
+      author_id INTEGER REFERENCES users(id),
+      created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+      view_count INTEGER DEFAULT 0
+    );
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS comments (
+      id SERIAL PRIMARY KEY,
+      post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      content TEXT NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS site_settings (
+      key TEXT PRIMARY KEY,
+      value TEXT
+    );
+  `);
+
+  if (!(await pgColumnExists(pool, 'posts', 'view_count'))) {
+    await pool.query('ALTER TABLE posts ADD COLUMN view_count INTEGER DEFAULT 0');
+  }
+  if (!(await pgColumnExists(pool, 'posts', 'author_id'))) {
+    await pool.query('ALTER TABLE posts ADD COLUMN author_id INTEGER REFERENCES users(id)');
+    const adminRow = await pool.query(
+      'SELECT id FROM users WHERE is_admin = 1 ORDER BY id ASC LIMIT 1'
+    );
+    if (adminRow.rows[0]) {
+      await pool.query('UPDATE posts SET author_id = $1 WHERE author_id IS NULL', [
+        adminRow.rows[0].id
+      ]);
+    }
+  }
+  if (!(await pgColumnExists(pool, 'users', 'avatar'))) {
+    await pool.query('ALTER TABLE users ADD COLUMN avatar TEXT');
+  }
+
+  await seedDefaultsPg(pool);
+
+  console.log('[database] PostgreSQL 연결됨 (DATABASE_URL)');
+}
+
+function seedDefaults({ insertSetting, getAdmin, insertAdmin, run, get }) {
   const defaults = {
     site_name: 'Donghawan Lee / @lilip',
     bio: '',
@@ -119,48 +240,120 @@ function initializeDatabase() {
     all_posts_intro_ja: '作成された全ての投稿を確認できる掲示板です。'
   };
 
-  const insertSetting = database.prepare(
-    'INSERT OR IGNORE INTO site_settings (key, value) VALUES (?, ?)'
-  );
   for (const [key, value] of Object.entries(defaults)) {
-    insertSetting.run(key, value);
+    insertSetting(key, value);
   }
 
-  const adminExists = database.prepare(
-    'SELECT id FROM users WHERE username = ?'
-  ).get('seydlitz');
-
-  if (!adminExists) {
+  if (!getAdmin()) {
     const hashedPassword = bcrypt.hashSync('renown0716**AA', 12);
-    database.prepare(
-      'INSERT INTO users (username, nickname, password, is_admin, avatar) VALUES (?, ?, ?, ?, ?)'
-    ).run('seydlitz', '릴리프', hashedPassword, 1, '/images/default-admin-avatar.png');
+    insertAdmin(hashedPassword);
     console.log('관리자 계정 생성 완료');
   }
-  database.prepare("UPDATE users SET nickname = '릴리프' WHERE username = 'seydlitz'").run();
-  database
-    .prepare(
-      "UPDATE users SET avatar = ? WHERE username = 'seydlitz' AND (avatar IS NULL OR TRIM(avatar) = '')"
-    )
-    .run('/images/default-admin-avatar.png');
+
+  run("UPDATE users SET nickname = '릴리프' WHERE username = 'seydlitz'");
+  run(
+    "UPDATE users SET avatar = ? WHERE username = 'seydlitz' AND (avatar IS NULL OR TRIM(avatar) = '')",
+    '/images/default-admin-avatar.png'
+  );
 
   if (process.env.SYNC_SEED_ADMIN === '1' || process.env.SYNC_SEED_ADMIN === 'true') {
-    const a = database.prepare("SELECT * FROM users WHERE username = 'seydlitz'").get();
+    const a = get("SELECT * FROM users WHERE username = 'seydlitz'");
     if (a) {
       const rehash = bcrypt.hashSync('renown0716**AA', 12);
       const isAdmin = Number(a.is_admin) === 1 || a.is_admin === true;
       const ok = bcrypt.compareSync('renown0716**AA', a.password) && isAdmin;
       if (!ok) {
-        database.prepare(
-          "UPDATE users SET password = ?, is_admin = 1, nickname = '릴리프' WHERE username = 'seydlitz'"
-        ).run(rehash);
+        run(
+          "UPDATE users SET password = ?, is_admin = 1, nickname = '릴리프' WHERE username = 'seydlitz'",
+          rehash
+        );
         console.log('SYNC_SEED_ADMIN: seydlitz 계정이 기본 문서와 동일하게 갱신되었습니다. 환경변수를 끄세요.');
       }
     }
   }
+}
 
-  console.log('[database] SQLite 파일:', path.join(getDataDir(), DB_FILE));
+async function seedDefaultsPg(pool) {
+  const defaults = {
+    site_name: 'Donghawan Lee / @lilip',
+    bio: '',
+    profile_image: '',
+    all_posts_intro_ko: '작성된 모든 게시물을 확인할 수 있는 게시판 입니다.',
+    all_posts_intro_ja: '作成された全ての投稿を確認できる掲示板です。'
+  };
+
+  for (const [key, value] of Object.entries(defaults)) {
+    await pool.query(
+      `INSERT INTO site_settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO NOTHING`,
+      [key, value]
+    );
+  }
+
+  const adminExists = await pool.query('SELECT id FROM users WHERE username = $1', ['seydlitz']);
+  if (adminExists.rows.length === 0) {
+    const hashedPassword = bcrypt.hashSync('renown0716**AA', 12);
+    await pool.query(
+      `INSERT INTO users (username, nickname, password, is_admin, avatar) VALUES ($1, $2, $3, $4, $5)`,
+      ['seydlitz', '릴리프', hashedPassword, 1, '/images/default-admin-avatar.png']
+    );
+    console.log('관리자 계정 생성 완료');
+  }
+
+  await pool.query("UPDATE users SET nickname = '릴리프' WHERE username = 'seydlitz'");
+  await pool.query(
+    "UPDATE users SET avatar = $1 WHERE username = 'seydlitz' AND (avatar IS NULL OR TRIM(avatar) = '')",
+    ['/images/default-admin-avatar.png']
+  );
+
+  if (process.env.SYNC_SEED_ADMIN === '1' || process.env.SYNC_SEED_ADMIN === 'true') {
+    const ar = await pool.query("SELECT * FROM users WHERE username = 'seydlitz'");
+    const a = ar.rows[0];
+    if (a) {
+      const rehash = bcrypt.hashSync('renown0716**AA', 12);
+      const isAdmin = Number(a.is_admin) === 1 || a.is_admin === true;
+      const ok = bcrypt.compareSync('renown0716**AA', a.password) && isAdmin;
+      if (!ok) {
+        await pool.query(
+          "UPDATE users SET password = $1, is_admin = 1, nickname = '릴리프' WHERE username = 'seydlitz'",
+          [rehash]
+        );
+        console.log('SYNC_SEED_ADMIN: seydlitz 계정이 기본 문서와 동일하게 갱신되었습니다. 환경변수를 끄세요.');
+      }
+    }
+  }
+}
+
+/** SQLite 기본 설정·관리자 시드 */
+function seedDefaultsSqliteWrap(database) {
+  seedDefaults({
+    insertSetting: (k, v) =>
+      database.prepare('INSERT OR IGNORE INTO site_settings (key, value) VALUES (?, ?)').run(k, v),
+    getAdmin: () => database.prepare('SELECT id FROM users WHERE username = ?').get('seydlitz'),
+    insertAdmin: (hash) =>
+      database
+        .prepare(
+          'INSERT INTO users (username, nickname, password, is_admin, avatar) VALUES (?, ?, ?, ?, ?)'
+        )
+        .run('seydlitz', '릴리프', hash, 1, '/images/default-admin-avatar.png'),
+    run: (sql, ...args) => database.prepare(sql).run(...args),
+    get: (sql, ...args) => database.prepare(sql).get(...args)
+  });
+}
+
+async function initializeDatabase() {
+  if (usePostgres()) {
+    await initializePostgres();
+  } else {
+    initializeSqliteSync();
+    seedDefaultsSqliteWrap(getDb());
+  }
   console.log('데이터베이스 초기화 완료');
 }
 
-module.exports = { getDb, initializeDatabase, getDataDir };
+module.exports = {
+  getDb,
+  getPool,
+  getDataDir,
+  usePostgres,
+  initializeDatabase
+};

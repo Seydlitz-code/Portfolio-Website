@@ -4,7 +4,8 @@ const fs = require('fs');
 const bcrypt = require('bcrypt');
 const multer = require('multer');
 const router = express.Router();
-const { getDb } = require('../config/database');
+const db = require('../lib/db');
+const { asyncRoute } = require('../lib/asyncRoute');
 
 const avatarStorage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -61,7 +62,6 @@ function registerFail(req, res, msg) {
   return res.render('register', { error: msg, captchaQuestion: question });
 }
 
-// GET /auth/login
 router.get('/login', (req, res) => {
   if (req.session.user) {
     return res.redirect(safeRedirectPath(req.query.next) || '/');
@@ -75,110 +75,120 @@ router.get('/login', (req, res) => {
   });
 });
 
-// POST /auth/login
-router.post('/login', (req, res) => {
-  const { username, password } = req.body;
-  const nextForForm = safeRedirectPath(req.body.next) || safeRedirectPath(req.query.next) || null;
+router.post(
+  '/login',
+  asyncRoute(async (req, res) => {
+    const { username, password } = req.body;
+    const nextForForm = safeRedirectPath(req.body.next) || safeRedirectPath(req.query.next) || null;
 
-  if (!username || !password) {
-    return res.render('login', { error: '아이디와 비밀번호를 입력해주세요.', success: null, next: nextForForm });
-  }
-
-  const db = getDb();
-  const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username.trim());
-
-  if (!user || !bcrypt.compareSync(password, user.password)) {
-    return res.render('login', { error: '아이디 또는 비밀번호가 올바르지 않습니다.', success: null, next: nextForForm });
-  }
-
-  // connect-sqlite3(비동기) 세션이 파일에 쓰이기 전에 redirect 하면
-  // 쿠키/세션이 반영되지 않은 것처럼 보일 수 있으므로 반드시 save 후 응답
-  const nextUrl = safeRedirectPath(req.body.next) || safeRedirectPath(req.query.next) || '/';
-
-  const avatar =
-    user.avatar != null && String(user.avatar).trim() !== '' ? String(user.avatar).trim() : null;
-  req.session.user = {
-    id: user.id,
-    username: user.username,
-    nickname: user.nickname,
-    avatar,
-    is_admin: user.is_admin != null ? Number(user.is_admin) : 0
-  };
-
-  req.session.save((err) => {
-    if (err) {
-      console.error('Session save error:', err);
+    if (!username || !password) {
       return res.render('login', {
-        error: '로그인 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.',
+        error: '아이디와 비밀번호를 입력해주세요.',
         success: null,
         next: nextForForm
       });
     }
-    res.redirect(nextUrl);
-  });
-});
 
-// GET /auth/check-username (JSON)
-router.get('/check-username', (req, res) => {
-  const u = (req.query.username != null ? String(req.query.username) : '').trim();
-  if (!u) {
-    return res.json({ available: false, message: '아이디를 입력해주세요.' });
-  }
-  if (u.length < 3) {
-    return res.json({ available: false, message: '아이디는 3자 이상이어야 합니다.' });
-  }
-  if (u.length > 30) {
-    return res.json({ available: false, message: '아이디가 너무 깁니다.' });
-  }
-  if (!/^[a-zA-Z0-9_]+$/.test(u)) {
-    return res.json({ available: false, message: '영문, 숫자, 밑줄(_)만 사용할 수 있습니다.' });
-  }
-  const row = getDb().prepare('SELECT id FROM users WHERE username = ?').get(u);
-  if (row) {
-    return res.json({ available: false, duplicate: true });
-  }
-  return res.json({ available: true });
-});
+    const user = await db.get('SELECT * FROM users WHERE username = ?', [username.trim()]);
 
-// GET /auth/check-nickname (JSON) — 로그인 시 본인 닉네임은 사용 가능으로 처리, 마이페이지 적용용 세션에 검증값 저장
-router.get('/check-nickname', (req, res) => {
-  const n = (req.query.nickname != null ? String(req.query.nickname) : '').trim();
-  if (!n) {
-    if (req.session) delete req.session.mypageNicknameVerified;
-    return res.json({ available: false, message: '닉네임을 입력해주세요.' });
-  }
-  if (n.length > 20) {
-    if (req.session) delete req.session.mypageNicknameVerified;
-    return res.json({ available: false, message: '닉네임은 20자 이하로 입력해주세요.' });
-  }
-  const row = getDb().prepare('SELECT id FROM users WHERE nickname = ?').get(n);
-  const sessUser = req.session && req.session.user;
-
-  function sendJson(payload) {
-    if (req.session && typeof req.session.save === 'function') {
-      return req.session.save((err) => {
-        if (err) return res.status(500).json({ available: false, message: '세션 저장에 실패했습니다.' });
-        return res.json(payload);
+    if (!user || !bcrypt.compareSync(password, user.password)) {
+      return res.render('login', {
+        error: '아이디 또는 비밀번호가 올바르지 않습니다.',
+        success: null,
+        next: nextForForm
       });
     }
-    return res.json(payload);
-  }
 
-  if (row) {
-    if (sessUser && Number(row.id) === Number(sessUser.id)) {
-      if (req.session) req.session.mypageNicknameVerified = n;
-      return sendJson({ available: true, self: true });
+    const nextUrl = safeRedirectPath(req.body.next) || safeRedirectPath(req.query.next) || '/';
+
+    const avatar =
+      user.avatar != null && String(user.avatar).trim() !== '' ? String(user.avatar).trim() : null;
+    req.session.user = {
+      id: user.id,
+      username: user.username,
+      nickname: user.nickname,
+      avatar,
+      is_admin: user.is_admin != null ? Number(user.is_admin) : 0
+    };
+
+    req.session.save((err) => {
+      if (err) {
+        console.error('Session save error:', err);
+        return res.render('login', {
+          error: '로그인 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.',
+          success: null,
+          next: nextForForm
+        });
+      }
+      res.redirect(nextUrl);
+    });
+  })
+);
+
+router.get(
+  '/check-username',
+  asyncRoute(async (req, res) => {
+    const u = (req.query.username != null ? String(req.query.username) : '').trim();
+    if (!u) {
+      return res.json({ available: false, message: '아이디를 입력해주세요.' });
     }
-    if (req.session) delete req.session.mypageNicknameVerified;
-    return res.json({ available: false, duplicate: true });
-  }
-  if (sessUser && req.session) {
-    req.session.mypageNicknameVerified = n;
-  }
-  return sendJson({ available: true });
-});
+    if (u.length < 3) {
+      return res.json({ available: false, message: '아이디는 3자 이상이어야 합니다.' });
+    }
+    if (u.length > 30) {
+      return res.json({ available: false, message: '아이디가 너무 깁니다.' });
+    }
+    if (!/^[a-zA-Z0-9_]+$/.test(u)) {
+      return res.json({ available: false, message: '영문, 숫자, 밑줄(_)만 사용할 수 있습니다.' });
+    }
+    const row = await db.get('SELECT id FROM users WHERE username = ?', [u]);
+    if (row) {
+      return res.json({ available: false, duplicate: true });
+    }
+    return res.json({ available: true });
+  })
+);
 
-// GET /auth/register
+router.get(
+  '/check-nickname',
+  asyncRoute(async (req, res) => {
+    const n = (req.query.nickname != null ? String(req.query.nickname) : '').trim();
+    if (!n) {
+      if (req.session) delete req.session.mypageNicknameVerified;
+      return res.json({ available: false, message: '닉네임을 입력해주세요.' });
+    }
+    if (n.length > 20) {
+      if (req.session) delete req.session.mypageNicknameVerified;
+      return res.json({ available: false, message: '닉네임은 20자 이하로 입력해주세요.' });
+    }
+    const row = await db.get('SELECT id FROM users WHERE nickname = ?', [n]);
+    const sessUser = req.session && req.session.user;
+
+    function sendJson(payload) {
+      if (req.session && typeof req.session.save === 'function') {
+        return req.session.save((err) => {
+          if (err) return res.status(500).json({ available: false, message: '세션 저장에 실패했습니다.' });
+          return res.json(payload);
+        });
+      }
+      return res.json(payload);
+    }
+
+    if (row) {
+      if (sessUser && Number(row.id) === Number(sessUser.id)) {
+        if (req.session) req.session.mypageNicknameVerified = n;
+        return sendJson({ available: true, self: true });
+      }
+      if (req.session) delete req.session.mypageNicknameVerified;
+      return res.json({ available: false, duplicate: true });
+    }
+    if (sessUser && req.session) {
+      req.session.mypageNicknameVerified = n;
+    }
+    return sendJson({ available: true });
+  })
+);
+
 router.get('/register', (req, res) => {
   if (req.session.user) return res.redirect('/');
   const captcha = generateCaptcha();
@@ -186,69 +196,73 @@ router.get('/register', (req, res) => {
   res.render('register', { error: null, captchaQuestion: captcha.question });
 });
 
-// POST /auth/register
-router.post('/register', (req, res, next) => {
-  uploadAvatar.single('avatar')(req, res, (err) => {
-    if (err) {
-      if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE') {
-        return registerFail(req, res, '프로필 이미지는 3MB 이하여야 합니다.');
+router.post(
+  '/register',
+  (req, res, next) => {
+    uploadAvatar.single('avatar')(req, res, (err) => {
+      if (err) {
+        if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE') {
+          return registerFail(req, res, '프로필 이미지는 3MB 이하여야 합니다.');
+        }
+        return registerFail(req, res, err.message || '이미지 업로드에 실패했습니다.');
       }
-      return registerFail(req, res, err.message || '이미지 업로드에 실패했습니다.');
+      next();
+    });
+  },
+  asyncRoute(async (req, res) => {
+    const { nickname, username, password, passwordConfirm, captcha } = req.body;
+
+    const fail = (msg) => registerFail(req, res, msg);
+
+    if (!nickname || !username || !password || !passwordConfirm || !captcha) {
+      return fail('모든 항목을 입력해주세요.');
     }
-    next();
-  });
-}, (req, res) => {
-  const { nickname, username, password, passwordConfirm, captcha } = req.body;
+    if (parseInt(captcha, 10) !== req.session.captchaAnswer) {
+      return fail('보안 문자가 올바르지 않습니다. 다시 시도해주세요.');
+    }
+    if (password !== passwordConfirm) {
+      return fail('비밀번호가 일치하지 않습니다.');
+    }
+    if (password.length < 8 || password.length > 20) {
+      return fail('비밀번호는 8자 이상 20자 이하여야 합니다.');
+    }
+    if (username.length < 3) {
+      return fail('아이디는 3자 이상이어야 합니다.');
+    }
+    if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+      return fail('아이디는 영문, 숫자, 밑줄(_)만 사용할 수 있습니다.');
+    }
 
-  const fail = (msg) => registerFail(req, res, msg);
+    const existingUser = await db.get('SELECT id FROM users WHERE username = ?', [username.trim()]);
+    if (existingUser) {
+      return fail('이미 사용 중인 아이디입니다.');
+    }
+    const existingNick = await db.get('SELECT id FROM users WHERE nickname = ?', [nickname.trim()]);
+    if (existingNick) {
+      return fail('이미 사용 중인 닉네임입니다.');
+    }
 
-  if (!nickname || !username || !password || !passwordConfirm || !captcha) {
-    return fail('모든 항목을 입력해주세요.');
-  }
-  if (parseInt(captcha, 10) !== req.session.captchaAnswer) {
-    return fail('보안 문자가 올바르지 않습니다. 다시 시도해주세요.');
-  }
-  if (password !== passwordConfirm) {
-    return fail('비밀번호가 일치하지 않습니다.');
-  }
-  if (password.length < 8 || password.length > 20) {
-    return fail('비밀번호는 8자 이상 20자 이하여야 합니다.');
-  }
-  if (username.length < 3) {
-    return fail('아이디는 3자 이상이어야 합니다.');
-  }
-  if (!/^[a-zA-Z0-9_]+$/.test(username)) {
-    return fail('아이디는 영문, 숫자, 밑줄(_)만 사용할 수 있습니다.');
-  }
+    let avatarPath = null;
+    if (req.file) {
+      avatarPath = `/uploads/avatars/${req.file.filename}`;
+    }
 
-  const db = getDb();
-  const existingUser = db.prepare('SELECT id FROM users WHERE username = ?').get(username.trim());
-  if (existingUser) {
-    return fail('이미 사용 중인 아이디입니다.');
-  }
-  const existingNick = db.prepare('SELECT id FROM users WHERE nickname = ?').get(nickname.trim());
-  if (existingNick) {
-    return fail('이미 사용 중인 닉네임입니다.');
-  }
+    try {
+      const hashed = bcrypt.hashSync(password, 12);
+      await db.run('INSERT INTO users (username, nickname, password, avatar) VALUES (?, ?, ?, ?)', [
+        username.trim(),
+        nickname.trim(),
+        hashed,
+        avatarPath
+      ]);
+      res.redirect('/auth/login?registered=true');
+    } catch (err) {
+      console.error(err);
+      return fail('회원가입 중 오류가 발생했습니다. 다시 시도해주세요.');
+    }
+  })
+);
 
-  let avatarPath = null;
-  if (req.file) {
-    avatarPath = `/uploads/avatars/${req.file.filename}`;
-  }
-
-  try {
-    const hashed = bcrypt.hashSync(password, 12);
-    db.prepare(
-      'INSERT INTO users (username, nickname, password, avatar) VALUES (?, ?, ?, ?)'
-    ).run(username.trim(), nickname.trim(), hashed, avatarPath);
-    res.redirect('/auth/login?registered=true');
-  } catch (err) {
-    console.error(err);
-    return fail('회원가입 중 오류가 발생했습니다. 다시 시도해주세요.');
-  }
-});
-
-// POST /auth/logout
 router.post('/logout', (req, res) => {
   req.session.destroy(() => {
     res.redirect('/');

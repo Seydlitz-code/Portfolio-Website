@@ -1,4 +1,5 @@
-# Render: 영구 디스크 mountPath와 DATA_DIR을 반드시 동일하게 두세요. 그렇지 않으면 배포마다 DB가 비는 것처럼 보일 수 있습니다.
+# Render: SQLite 유지 시 영구 디스크 mountPath와 DATA_DIR을 동일하게 두세요.
+# Railway: PostgreSQL 플러그인을 쓰면 DATABASE_URL이 주입됩니다. 이 변수가 있으면 앱은 Postgres만 사용합니다(디스크 SQLite 불필요).
 # (이전에 "db" 폴더에 마운트하면 db/database.js가 가려져 Cannot find module 오류가 납니다.)
 # 대시보드만으로 만든 서비스: Disk 추가 후 Environment에 DATA_DIR = 디스크 mount 경로.
 services:

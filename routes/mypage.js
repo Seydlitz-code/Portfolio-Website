@@ -3,11 +3,12 @@ const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
 const router = express.Router();
-const { getDb } = require('../config/database');
+const db = require('../lib/db');
 const { requireLogin, requireAdmin } = require('../middleware/auth');
 const { getAccountShell } = require('../lib/mypageShell');
 const { getSiteHomeData, getSiteSettings } = require('../lib/siteData');
 const { buildPaginationItems } = require('../lib/listingHelpers');
+const { asyncRoute } = require('../lib/asyncRoute');
 
 const avatarStorage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -32,8 +33,17 @@ const uploadAvatar = multer({
   limits: { fileSize: 3 * 1024 * 1024 }
 });
 
-function profilePayload(req, extras) {
-  const shell = getAccountShell(req);
+function runUploadAvatar(req, res) {
+  return new Promise((resolve, reject) => {
+    uploadAvatar.single('avatar')(req, res, (err) => {
+      if (err) reject(err);
+      else resolve();
+    });
+  });
+}
+
+async function profilePayload(req, extras) {
+  const shell = await getAccountShell(req);
   if (!shell) return null;
   const e = { ...(extras || {}) };
   const formNick = e.formNickname != null ? String(e.formNickname).trim() : '';
@@ -58,41 +68,38 @@ function profilePayload(req, extras) {
 
 const MY_WRITINGS_PAGE = 10;
 
-function postsPayload(req, extras) {
-  const shell = getAccountShell(req);
+async function postsPayload(req, extras) {
+  const shell = await getAccountShell(req);
   if (!shell) return null;
-  const db = getDb();
   const uid = shell.profileUser.id;
 
-  const myPostsTotal =
-    db.prepare('SELECT COUNT(*) as n FROM posts WHERE author_id = ?').get(uid).n || 0;
-  const myPosts = db
-    .prepare(
-      `
+  const myPostsRow = await db.get('SELECT COUNT(*) as n FROM posts WHERE author_id = ?', [uid]);
+  const myPostsTotal = myPostsRow && myPostsRow.n != null ? Number(myPostsRow.n) : 0;
+  const myPosts = await db.all(
+    `
     SELECT p.*, pr.name as project_name
     FROM posts p
     LEFT JOIN projects pr ON p.project_id = pr.id
     WHERE p.author_id = ?
     ORDER BY p.created_at DESC
     LIMIT ?
-  `
-    )
-    .all(uid, MY_WRITINGS_PAGE);
+  `,
+    [uid, MY_WRITINGS_PAGE]
+  );
 
-  const myCommentsTotal =
-    db.prepare('SELECT COUNT(*) as n FROM comments WHERE user_id = ?').get(uid).n || 0;
-  const myComments = db
-    .prepare(
-      `
+  const myCommentsRow = await db.get('SELECT COUNT(*) as n FROM comments WHERE user_id = ?', [uid]);
+  const myCommentsTotal = myCommentsRow && myCommentsRow.n != null ? Number(myCommentsRow.n) : 0;
+  const myComments = await db.all(
+    `
     SELECT c.id, c.content, c.created_at, c.post_id, p.title as post_title
     FROM comments c
     JOIN posts p ON p.id = c.post_id
     WHERE c.user_id = ?
     ORDER BY c.created_at DESC
     LIMIT ?
-  `
-    )
-    .all(uid, MY_WRITINGS_PAGE);
+  `,
+    [uid, MY_WRITINGS_PAGE]
+  );
 
   return {
     ...shell,
@@ -121,36 +128,46 @@ function tryUnlinkAvatar(publicPath) {
   }
 }
 
-function accountViewLocals(data) {
+async function accountViewLocals(data) {
   if (!data) return null;
   return {
     ...data,
-    settings: data.settings != null ? data.settings : getSiteSettings()
+    settings: data.settings != null ? data.settings : await getSiteSettings()
   };
 }
 
-router.get('/', requireLogin, (req, res) => {
-  const data = profilePayload(req, {
-    saved: req.query.saved === '1'
-  });
-  if (!data) return res.redirect('/auth/logout');
-  res.render('mypage-account', accountViewLocals(data));
-});
+router.get(
+  '/',
+  requireLogin,
+  asyncRoute(async (req, res) => {
+    const data = await profilePayload(req, {
+      saved: req.query.saved === '1'
+    });
+    if (!data) return res.redirect('/auth/logout');
+    res.render('mypage-account', await accountViewLocals(data));
+  })
+);
 
-router.get('/posts', requireLogin, (req, res) => {
-  const data = postsPayload(req);
-  if (!data) return res.redirect('/auth/logout');
-  res.render('mypage-account', accountViewLocals(data));
-});
+router.get(
+  '/posts',
+  requireLogin,
+  asyncRoute(async (req, res) => {
+    const data = await postsPayload(req);
+    if (!data) return res.redirect('/auth/logout');
+    res.render('mypage-account', await accountViewLocals(data));
+  })
+);
 
-router.get('/api/my-posts', requireLogin, (req, res) => {
-  const uid = req.session.user.id;
-  const offset = Math.max(0, parseInt(req.query.offset, 10) || 0);
-  const limit = Math.min(50, Math.max(1, parseInt(req.query.limit, 10) || MY_WRITINGS_PAGE));
-  const db = getDb();
-  const total = db.prepare('SELECT COUNT(*) as n FROM posts WHERE author_id = ?').get(uid).n || 0;
-  const items = db
-    .prepare(
+router.get(
+  '/api/my-posts',
+  requireLogin,
+  asyncRoute(async (req, res) => {
+    const uid = req.session.user.id;
+    const offset = Math.max(0, parseInt(req.query.offset, 10) || 0);
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit, 10) || MY_WRITINGS_PAGE));
+    const totalRow = await db.get('SELECT COUNT(*) as n FROM posts WHERE author_id = ?', [uid]);
+    const total = totalRow && totalRow.n != null ? Number(totalRow.n) : 0;
+    const items = await db.all(
       `
     SELECT p.*, pr.name as project_name
     FROM posts p
@@ -158,24 +175,27 @@ router.get('/api/my-posts', requireLogin, (req, res) => {
     WHERE p.author_id = ?
     ORDER BY p.created_at DESC
     LIMIT ? OFFSET ?
-  `
-    )
-    .all(uid, limit, offset);
-  res.json({
-    items,
-    total,
-    hasMore: offset + items.length < total
-  });
-});
+  `,
+      [uid, limit, offset]
+    );
+    res.json({
+      items,
+      total,
+      hasMore: offset + items.length < total
+    });
+  })
+);
 
-router.get('/api/my-comments', requireLogin, (req, res) => {
-  const uid = req.session.user.id;
-  const offset = Math.max(0, parseInt(req.query.offset, 10) || 0);
-  const limit = Math.min(50, Math.max(1, parseInt(req.query.limit, 10) || MY_WRITINGS_PAGE));
-  const db = getDb();
-  const total = db.prepare('SELECT COUNT(*) as n FROM comments WHERE user_id = ?').get(uid).n || 0;
-  const items = db
-    .prepare(
+router.get(
+  '/api/my-comments',
+  requireLogin,
+  asyncRoute(async (req, res) => {
+    const uid = req.session.user.id;
+    const offset = Math.max(0, parseInt(req.query.offset, 10) || 0);
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit, 10) || MY_WRITINGS_PAGE));
+    const totalRow = await db.get('SELECT COUNT(*) as n FROM comments WHERE user_id = ?', [uid]);
+    const total = totalRow && totalRow.n != null ? Number(totalRow.n) : 0;
+    const items = await db.all(
       `
     SELECT c.id, c.content, c.created_at, c.post_id, p.title as post_title
     FROM comments c
@@ -183,72 +203,87 @@ router.get('/api/my-comments', requireLogin, (req, res) => {
     WHERE c.user_id = ?
     ORDER BY c.created_at DESC
     LIMIT ? OFFSET ?
-  `
-    )
-    .all(uid, limit, offset);
-  res.json({
-    items,
-    total,
-    hasMore: offset + items.length < total
-  });
-});
+  `,
+      [uid, limit, offset]
+    );
+    res.json({
+      items,
+      total,
+      hasMore: offset + items.length < total
+    });
+  })
+);
 
-router.get('/main-settings', requireLogin, requireAdmin, (req, res) => {
-  const shell = getAccountShell(req);
-  if (!shell) return res.redirect('/auth/logout');
-  res.render('mypage-account', accountViewLocals({
-    ...shell,
-    ...getSiteHomeData(),
-    activeTab: 'mainSettings',
-    saved: req.query.saved === '1',
-    errMessage: null
-  }));
-});
+router.get(
+  '/main-settings',
+  requireLogin,
+  requireAdmin,
+  asyncRoute(async (req, res) => {
+    const shell = await getAccountShell(req);
+    if (!shell) return res.redirect('/auth/logout');
+    const home = await getSiteHomeData();
+    res.render(
+      'mypage-account',
+      await accountViewLocals({
+        ...shell,
+        ...home,
+        activeTab: 'mainSettings',
+        saved: req.query.saved === '1',
+        errMessage: null
+      })
+    );
+  })
+);
 
 const BOARDS_ADMIN_PAGE_SIZE = 20;
 
-router.get('/boards', requireLogin, requireAdmin, (req, res) => {
-  const shell = getAccountShell(req);
-  if (!shell) return res.redirect('/auth/logout');
-  const db = getDb();
-  const page = Math.max(1, parseInt(req.query.page, 10) || 1);
-  const total = db.prepare('SELECT COUNT(*) as c FROM projects').get().c || 0;
-  const totalPages = total === 0 ? 1 : Math.ceil(total / BOARDS_ADMIN_PAGE_SIZE);
-  if (page > totalPages) {
-    return res.redirect('/mypage/boards?page=' + totalPages);
-  }
-  const offset = (page - 1) * BOARDS_ADMIN_PAGE_SIZE;
-  const boardsList = db
-    .prepare(
+router.get(
+  '/boards',
+  requireLogin,
+  requireAdmin,
+  asyncRoute(async (req, res) => {
+    const shell = await getAccountShell(req);
+    if (!shell) return res.redirect('/auth/logout');
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const totalRow = await db.get('SELECT COUNT(*) as c FROM projects');
+    const total = totalRow && totalRow.c != null ? Number(totalRow.c) : 0;
+    const totalPages = total === 0 ? 1 : Math.ceil(total / BOARDS_ADMIN_PAGE_SIZE);
+    if (page > totalPages) {
+      return res.redirect('/mypage/boards?page=' + totalPages);
+    }
+    const offset = (page - 1) * BOARDS_ADMIN_PAGE_SIZE;
+    const boardsList = await db.all(
       `
     SELECT pr.*,
       (SELECT COUNT(*) FROM posts p WHERE p.project_id = pr.id) AS post_count
     FROM projects pr
     ORDER BY pr.order_num ASC, pr.id ASC
     LIMIT ? OFFSET ?
-  `
-    )
-    .all(BOARDS_ADMIN_PAGE_SIZE, offset);
-  const boardsPaginationItems = buildPaginationItems(page, totalPages);
-  res.render(
-    'mypage-account',
-    accountViewLocals({
-      ...shell,
-      ...getSiteHomeData(),
-      activeTab: 'boardsManage',
-      boardsList,
-      boardsPage: page,
-      boardsTotalPages: totalPages,
-      boardsTotal: total,
-      boardsPageSize: BOARDS_ADMIN_PAGE_SIZE,
-      boardsPaginationItems,
-      boardsSaved: req.query.saved === '1',
-      boardsDeleted: req.query.deleted === '1',
-      boardsDeleteBlocked: req.query.deleteBlocked === '1',
-      boardsCreateErr: req.query.createErr === '1'
-    })
-  );
-});
+  `,
+      [BOARDS_ADMIN_PAGE_SIZE, offset]
+    );
+    const boardsPaginationItems = buildPaginationItems(page, totalPages);
+    const home = await getSiteHomeData();
+    res.render(
+      'mypage-account',
+      await accountViewLocals({
+        ...shell,
+        ...home,
+        activeTab: 'boardsManage',
+        boardsList,
+        boardsPage: page,
+        boardsTotalPages: totalPages,
+        boardsTotal: total,
+        boardsPageSize: BOARDS_ADMIN_PAGE_SIZE,
+        boardsPaginationItems,
+        boardsSaved: req.query.saved === '1',
+        boardsDeleted: req.query.deleted === '1',
+        boardsDeleteBlocked: req.query.deleteBlocked === '1',
+        boardsCreateErr: req.query.createErr === '1'
+      })
+    );
+  })
+);
 
 router.get('/board', requireLogin, requireAdmin, (req, res) => {
   res.redirect(302, '/mypage/boards');
@@ -257,55 +292,56 @@ router.get('/board', requireLogin, requireAdmin, (req, res) => {
 router.post(
   '/profile',
   requireLogin,
-  (req, res, next) => {
-    uploadAvatar.single('avatar')(req, res, (err) => {
-      if (err) {
-        if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE') {
-          const data = profilePayload(req, {
-            profileError: '프로필 이미지는 3MB 이하여야 합니다.',
-            nicknameDupWarning: false,
-            formNickname: (req.body && req.body.nickname) || ''
-          });
-          if (!data) return res.redirect('/auth/logout');
-          return res.status(400).render('mypage-account', accountViewLocals(data));
-        }
-        const data = profilePayload(req, {
-          profileError: err.message || '이미지 업로드에 실패했습니다.',
+  asyncRoute(async (req, res) => {
+    try {
+      await runUploadAvatar(req, res);
+    } catch (err) {
+      if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE') {
+        const data = await profilePayload(req, {
+          profileError: '프로필 이미지는 3MB 이하여야 합니다.',
           nicknameDupWarning: false,
           formNickname: (req.body && req.body.nickname) || ''
         });
         if (!data) return res.redirect('/auth/logout');
-        return res.status(400).render('mypage-account', accountViewLocals(data));
+        return res.status(400).render('mypage-account', await accountViewLocals(data));
       }
-      next();
-    });
-  },
-  (req, res) => {
-    const db = getDb();
+      const data = await profilePayload(req, {
+        profileError: err.message || '이미지 업로드에 실패했습니다.',
+        nicknameDupWarning: false,
+        formNickname: (req.body && req.body.nickname) || ''
+      });
+      if (!data) return res.redirect('/auth/logout');
+      return res.status(400).render('mypage-account', await accountViewLocals(data));
+    }
+
     const uid = req.session.user.id;
-    const row = db.prepare('SELECT id, username, nickname, avatar FROM users WHERE id = ?').get(uid);
+    const row = await db.get('SELECT id, username, nickname, avatar FROM users WHERE id = ?', [uid]);
     if (!row) {
-      if (req.file && req.file.path) try {
-        fs.unlinkSync(req.file.path);
-      } catch (e) {
-        /* ignore */
+      if (req.file && req.file.path) {
+        try {
+          fs.unlinkSync(req.file.path);
+        } catch (e) {
+          /* ignore */
+        }
       }
       return res.redirect('/auth/logout');
     }
 
     const newNick = (req.body.nickname != null ? String(req.body.nickname) : '').trim();
     if (!newNick || newNick.length > 20) {
-      if (req.file && req.file.path) try {
-        fs.unlinkSync(req.file.path);
-      } catch (e) {
-        /* ignore */
+      if (req.file && req.file.path) {
+        try {
+          fs.unlinkSync(req.file.path);
+        } catch (e) {
+          /* ignore */
+        }
       }
-      const data = profilePayload(req, {
+      const data = await profilePayload(req, {
         profileError: '닉네임을 1자 이상 20자 이하로 입력해주세요.',
         nicknameDupWarning: false,
         formNickname: (req.body && req.body.nickname) || ''
       });
-      return res.status(400).render('mypage-account', accountViewLocals(data));
+      return res.status(400).render('mypage-account', await accountViewLocals(data));
     }
 
     const prevNick = String(row.nickname || '').trim();
@@ -315,31 +351,35 @@ router.post(
     if (nickChanged) {
       const verified = req.session.mypageNicknameVerified;
       if (verified !== newNick) {
-        if (req.file && req.file.path) try {
-          fs.unlinkSync(req.file.path);
-        } catch (e) {
-          /* ignore */
+        if (req.file && req.file.path) {
+          try {
+            fs.unlinkSync(req.file.path);
+          } catch (e) {
+            /* ignore */
+          }
         }
-        const data = profilePayload(req, {
+        const data = await profilePayload(req, {
           profileError: null,
           nicknameDupWarning: true,
           formNickname: newNick
         });
-        return res.status(400).render('mypage-account', accountViewLocals(data));
+        return res.status(400).render('mypage-account', await accountViewLocals(data));
       }
-      const taken = db.prepare('SELECT id FROM users WHERE nickname = ? AND id != ?').get(newNick, uid);
+      const taken = await db.get('SELECT id FROM users WHERE nickname = ? AND id != ?', [newNick, uid]);
       if (taken) {
-        if (req.file && req.file.path) try {
-          fs.unlinkSync(req.file.path);
-        } catch (e) {
-          /* ignore */
+        if (req.file && req.file.path) {
+          try {
+            fs.unlinkSync(req.file.path);
+          } catch (e) {
+            /* ignore */
+          }
         }
-        const data = profilePayload(req, {
+        const data = await profilePayload(req, {
           profileError: '이미 사용 중인 닉네임입니다. 다시 중복 확인해주세요.',
           nicknameDupWarning: false,
           formNickname: newNick
         });
-        return res.status(400).render('mypage-account', accountViewLocals(data));
+        return res.status(400).render('mypage-account', await accountViewLocals(data));
       }
     }
 
@@ -352,7 +392,7 @@ router.post(
       nextAvatar = newPath;
     }
 
-    db.prepare('UPDATE users SET nickname = ?, avatar = ? WHERE id = ?').run(newNick, nextAvatar, uid);
+    await db.run('UPDATE users SET nickname = ?, avatar = ? WHERE id = ?', [newNick, nextAvatar, uid]);
 
     if (req.session) {
       delete req.session.mypageNicknameVerified;
@@ -364,7 +404,7 @@ router.post(
       if (err) console.error('Session save error (mypage profile):', err);
       res.redirect('/mypage?saved=1');
     });
-  }
+  })
 );
 
 module.exports = router;

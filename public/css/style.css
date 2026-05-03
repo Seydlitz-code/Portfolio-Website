@@ -347,11 +347,13 @@ body.index-page .portfolio-section {
 
 .hero-content {
   display: flex;
+  justify-content: center;
   align-items: center;
-  gap: clamp(1.25rem, 3.5vw, 2.75rem);
+  gap: clamp(1.5rem, 4vw, 3rem);
   padding: 5rem clamp(1.25rem, 5vw, 3rem) 3rem;
   width: 100%;
   max-width: min(1320px, 96vw);
+  margin-inline: auto;
   box-sizing: border-box;
 }
 
@@ -362,8 +364,8 @@ body.index-page .portfolio-section {
 
 .profile-circle-wrap {
   position: relative;
-  width: clamp(130px, 17vw, 220px);
-  height: clamp(130px, 17vw, 220px);
+  width: clamp(160px, 20vw, 280px);
+  height: clamp(160px, 20vw, 280px);
   border-radius: 50%;
   background: white;
   border: 3px solid rgba(0,0,0,0.12);
@@ -422,9 +424,13 @@ body.index-page .portfolio-section {
   background: rgba(0,0,0,0.85);
 }
 
-/* Hero Info — 이름 한 줄·소개문에 충분한 가로 공간(가로 스크롤 최소화) */
+/* Hero Info — 프로필과 함께 한 덩어리로 중앙에 오도록 flex-grow 없음 */
 .hero-info {
-  flex: 1 1 48%;
+  flex: 0 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
   min-width: 0;
   overflow-x: visible;
   overflow-y: visible;
@@ -445,7 +451,7 @@ body.index-page .portfolio-section {
 
 .hero-name {
   font-family: 'Inter', sans-serif;
-  font-size: clamp(1.15rem, 2.2vw + 0.55rem, 2.5rem);
+  font-size: clamp(1.45rem, 2.85vw + 0.6rem, 3rem);
   font-weight: 400;
   letter-spacing: -0.01em;
   color: var(--text-primary);
@@ -454,11 +460,12 @@ body.index-page .portfolio-section {
 }
 
 .hero-bio {
-  font-size: clamp(0.85rem, 1.4vw, 1rem);
+  font-size: clamp(0.95rem, 1.55vw, 1.12rem);
   color: var(--text-secondary);
   line-height: 1.7;
   white-space: pre-wrap;
   max-width: min(42rem, 100%);
+  text-align: center;
 }
 
 .bio-empty {
@@ -474,18 +481,20 @@ body.index-page .portfolio-section {
 /* Social Links */
 .social-links {
   display: flex;
-  gap: 0.75rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: clamp(0.85rem, 2vw, 1.15rem);
 }
 
 .social-btn {
-  width: 44px;
-  height: 44px;
+  width: clamp(50px, 7.5vw, 62px);
+  height: clamp(50px, 7.5vw, 62px);
   border: 1.5px solid rgba(0,0,0,0.2);
   border-radius: var(--radius);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.15rem;
+  font-size: clamp(1.2rem, 2.6vw, 1.5rem);
   color: var(--text-primary);
   background: rgba(255,255,255,0.6);
   backdrop-filter: blur(4px);
@@ -3411,8 +3420,8 @@ body.register-crop-modal-open {
   }
 
   .profile-circle-wrap {
-    width: 180px;
-    height: 180px;
+    width: 200px;
+    height: 200px;
   }
 
   .hero-info {
@@ -3425,10 +3434,11 @@ body.register-crop-modal-open {
     padding-inline: 0.75rem;
     box-sizing: border-box;
     overflow-x: visible;
+    text-align: center;
   }
 
   .hero-name {
-    font-size: clamp(0.88rem, 3.5vw + 0.35rem, 1.65rem);
+    font-size: clamp(1rem, 4.2vw + 0.45rem, 1.85rem);
   }
 
   .name-display,
