@@ -134,6 +134,13 @@ function initializeSqliteSync() {
       mime TEXT NOT NULL,
       data BLOB NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS post_body_assets (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      mime TEXT NOT NULL,
+      data BLOB NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
   `);
 
   const postCols = database.prepare('PRAGMA table_info(posts)').all();
@@ -148,6 +155,11 @@ function initializeSqliteSync() {
     if (adminUser) {
       database.prepare('UPDATE posts SET author_id = ? WHERE author_id IS NULL').run(adminUser.id);
     }
+  }
+  let postCols2 = database.prepare('PRAGMA table_info(posts)').all();
+  if (!postCols2.some((c) => c.name === 'title_ja')) {
+    database.exec('ALTER TABLE posts ADD COLUMN title_ja TEXT');
+    postCols2 = database.prepare('PRAGMA table_info(posts)').all();
   }
 
   let userCols = database.prepare('PRAGMA table_info(users)').all();
@@ -241,6 +253,15 @@ async function initializePostgres() {
     );
   `);
 
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS post_body_assets (
+      id SERIAL PRIMARY KEY,
+      mime TEXT NOT NULL,
+      data BYTEA NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
   if (!(await pgColumnExists(pool, 'posts', 'view_count'))) {
     await pool.query('ALTER TABLE posts ADD COLUMN view_count INTEGER DEFAULT 0');
   }
@@ -254,6 +275,9 @@ async function initializePostgres() {
         adminRow.rows[0].id
       ]);
     }
+  }
+  if (!(await pgColumnExists(pool, 'posts', 'title_ja'))) {
+    await pool.query('ALTER TABLE posts ADD COLUMN title_ja TEXT');
   }
   if (!(await pgColumnExists(pool, 'users', 'avatar'))) {
     await pool.query('ALTER TABLE users ADD COLUMN avatar TEXT');

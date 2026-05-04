@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title><%= post.title %> — 포트폴리오</title>
-  <link rel="stylesheet" href="/css/style.css?v=20260438">
+  <title><%= post.title %><%= post.title_ja && String(post.title_ja).trim() ? ' / ' + String(post.title_ja).trim() : '' %> — 포트폴리오</title>
+  <link rel="stylesheet" href="/css/style.css?v=20260455">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Inter:wght@300;400;500;700&display=swap" rel="stylesheet">
 </head>
@@ -13,7 +13,7 @@
   <%- include('partials/inner-header') %>
 
   <main class="inner-main">
-    <div class="inner-container post-container">
+    <div class="inner-container post-container<%= typeof contentAsHtml !== 'undefined' && contentAsHtml ? ' post-container--wide' : '' %>">
 
       <!-- 게시물 본문 -->
       <article class="post-article">
@@ -26,6 +26,9 @@
         </div>
 
         <h1 class="post-title"><%= post.title %></h1>
+        <% if (post.title_ja != null && String(post.title_ja).trim() !== '') { %>
+          <p class="post-title-ja" lang="ja"><%= post.title_ja %></p>
+        <% } %>
 
         <div class="post-meta">
           <% if (post.project_name) { %>
@@ -39,8 +42,12 @@
           <% } %>
         </div>
 
-        <div class="post-content">
-          <%- post.content.replace(/\n/g, '<br>') %>
+        <div class="post-content<%= typeof contentAsHtml !== 'undefined' && contentAsHtml ? ' post-content--html' : '' %>">
+          <% if (typeof contentAsHtml !== 'undefined' && contentAsHtml) { %>
+            <%- post.content %>
+          <% } else { %>
+            <%- post.content.replace(/\n/g, '<br>') %>
+          <% } %>
         </div>
 
         <!-- 관리자 수정/삭제 -->

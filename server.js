@@ -27,7 +27,7 @@ app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.urlencoded({ extended: true, limit: '12mb' }));
 app.use(methodOverride('_method'));
 app.use('/media', mediaRoutes);
 app.use(

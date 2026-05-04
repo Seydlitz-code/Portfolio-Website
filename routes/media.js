@@ -50,4 +50,17 @@ router.get(
   })
 );
 
+router.get(
+  '/post-body/:id',
+  asyncRoute(async (req, res) => {
+    const id = parseInt(req.params.id, 10);
+    if (!Number.isFinite(id) || id < 1) return res.status(404).send('Not found');
+    const row = await db.get('SELECT mime, data FROM post_body_assets WHERE id = ?', [id]);
+    const buf = row ? asBuffer(row.data) : null;
+    if (!buf) return res.status(404).send('Not found');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    res.type(row.mime || 'application/octet-stream').send(buf);
+  })
+);
+
 module.exports = router;

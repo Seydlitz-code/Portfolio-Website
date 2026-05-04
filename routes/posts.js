@@ -1,12 +1,25 @@
 const express = require('express');
+const multer = require('multer');
 const router = express.Router();
 const db = require('../lib/db');
 const { requireAdmin, requireLogin, isUserAdmin } = require('../middleware/auth');
 const { getSiteSettings } = require('../lib/siteData');
 const { formatListTime, buildPaginationItems } = require('../lib/listingHelpers');
 const { asyncRoute } = require('../lib/asyncRoute');
+const { sanitizePostHtml, isPostContentMeaningful, postContentLooksLikeHtml } = require('../lib/postHtml');
 
 const ALL_POSTS_PAGE_SIZE = 200;
+
+function editorInitB64From(obj) {
+  return Buffer.from(
+    JSON.stringify({
+      html: obj.html != null ? String(obj.html) : '',
+      titleKo: obj.titleKo != null ? String(obj.titleKo) : '',
+      titleJa: obj.titleJa != null ? String(obj.titleJa) : ''
+    }),
+    'utf8'
+  ).toString('base64');
+}
 
 function safeNewPostCancel(queryCancel) {
   if (queryCancel == null || typeof queryCancel !== 'string') return '/posts';
@@ -24,6 +37,48 @@ function pickDefaultProjectId(projects, queryProjectId) {
   const ok = projects.some((p) => Number(p.id) === qid);
   return ok ? qid : null;
 }
+
+const bodyUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 55 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const m = file.mimetype || '';
+    const ok =
+      /^image\/(jpeg|png|gif|webp)$/i.test(m) ||
+      /^video\/(mp4|webm|quicktime)$/i.test(m);
+    if (ok) cb(null, true);
+    else cb(new Error('JPEG, PNG, GIF, WEBP 이미지 또는 MP4, WEBM 동영상만 업로드할 수 있습니다.'));
+  }
+});
+
+router.post(
+  '/body-upload',
+  requireAdmin,
+  (req, res, next) => {
+    bodyUpload.single('file')(req, res, (err) => {
+      if (err) {
+        const msg =
+          err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE'
+            ? '파일이 최대 55MB를 넘을 수 없습니다.'
+            : err.message || '업로드 실패';
+        return res.status(400).json({ error: msg });
+      }
+      next();
+    });
+  },
+  asyncRoute(async (req, res) => {
+    if (!req.file || !req.file.buffer || !req.file.buffer.length) {
+      return res.status(400).json({ error: '파일이 없습니다.' });
+    }
+    const ins = await db.run('INSERT INTO post_body_assets (mime, data) VALUES (?, ?)', [
+      req.file.mimetype,
+      req.file.buffer
+    ]);
+    const id = ins.lastInsertRowid;
+    if (id == null) return res.status(500).json({ error: '저장에 실패했습니다.' });
+    res.json({ id, url: `/media/post-body/${id}` });
+  })
+);
 
 router.get(
   '/',
@@ -103,7 +158,8 @@ router.get(
       formMethod: 'POST',
       settings: await getSiteSettings(),
       cancelHref,
-      defaultProjectId
+      defaultProjectId,
+      editorInitJsonB64: editorInitB64From({ html: '', titleKo: '', titleJa: '' })
     });
   })
 );
@@ -112,25 +168,36 @@ router.post(
   '/',
   requireAdmin,
   asyncRoute(async (req, res) => {
-    const { title, content, project_id } = req.body;
-    if (!title || !content) {
+    const titleKo = (req.body.title != null ? String(req.body.title) : '').trim();
+    const titleJaRaw = req.body.title_ja != null ? String(req.body.title_ja).trim() : '';
+    const titleJa = titleJaRaw === '' ? null : titleJaRaw;
+    const contentRaw = req.body.content != null ? String(req.body.content) : '';
+    const content = sanitizePostHtml(contentRaw);
+    const { project_id } = req.body;
+
+    if (!titleKo || !isPostContentMeaningful(content)) {
       const projects = await db.all('SELECT * FROM projects ORDER BY order_num ASC');
       return res.render('post-form', {
         post: null,
         projects,
         formAction: '/posts',
         formMethod: 'POST',
-        error: '제목과 내용을 입력해주세요.',
+        error: '국문 제목과 본문(또는 첨부 미디어)을 입력해주세요.',
         settings: await getSiteSettings(),
         cancelHref: '/posts',
-        defaultProjectId: null
+        defaultProjectId: pickDefaultProjectId(projects, req.body.project_id),
+        editorInitJsonB64: editorInitB64From({
+          html: contentRaw,
+          titleKo: req.body.title,
+          titleJa: req.body.title_ja
+        })
       });
     }
 
     const authorId = req.session.user && req.session.user.id != null ? req.session.user.id : null;
     const result = await db.run(
-      'INSERT INTO posts (title, content, project_id, author_id) VALUES (?, ?, ?, ?)',
-      [title, content, project_id || null, authorId]
+      'INSERT INTO posts (title, title_ja, content, project_id, author_id) VALUES (?, ?, ?, ?, ?)',
+      [titleKo, titleJa, content, project_id || null, authorId]
     );
 
     res.redirect(`/posts/${result.lastInsertRowid}`);
@@ -150,7 +217,13 @@ router.get(
       projects,
       formAction: `/posts/${post.id}?_method=PUT`,
       formMethod: 'POST',
-      settings: await getSiteSettings()
+      settings: await getSiteSettings(),
+      cancelHref: `/posts/${post.id}`,
+      editorInitJsonB64: editorInitB64From({
+        html: post.content,
+        titleKo: post.title,
+        titleJa: post.title_ja != null ? post.title_ja : ''
+      })
     });
   })
 );
@@ -159,10 +232,42 @@ router.put(
   '/:id',
   requireAdmin,
   asyncRoute(async (req, res) => {
-    const { title, content, project_id } = req.body;
+    const titleKo = (req.body.title != null ? String(req.body.title) : '').trim();
+    const titleJaRaw = req.body.title_ja != null ? String(req.body.title_ja).trim() : '';
+    const titleJa = titleJaRaw === '' ? null : titleJaRaw;
+    const contentRaw = req.body.content != null ? String(req.body.content) : '';
+    const content = sanitizePostHtml(contentRaw);
+    const { project_id } = req.body;
+
+    if (!titleKo || !isPostContentMeaningful(content)) {
+      const post = await db.get('SELECT * FROM posts WHERE id = ?', [req.params.id]);
+      const projects = await db.all('SELECT * FROM projects ORDER BY order_num ASC');
+      return res.render('post-form', {
+        post: post || {
+          id: req.params.id,
+          title: titleKo,
+          title_ja: titleJa,
+          content: contentRaw,
+          project_id: project_id || null
+        },
+        projects,
+        formAction: `/posts/${req.params.id}?_method=PUT`,
+        formMethod: 'POST',
+        error: '국문 제목과 본문(또는 첨부 미디어)을 입력해주세요.',
+        settings: await getSiteSettings(),
+        cancelHref: `/posts/${req.params.id}`,
+        defaultProjectId: pickDefaultProjectId(projects, project_id),
+        editorInitJsonB64: editorInitB64From({
+          html: contentRaw,
+          titleKo: req.body.title,
+          titleJa: req.body.title_ja
+        })
+      });
+    }
+
     await db.run(
-      'UPDATE posts SET title = ?, content = ?, project_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-      [title, content, project_id || null, req.params.id]
+      'UPDATE posts SET title = ?, title_ja = ?, content = ?, project_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+      [titleKo, titleJa, content, project_id || null, req.params.id]
     );
     res.redirect(`/posts/${req.params.id}`);
   })
@@ -207,7 +312,12 @@ router.get(
       [req.params.id]
     );
 
-    res.render('post', { post, comments, settings: await getSiteSettings() });
+    res.render('post', {
+      post,
+      comments,
+      settings: await getSiteSettings(),
+      contentAsHtml: postContentLooksLikeHtml(post.content)
+    });
   })
 );
 

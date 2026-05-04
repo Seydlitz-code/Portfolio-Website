@@ -3,33 +3,44 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title><%= post ? '게시물 수정' : '새 게시물 작성' %> — 포트폴리오</title>
-  <link rel="stylesheet" href="/css/style.css?v=20260438">
+  <title><%= post ? '게시물 수정' : '새 게시물 작성' %> — <%= settings.site_name || '포트폴리오' %></title>
+  <link rel="stylesheet" href="/css/style.css?v=20260455">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Inter:wght@300;400;500;700&display=swap" rel="stylesheet">
 </head>
-<body class="inner-page">
+<body class="inner-page post-editor-page">
 
   <%- include('partials/inner-header') %>
 
-  <main class="inner-main">
-    <div class="inner-container" style="max-width: 760px;">
-      <h1 class="page-heading-sm"><%= post ? '게시물 수정' : '새 게시물 작성' %></h1>
+  <main class="post-editor-main">
+    <div class="post-editor-shell">
+      <header class="post-editor-page-head">
+        <a href="/posts" class="post-editor-backlink">전체 게시물 보기</a>
+        <p class="post-editor-backlink-ja" lang="ja">全ての投稿を表示</p>
+        <div class="post-editor-head-rule" aria-hidden="true"></div>
+      </header>
 
       <% if (typeof error !== 'undefined' && error) { %>
-        <div class="alert alert-error"><%= error %></div>
+        <div class="post-editor-alert"><%= error %></div>
       <% } %>
 
-      <form action="<%= formAction %>" method="<%= formMethod %>" class="post-write-form">
-        <div class="form-group">
-          <label class="form-label">제목 <span class="required">*</span></label>
-          <input type="text" name="title" class="form-input form-input-lg"
-                 value="<%= post ? post.title : '' %>" placeholder="게시물 제목을 입력하세요" required>
+      <form id="postEditorForm" action="<%= formAction %>" method="<%= formMethod %>" class="post-editor-form">
+        <div class="post-editor-title-grid">
+          <label class="post-editor-field">
+            <span class="post-editor-label">제목을 입력해주세요 (국문) <span class="required">*</span></span>
+            <input type="text" name="title" id="postTitleKo" class="post-editor-input"
+                   value="<%= post ? post.title : '' %>" placeholder="국문 제목" autocomplete="off" required>
+          </label>
+          <label class="post-editor-field">
+            <span class="post-editor-label">제목을 입력해주세요 (일본어)</span>
+            <input type="text" name="title_ja" id="postTitleJa" class="post-editor-input"
+                   value="<%= post && post.title_ja != null ? post.title_ja : '' %>" placeholder="日本語タイトル" lang="ja" autocomplete="off">
+          </label>
         </div>
 
-        <div class="form-group">
-          <label class="form-label">프로젝트 분류</label>
-          <select name="project_id" class="form-input form-select">
+        <div class="post-editor-field post-editor-field--inline">
+          <span class="post-editor-label">게시판</span>
+          <select name="project_id" id="postProjectId" class="post-editor-select">
             <option value="">-- 분류 없음 --</option>
             <% projects.forEach(p => { %>
               <option value="<%= p.id %>" <%= (post && post.project_id === p.id) || (!post && typeof defaultProjectId !== 'undefined' && defaultProjectId != null && Number(defaultProjectId) === Number(p.id)) ? 'selected' : '' %>>
@@ -39,20 +50,48 @@
           </select>
         </div>
 
-        <div class="form-group">
-          <label class="form-label">내용 <span class="required">*</span></label>
-          <textarea name="content" class="form-input post-content-area" rows="16"
-                    placeholder="게시물 내용을 입력하세요..." required><%= post ? post.content : '' %></textarea>
+        <div class="post-editor-toolbar" role="toolbar" aria-label="본문 삽입">
+          <button type="button" class="post-editor-toolbtn" id="postEditorBtnImage" title="이미지">
+            <i class="fas fa-image" aria-hidden="true"></i><span>이미지</span>
+          </button>
+          <button type="button" class="post-editor-toolbtn" id="postEditorBtnVideo" title="동영상">
+            <i class="fas fa-film" aria-hidden="true"></i><span>동영상</span>
+          </button>
+          <button type="button" class="post-editor-toolbtn" id="postEditorBtnYoutube" title="YouTube">
+            <i class="fab fa-youtube" aria-hidden="true"></i><span>YouTube</span>
+          </button>
+          <input type="file" id="postEditorFileImage" class="is-hidden" accept="image/jpeg,image/png,image/gif,image/webp" tabindex="-1" aria-hidden="true">
+          <input type="file" id="postEditorFileVideo" class="is-hidden" accept="video/mp4,video/webm,video/quicktime" tabindex="-1" aria-hidden="true">
         </div>
 
-        <div class="form-actions">
-          <button type="submit" class="btn-primary">
-            <i class="fas fa-save"></i> <%= post ? '수정 완료' : '게시물 등록' %>
+        <div id="postEditorBody" class="post-editor-body" contenteditable="true" spellcheck="true"
+             data-placeholder="게시물 본문을 입력하세요. 이미지·동영상은 버튼으로 추가하거나 붙여넣기·드래그 앤 드롭할 수 있습니다."></div>
+        <textarea id="postContentHidden" name="content" class="is-hidden" aria-hidden="true" tabindex="-1"></textarea>
+
+        <div class="post-editor-actions">
+          <a href="<%= post ? '/posts/' + post.id : (typeof cancelHref !== 'undefined' && cancelHref ? cancelHref : '/posts') %>" class="post-editor-btn post-editor-btn--ghost">취소</a>
+          <button type="submit" class="post-editor-btn post-editor-btn--primary">
+            <%= post ? '수정 완료' : '등록' %>
           </button>
-          <a href="<%= post ? '/posts/' + post.id : (typeof cancelHref !== 'undefined' && cancelHref ? cancelHref : '/posts') %>" class="btn-secondary">취소</a>
         </div>
       </form>
     </div>
   </main>
+
+  <dialog id="postYtDialog" class="post-editor-dialog">
+    <div class="post-editor-dialog-inner">
+      <h2 class="post-editor-dialog-title">YouTube 링크</h2>
+      <p class="post-editor-dialog-hint">영상 URL을 붙여넣은 뒤 적용을 누르면 본문에 플레이어와 링크가 함께 들어갑니다.</p>
+      <input type="url" id="postYtInput" class="post-editor-input" placeholder="https://www.youtube.com/watch?v=…">
+      <div class="post-editor-dialog-actions">
+        <button type="button" class="post-editor-btn post-editor-btn--ghost" id="postYtCancel">닫기</button>
+        <button type="button" class="post-editor-btn post-editor-btn--primary" id="postYtApply">적용</button>
+      </div>
+    </div>
+  </dialog>
+
+  <input type="hidden" id="post-editor-init-b64" value="<%= typeof editorInitJsonB64 !== 'undefined' ? editorInitJsonB64 : '' %>">
+
+  <script src="/js/post-editor.js?v=20260455" defer></script>
 </body>
 </html>
