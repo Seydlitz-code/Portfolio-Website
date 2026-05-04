@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><%= post ? '게시물 수정' : '새 게시물 작성' %> — <%= settings.site_name || '포트폴리오' %></title>
-  <link rel="stylesheet" href="/css/style.css?v=20260455">
+  <link rel="stylesheet" href="/css/style.css?v=20260456">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Inter:wght@300;400;500;700&display=swap" rel="stylesheet">
 </head>
@@ -50,18 +50,68 @@
           </select>
         </div>
 
-        <div class="post-editor-toolbar" role="toolbar" aria-label="본문 삽입">
-          <button type="button" class="post-editor-toolbtn" id="postEditorBtnImage" title="이미지">
-            <i class="fas fa-image" aria-hidden="true"></i><span>이미지</span>
-          </button>
-          <button type="button" class="post-editor-toolbtn" id="postEditorBtnVideo" title="동영상">
-            <i class="fas fa-film" aria-hidden="true"></i><span>동영상</span>
-          </button>
-          <button type="button" class="post-editor-toolbtn" id="postEditorBtnYoutube" title="YouTube">
-            <i class="fab fa-youtube" aria-hidden="true"></i><span>YouTube</span>
-          </button>
-          <input type="file" id="postEditorFileImage" class="is-hidden" accept="image/jpeg,image/png,image/gif,image/webp" tabindex="-1" aria-hidden="true">
-          <input type="file" id="postEditorFileVideo" class="is-hidden" accept="video/mp4,video/webm,video/quicktime" tabindex="-1" aria-hidden="true">
+        <div class="post-editor-toolbars">
+          <div class="post-editor-toolbar post-editor-toolbar--media" role="toolbar" aria-label="미디어 삽입">
+            <button type="button" class="post-editor-toolbtn" id="postEditorBtnImage" title="이미지">
+              <i class="fas fa-image" aria-hidden="true"></i><span>이미지</span>
+            </button>
+            <button type="button" class="post-editor-toolbtn" id="postEditorBtnVideo" title="동영상">
+              <i class="fas fa-film" aria-hidden="true"></i><span>동영상</span>
+            </button>
+            <button type="button" class="post-editor-toolbtn" id="postEditorBtnYoutube" title="YouTube">
+              <i class="fab fa-youtube" aria-hidden="true"></i><span>YouTube</span>
+            </button>
+            <input type="file" id="postEditorFileImage" class="is-hidden" accept="image/jpeg,image/png,image/gif,image/webp" tabindex="-1" aria-hidden="true">
+            <input type="file" id="postEditorFileVideo" class="is-hidden" accept="video/mp4,video/webm,video/quicktime" tabindex="-1" aria-hidden="true">
+          </div>
+
+          <div class="post-editor-toolbar post-editor-toolbar--format" role="toolbar" aria-label="글자 서식">
+            <select id="postEditorFontFamily" class="post-editor-fmt-select" title="글꼴" aria-label="글꼴">
+              <option value="">글꼴</option>
+              <option value="'Noto Sans KR', 'Malgun Gothic', sans-serif">본고딕 계열</option>
+              <option value="'Malgun Gothic', sans-serif">맑은 고딕</option>
+              <option value="Georgia, 'Times New Roman', serif">명조 계열</option>
+              <option value="ui-monospace, 'Cascadia Code', monospace">고정폭</option>
+            </select>
+            <select id="postEditorFontSize" class="post-editor-fmt-select" title="크기" aria-label="글자 크기">
+              <option value="">크기</option>
+              <option value="12">12</option>
+              <option value="14">14</option>
+              <option value="16">16</option>
+              <option value="18">18</option>
+              <option value="20">20</option>
+              <option value="24">24</option>
+              <option value="28">28</option>
+            </select>
+            <span class="post-editor-fmt-div" aria-hidden="true"></span>
+            <button type="button" class="post-editor-fmt-btn" data-cmd="bold" title="굵게 (Ctrl+B)">
+              <i class="fas fa-bold" aria-hidden="true"></i>
+            </button>
+            <button type="button" class="post-editor-fmt-btn" data-cmd="italic" title="기울임 (Ctrl+I)">
+              <i class="fas fa-italic" aria-hidden="true"></i>
+            </button>
+            <button type="button" class="post-editor-fmt-btn" data-cmd="underline" title="밑줄 (Ctrl+U)">
+              <i class="fas fa-underline" aria-hidden="true"></i>
+            </button>
+            <button type="button" class="post-editor-fmt-btn" data-cmd="strikeThrough" title="취소선">
+              <i class="fas fa-strikethrough" aria-hidden="true"></i>
+            </button>
+            <span class="post-editor-fmt-div" aria-hidden="true"></span>
+            <label class="post-editor-fmt-color" title="글자 색">
+              <span class="post-editor-fmt-color-label"><i class="fas fa-font" aria-hidden="true"></i></span>
+              <input type="color" id="postEditorForeColor" value="#1a1a1a" aria-label="글자 색">
+            </label>
+            <span class="post-editor-fmt-div" aria-hidden="true"></span>
+            <button type="button" class="post-editor-fmt-btn" data-justify="left" title="왼쪽 정렬">
+              <i class="fas fa-align-left" aria-hidden="true"></i>
+            </button>
+            <button type="button" class="post-editor-fmt-btn" data-justify="center" title="가운데 정렬">
+              <i class="fas fa-align-center" aria-hidden="true"></i>
+            </button>
+            <button type="button" class="post-editor-fmt-btn" data-justify="right" title="오른쪽 정렬">
+              <i class="fas fa-align-right" aria-hidden="true"></i>
+            </button>
+          </div>
         </div>
 
         <div id="postEditorBody" class="post-editor-body" contenteditable="true" spellcheck="true"
@@ -92,6 +142,6 @@
 
   <input type="hidden" id="post-editor-init-b64" value="<%= typeof editorInitJsonB64 !== 'undefined' ? editorInitJsonB64 : '' %>">
 
-  <script src="/js/post-editor.js?v=20260455" defer></script>
+  <script src="/js/post-editor.js?v=20260456" defer></script>
 </body>
 </html>

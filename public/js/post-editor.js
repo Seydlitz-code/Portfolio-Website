@@ -87,6 +87,79 @@
     hidden.value = editor.innerHTML;
   }
 
+  function applyInlineStyle(editor, prop, value) {
+    editor.focus();
+    const sel = window.getSelection();
+    if (!sel || !sel.rangeCount) return;
+    const range = sel.getRangeAt(0);
+    if (!editor.contains(range.commonAncestorContainer)) return;
+
+    if (range.collapsed) {
+      const span = document.createElement('span');
+      span.style[prop] = value;
+      span.appendChild(document.createTextNode('\u200b'));
+      range.insertNode(span);
+      range.setStart(span.firstChild, 1);
+      range.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(range);
+      return;
+    }
+
+    try {
+      const span = document.createElement('span');
+      span.style[prop] = value;
+      range.surroundContents(span);
+      range.selectNodeContents(span);
+      range.collapse(false);
+      sel.removeAllRanges();
+      sel.addRange(range);
+    } catch (err) {
+      const contents = range.extractContents();
+      const span = document.createElement('span');
+      span.style[prop] = value;
+      span.appendChild(contents);
+      range.insertNode(span);
+      range.selectNodeContents(span);
+      range.collapse(false);
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+  }
+
+  function execRtf(editor, cmd, val) {
+    editor.focus();
+    try {
+      document.execCommand('styleWithCSS', false, true);
+    } catch (e1) {
+      /* ignore */
+    }
+    try {
+      if (val === undefined) document.execCommand(cmd, false);
+      else document.execCommand(cmd, false, val);
+    } catch (e2) {
+      /* ignore */
+    }
+  }
+
+  function refreshFmtButtonStates(fmtBar, editor) {
+    if (!fmtBar) return;
+    const cmds = ['bold', 'italic', 'underline', 'strikeThrough'];
+    cmds.forEach(function (cmd) {
+      const btn = fmtBar.querySelector('[data-cmd="' + cmd + '"]');
+      if (!btn) return;
+      try {
+        if (document.activeElement !== editor && !editor.contains(window.getSelection().anchorNode)) {
+          btn.classList.remove('is-active');
+          return;
+        }
+        btn.classList.toggle('is-active', document.queryCommandState(cmd));
+      } catch (e) {
+        btn.classList.remove('is-active');
+      }
+    });
+  }
+
   async function uploadBodyFile(file) {
     const fd = new FormData();
     fd.append('file', file);
@@ -130,6 +203,10 @@
     const ytInput = document.getElementById('postYtInput');
     const ytApply = document.getElementById('postYtApply');
     const ytCancel = document.getElementById('postYtCancel');
+    const fmtBar = document.querySelector('.post-editor-toolbar--format');
+    const selFont = document.getElementById('postEditorFontFamily');
+    const selSize = document.getElementById('postEditorFontSize');
+    const inpColor = document.getElementById('postEditorForeColor');
 
     if (!form || !editor || !hidden) return;
 
@@ -160,7 +237,87 @@
       editor.classList.toggle('post-editor-body--empty', t.length === 0 && !hasMedia);
     }
     applyPlaceholderClass();
-    editor.addEventListener('input', applyPlaceholderClass);
+    editor.addEventListener('input', function () {
+      applyPlaceholderClass();
+      refreshFmtButtonStates(fmtBar, editor);
+    });
+
+    let selTimer;
+    document.addEventListener('selectionchange', function () {
+      clearTimeout(selTimer);
+      selTimer = setTimeout(function () {
+        refreshFmtButtonStates(fmtBar, editor);
+      }, 80);
+    });
+
+    if (fmtBar) {
+      fmtBar.addEventListener('mousedown', function (e) {
+        if (e.target.closest && e.target.closest('button.post-editor-fmt-btn')) e.preventDefault();
+      });
+
+      fmtBar.addEventListener('click', function (e) {
+        const cmdBtn = e.target.closest('[data-cmd]');
+        if (cmdBtn) {
+          const cmd = cmdBtn.getAttribute('data-cmd');
+          execRtf(editor, cmd);
+          applyPlaceholderClass();
+          refreshFmtButtonStates(fmtBar, editor);
+          return;
+        }
+        const jBtn = e.target.closest('[data-justify]');
+        if (jBtn) {
+          const j = jBtn.getAttribute('data-justify');
+          const map = { left: 'justifyLeft', center: 'justifyCenter', right: 'justifyRight' };
+          if (map[j]) execRtf(editor, map[j]);
+          applyPlaceholderClass();
+        }
+      });
+    }
+
+    if (selFont) {
+      selFont.addEventListener('change', function () {
+        const v = this.value;
+        if (!v) return;
+        applyInlineStyle(editor, 'fontFamily', v);
+        this.selectedIndex = 0;
+        applyPlaceholderClass();
+      });
+    }
+
+    if (selSize) {
+      selSize.addEventListener('change', function () {
+        const v = this.value;
+        if (!v) return;
+        applyInlineStyle(editor, 'fontSize', v + 'px');
+        this.selectedIndex = 0;
+        applyPlaceholderClass();
+      });
+    }
+
+    if (inpColor) {
+      inpColor.addEventListener('input', function () {
+        execRtf(editor, 'foreColor', this.value);
+        applyPlaceholderClass();
+      });
+    }
+
+    editor.addEventListener('keydown', function (e) {
+      if (!e.ctrlKey && !e.metaKey) return;
+      const k = String(e.key || '').toLowerCase();
+      if (k === 'b') {
+        e.preventDefault();
+        execRtf(editor, 'bold');
+        refreshFmtButtonStates(fmtBar, editor);
+      } else if (k === 'i') {
+        e.preventDefault();
+        execRtf(editor, 'italic');
+        refreshFmtButtonStates(fmtBar, editor);
+      } else if (k === 'u') {
+        e.preventDefault();
+        execRtf(editor, 'underline');
+        refreshFmtButtonStates(fmtBar, editor);
+      }
+    });
 
     btnImg.addEventListener('click', function () {
       fileImg.click();

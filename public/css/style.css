@@ -3318,6 +3318,10 @@ body.register-crop-modal-open {
   color: var(--text-primary);
 }
 
+.post-content--html p {
+  margin: 0.55rem 0;
+}
+
 .post-content--html img,
 .post-content--html video {
   max-width: 100%;
@@ -3494,15 +3498,99 @@ body.register-crop-modal-open {
   max-width: 22rem;
 }
 
+.post-editor-toolbars {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
 .post-editor-toolbar {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: 0.45rem;
   align-items: center;
   padding: 0.5rem 0.65rem;
   background: #eceae4;
   border: 1px solid #1a1a1a;
   border-radius: 2px;
+}
+
+.post-editor-toolbar--format {
+  padding: 0.42rem 0.55rem;
+}
+
+.post-editor-fmt-select {
+  min-width: 6.5rem;
+  max-width: 10rem;
+  padding: 0.35rem 0.45rem;
+  font-size: 0.8rem;
+  border: 1px solid #1a1a1a;
+  border-radius: 2px;
+  background: #fff;
+  font-family: inherit;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.post-editor-fmt-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  font-size: 0.85rem;
+  border: 1px solid #1a1a1a;
+  border-radius: 2px;
+  background: #fff;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.post-editor-fmt-btn:hover {
+  background: #f4f4f0;
+}
+
+.post-editor-fmt-btn.is-active {
+  background: #d8d6cf;
+}
+
+.post-editor-fmt-div {
+  width: 1px;
+  align-self: stretch;
+  min-height: 1.5rem;
+  background: #999;
+  margin: 0 0.15rem;
+}
+
+.post-editor-fmt-color {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid #1a1a1a;
+  border-radius: 2px;
+  background: #fff;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.post-editor-fmt-color-label {
+  position: absolute;
+  pointer-events: none;
+  font-size: 0.75rem;
+  color: #333;
+}
+
+.post-editor-fmt-color input[type='color'] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
 }
 
 .post-editor-toolbtn {
@@ -3526,6 +3614,10 @@ body.register-crop-modal-open {
 
 .post-editor-toolbtn i {
   font-size: 0.95rem;
+}
+
+.post-editor-body p {
+  margin: 0.35rem 0;
 }
 
 .post-editor-body {
