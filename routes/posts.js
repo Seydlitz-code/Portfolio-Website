@@ -4,7 +4,20 @@ const router = express.Router();
 const db = require('../lib/db');
 const { requireAdmin, requireLogin, isUserAdmin } = require('../middleware/auth');
 const { getSiteSettings } = require('../lib/siteData');
-const { formatListTime, buildPaginationItems } = require('../lib/listingHelpers');
+const {
+  formatListTime,
+  buildPaginationItems,
+  truncatePostTitleLine,
+  truncateBoardNameLine
+} = require('../lib/listingHelpers');
+
+function isPostEdited(createdAt, updatedAt) {
+  if (!createdAt || !updatedAt) return false;
+  const c = new Date(createdAt).getTime();
+  const u = new Date(updatedAt).getTime();
+  if (Number.isNaN(c) || Number.isNaN(u)) return false;
+  return u - c > 2000;
+}
 const { asyncRoute } = require('../lib/asyncRoute');
 const { sanitizePostHtml, isPostContentMeaningful, postContentLooksLikeHtml } = require('../lib/postHtml');
 
@@ -96,13 +109,21 @@ router.get(
 
     const rows = await db.all(
       `
-    SELECT p.*, pr.name as project_name,
+    SELECT p.*, pr.name as project_name, pr.name_ja as project_name_ja,
       (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id) AS comment_count,
-      u.nickname AS author_nickname
+      u.nickname AS author_nickname,
+      (
+        (SELECT COUNT(*) FROM posts) -
+        (
+          SELECT COUNT(*) FROM posts p2
+          WHERE (p2.created_at > p.created_at)
+             OR (p2.created_at = p.created_at AND p2.id > p.id)
+        )
+      ) AS global_num
     FROM posts p
     LEFT JOIN projects pr ON p.project_id = pr.id
     LEFT JOIN users u ON p.author_id = u.id
-    ORDER BY p.created_at DESC
+    ORDER BY p.created_at DESC, p.id DESC
     LIMIT ? OFFSET ?
   `,
       [limit, offset]
@@ -112,7 +133,14 @@ router.get(
       ...p,
       display_time: formatListTime(p.created_at),
       view_count: p.view_count != null ? Number(p.view_count) : 0,
-      comment_count: p.comment_count != null ? Number(p.comment_count) : 0
+      comment_count: p.comment_count != null ? Number(p.comment_count) : 0,
+      global_num: p.global_num != null ? Number(p.global_num) : 0,
+      title_ko_short: truncatePostTitleLine(p.title),
+      title_ja_short: truncatePostTitleLine(p.title_ja != null ? p.title_ja : ''),
+      project_name_ko_short: truncateBoardNameLine(p.project_name || ''),
+      project_name_ja_short: truncateBoardNameLine(
+        p.project_name_ja != null ? String(p.project_name_ja) : ''
+      )
     }));
 
     const paginationItems = buildPaginationItems(page, totalPages);
@@ -288,9 +316,14 @@ router.get(
   asyncRoute(async (req, res) => {
     const post = await db.get(
       `
-    SELECT p.*, pr.name as project_name
+    SELECT p.*,
+      pr.name AS project_name,
+      pr.name_ja AS project_name_ja,
+      pr.description AS project_description,
+      u.nickname AS author_nickname
     FROM posts p
     LEFT JOIN projects pr ON p.project_id = pr.id
+    LEFT JOIN users u ON p.author_id = u.id
     WHERE p.id = ?
   `,
       [req.params.id]
@@ -316,7 +349,10 @@ router.get(
       post,
       comments,
       settings: await getSiteSettings(),
-      contentAsHtml: postContentLooksLikeHtml(post.content)
+      contentAsHtml: postContentLooksLikeHtml(post.content),
+      postDisplayCreated: formatListTime(post.created_at),
+      postDisplayUpdated: formatListTime(post.updated_at),
+      postEdited: isPostEdited(post.created_at, post.updated_at)
     });
   })
 );

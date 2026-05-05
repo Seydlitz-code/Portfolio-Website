@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../lib/db');
 const { getSiteSettings } = require('../lib/siteData');
-const { formatListTime, buildPaginationItems } = require('../lib/listingHelpers');
+const { formatListTime, buildPaginationItems, truncatePostTitleLine } = require('../lib/listingHelpers');
 const { asyncRoute } = require('../lib/asyncRoute');
 const { isUserAdmin } = require('../middleware/auth');
 
@@ -34,11 +34,19 @@ router.get(
       `
     SELECT p.*,
       (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id) AS comment_count,
-      u.nickname AS author_nickname
+      u.nickname AS author_nickname,
+      (
+        (SELECT COUNT(*) FROM posts) -
+        (
+          SELECT COUNT(*) FROM posts p2
+          WHERE (p2.created_at > p.created_at)
+             OR (p2.created_at = p.created_at AND p2.id > p.id)
+        )
+      ) AS global_num
     FROM posts p
     LEFT JOIN users u ON p.author_id = u.id
     WHERE p.project_id = ?
-    ORDER BY p.created_at DESC
+    ORDER BY p.created_at DESC, p.id DESC
     LIMIT ? OFFSET ?
   `,
       [projectId, PAGE_SIZE, offset]
@@ -48,7 +56,10 @@ router.get(
       ...p,
       display_time: formatListTime(p.created_at),
       view_count: p.view_count != null ? Number(p.view_count) : 0,
-      comment_count: p.comment_count != null ? Number(p.comment_count) : 0
+      comment_count: p.comment_count != null ? Number(p.comment_count) : 0,
+      global_num: p.global_num != null ? Number(p.global_num) : 0,
+      title_ko_short: truncatePostTitleLine(p.title),
+      title_ja_short: truncatePostTitleLine(p.title_ja != null ? p.title_ja : '')
     }));
 
     const settings = await getSiteSettings();

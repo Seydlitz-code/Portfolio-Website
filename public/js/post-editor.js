@@ -35,6 +35,16 @@
       .replace(/"/g, '&quot;');
   }
 
+  /** Base64(UTF-8 바이트) → UTF-8 문자열. atob만 쓰면 한글 등이 mojibake로 깨짐 */
+  function base64ToUtf8(b64) {
+    const bin = atob(String(b64 || '').trim());
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i += 1) {
+      bytes[i] = bin.charCodeAt(i) & 0xff;
+    }
+    return new TextDecoder('utf-8').decode(bytes);
+  }
+
   function buildYoutubeEmbedHtml(videoId, originalUrl) {
     const safeId = String(videoId || '').replace(/[^0-9A-Za-z_-]/g, '');
     if (!safeId || safeId.length !== 11) return '';
@@ -213,7 +223,7 @@
     let init = { html: '', titleKo: '', titleJa: '' };
     try {
       if (b64El && b64El.value) {
-        const json = atob(b64El.value);
+        const json = base64ToUtf8(b64El.value);
         init = JSON.parse(json);
       }
     } catch (e) {

@@ -4,45 +4,65 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><%= post.title %><%= post.title_ja && String(post.title_ja).trim() ? ' / ' + String(post.title_ja).trim() : '' %> — 포트폴리오</title>
-  <link rel="stylesheet" href="/css/style.css?v=20260455">
+  <link rel="stylesheet" href="/css/style.css?v=20260460">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Inter:wght@300;400;500;700&display=swap" rel="stylesheet">
 </head>
-<body class="inner-page">
+<body class="inner-page post-detail-page">
 
   <%- include('partials/inner-header') %>
 
-  <main class="inner-main">
+  <main class="inner-main post-detail-main">
     <div class="inner-container post-container<%= typeof contentAsHtml !== 'undefined' && contentAsHtml ? ' post-container--wide' : '' %>">
 
-      <!-- 게시물 본문 -->
       <article class="post-article">
-        <div class="post-breadcrumb">
+        <header class="post-board-head">
+          <% if (post.project_id && post.project_name) { %>
+            <a href="/boards/<%= post.project_id %>" class="post-board-name post-board-name--ko"><%= post.project_name %></a>
+            <% if (post.project_name_ja != null && String(post.project_name_ja).trim() !== '') { %>
+              <a href="/boards/<%= post.project_id %>" class="post-board-name post-board-name--ja" lang="ja"><%= post.project_name_ja %></a>
+            <% } %>
+          <% } else { %>
+            <span class="post-board-name post-board-name--ko">분류 없음</span>
+            <span class="post-board-name post-board-name--ja" lang="ja">未分類</span>
+          <% } %>
+        </header>
+        <div class="post-board-rule" aria-hidden="true"></div>
+
+        <nav class="post-breadcrumb" aria-label="위치">
           <a href="/posts">전체 게시물</a>
           <% if (post.project_id && post.project_name) { %>
             <span>/</span>
             <a href="/boards/<%= post.project_id %>"><%= post.project_name %></a>
           <% } %>
-        </div>
+        </nav>
 
-        <h1 class="post-title"><%= post.title %></h1>
+        <h1 class="post-heading-title"><%= post.title %></h1>
         <% if (post.title_ja != null && String(post.title_ja).trim() !== '') { %>
-          <p class="post-title-ja" lang="ja"><%= post.title_ja %></p>
+          <p class="post-heading-title post-heading-title--ja" lang="ja"><%= post.title_ja %></p>
         <% } %>
 
-        <div class="post-meta">
-          <% if (post.project_name) { %>
-            <span class="post-project-tag"><%= post.project_name %></span>
-          <% } %>
-          <time class="post-date">
-            <%= new Date(post.created_at).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' }) %>
-          </time>
-          <% if (post.updated_at !== post.created_at) { %>
-            <span class="post-updated">(수정됨: <%= new Date(post.updated_at).toLocaleDateString('ko-KR') %>)</span>
-          <% } %>
+        <div class="post-meta-row">
+          <div class="post-meta-left">
+            <span class="post-meta-author"><%= post.author_nickname && String(post.author_nickname).trim() ? post.author_nickname : '—' %></span>
+            <span class="post-meta-times">
+              작성 <time datetime="<%= post.created_at %>"><%= typeof postDisplayCreated !== 'undefined' ? postDisplayCreated : '' %></time>
+              <% if (typeof postEdited !== 'undefined' && postEdited) { %>
+                <span class="post-meta-sep">·</span>
+                수정 <time datetime="<%= post.updated_at %>"><%= typeof postDisplayUpdated !== 'undefined' ? postDisplayUpdated : '' %></time>
+                <span class="post-edited-pill">(수정됨)</span>
+              <% } %>
+            </span>
+          </div>
+          <div class="post-meta-right">
+            <span class="post-view-count" aria-label="조회수">조회 <%= post.view_count != null ? post.view_count : 0 %></span>
+            <button type="button" class="post-comment-jump" id="postCommentJumpBtn" aria-label="댓글 <%= comments.length %>개, 댓글 영역으로 이동">
+              댓글 <%= comments.length %>
+            </button>
+          </div>
         </div>
 
-        <div class="post-content<%= typeof contentAsHtml !== 'undefined' && contentAsHtml ? ' post-content--html' : '' %>">
+        <div class="post-content post-content--detail-frame<%= typeof contentAsHtml !== 'undefined' && contentAsHtml ? ' post-content--html' : '' %>">
           <% if (typeof contentAsHtml !== 'undefined' && contentAsHtml) { %>
             <%- post.content %>
           <% } else { %>
@@ -50,23 +70,25 @@
           <% } %>
         </div>
 
-        <!-- 관리자 수정/삭제 -->
         <% if (isAdmin) { %>
           <div class="post-admin-actions">
             <a href="/posts/<%= post.id %>/edit" class="btn-secondary">
               <i class="fas fa-pen"></i> 수정
             </a>
             <form action="/posts/<%= post.id %>?_method=DELETE" method="POST"
+                  class="post-admin-delete-form"
                   onsubmit="return confirm('게시물을 삭제하시겠습니까?')">
               <button type="submit" class="btn-danger">
                 <i class="fas fa-trash"></i> 삭제
               </button>
             </form>
+            <button type="button" class="btn-secondary" id="postWriteGuideBtn">
+              <i class="fas fa-pen-nib"></i> 글쓰기
+            </button>
           </div>
         <% } %>
       </article>
 
-      <!-- 댓글 -->
       <section class="comments-section" id="comments">
         <h2 class="comments-title">댓글 <span class="comment-count"><%= comments.length %></span></h2>
 
@@ -95,7 +117,6 @@
           </div>
         <% } %>
 
-        <!-- 댓글 작성 폼 -->
         <% if (user) { %>
           <form action="/posts/<%= post.id %>/comments" method="POST" class="comment-form">
             <div class="comment-form-header">
@@ -114,5 +135,68 @@
 
     </div>
   </main>
+
+  <script>
+    (function () {
+      var jump = document.getElementById('postCommentJumpBtn');
+      var target = document.getElementById('comments');
+      if (jump && target) {
+        jump.addEventListener('click', function () {
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+      }
+    })();
+  </script>
+  <% if (isAdmin) { %>
+    <% var _newPostQs2 = post.project_id ? ('?project_id=' + post.project_id + '&cancel=' + encodeURIComponent('/posts/' + post.id)) : ('?cancel=' + encodeURIComponent('/posts/' + post.id)); %>
+    <dialog id="postWriteGuideDialog" class="post-write-guide-dialog">
+      <div class="post-write-guide-inner">
+        <h2 class="post-write-guide-title">글쓰기 안내</h2>
+        <p class="post-write-guide-title-ja" lang="ja">執筆のご案内</p>
+        <% if (post.project_id && post.project_name) { %>
+          <p class="post-write-guide-board">
+            <span class="post-write-guide-board-ko"><%= post.project_name %></span>
+            <% if (post.project_name_ja != null && String(post.project_name_ja).trim() !== '') { %>
+              <span class="post-write-guide-board-ja" lang="ja"><%= post.project_name_ja %></span>
+            <% } %>
+          </p>
+        <% } %>
+        <% if (post.project_description != null && String(post.project_description).trim() !== '') { %>
+          <div class="post-write-guide-desc" lang="ko"><%= String(post.project_description).trim() %></div>
+        <% } %>
+        <ul class="post-write-guide-list" lang="ko">
+          <li>이 게시판 주제에 맞는 내용만 작성해 주세요.</li>
+          <li>제목은 국문(필수)과 일본어를 함께 입력하는 것을 권장합니다.</li>
+          <li>이미지·동영상은 저작권을 확인한 뒤 첨부해 주세요.</li>
+        </ul>
+        <ul class="post-write-guide-list post-write-guide-list--ja" lang="ja">
+          <li>この掲示板のテーマに沿った内容でお書きください。</li>
+          <li>タイトルは韓国語（必須）と日本語の併記を推奨します。</li>
+          <li>画像・動画は著作権を確認のうえ添付してください。</li>
+        </ul>
+        <div class="post-write-guide-actions">
+          <button type="button" class="btn-secondary" id="postWriteGuideClose">닫기</button>
+          <a href="/posts/new<%= _newPostQs2 %>" class="btn-primary">새 글 작성하기</a>
+        </div>
+      </div>
+    </dialog>
+    <script>
+      (function () {
+        var dlg = document.getElementById('postWriteGuideDialog');
+        var openBtn = document.getElementById('postWriteGuideBtn');
+        var closeBtn = document.getElementById('postWriteGuideClose');
+        if (dlg && openBtn) {
+          openBtn.addEventListener('click', function () {
+            if (dlg.showModal) dlg.showModal();
+          });
+        }
+        if (dlg && closeBtn) {
+          closeBtn.addEventListener('click', function () {
+            dlg.close();
+          });
+        }
+      })();
+    </script>
+  <% } %>
 </body>
 </html>

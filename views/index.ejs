@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><%= settings.site_name || 'Donghawan Lee / @lilip' %></title>
-  <link rel="stylesheet" href="/css/style.css?v=20260451">
+  <link rel="stylesheet" href="/css/style.css?v=20260458">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Inter:wght@300;400;500;700&display=swap" rel="stylesheet">
@@ -69,25 +69,54 @@
           </div>
         </div>
         <div class="portfolio-block-posts">
-        <div class="posts-grid">
-          <% if (recentPosts.length === 0) { %>
-            <div class="empty-posts">
-              <p>게시물이 존재하지 않습니다.</p>
-            </div>
-          <% } else { %>
-            <% recentPosts.forEach(function(post) { %>
-              <article class="post-card" onclick="location.href='/posts/<%= post.id %>'">
-                <h3 class="post-card-title"><%= post.title %></h3>
-                <div class="post-card-meta">
-                  <% if (post.project_name) { %>
-                    <span class="post-card-project"><%= post.project_name %></span>
-                  <% } %>
-                  <time class="post-card-date"><%= new Date(post.created_at).toLocaleDateString('ko-KR') %></time>
-                </div>
-              </article>
-            <% }); %>
-          <% } %>
-        </div>
+          <div class="board-table-wrap index-portfolio-table-wrap" role="region" aria-label="전체 최근 게시글">
+            <table class="board-table posts-all-table index-home-recent-table">
+              <thead>
+                <tr>
+                  <th class="board-th board-th--num" scope="col">번호</th>
+                  <th class="board-th board-th--board" scope="col">게시판</th>
+                  <th class="board-th board-th--title" scope="col">제목</th>
+                  <th class="board-th board-th--author" scope="col">작성자</th>
+                  <th class="board-th board-th--date" scope="col">작성일</th>
+                  <th class="board-th board-th--views" scope="col">조회수</th>
+                  <th class="board-th board-th--comments" scope="col">댓글</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% if (recentPosts.length === 0) { %>
+                  <tr>
+                    <td class="board-td board-td--empty" colspan="7">게시물이 존재하지 않습니다.</td>
+                  </tr>
+                <% } else { %>
+                  <% recentPosts.forEach(function (post) { %>
+                    <tr class="board-row">
+                      <td class="board-td board-td--num"><%= post.global_num %></td>
+                      <td class="board-td board-td--board">
+                        <% if (post.project_id) { %>
+                          <a href="/boards/<%= post.project_id %>" class="board-board-link">
+                            <span class="board-title-line board-title-line--ko"><%= post.project_name_ko_short %></span>
+                            <span class="board-title-line board-title-line--ja" lang="ja"><%= post.project_name_ja_short ? post.project_name_ja_short : '　' %></span>
+                          </a>
+                        <% } else { %>
+                          <span class="board-board-static">—</span>
+                        <% } %>
+                      </td>
+                      <td class="board-td board-td--title">
+                        <div class="board-title-stack">
+                          <a href="/posts/<%= post.id %>" class="board-title-link board-title-line board-title-line--ko"><%= post.title_ko_short %></a>
+                          <span class="board-title-line board-title-line--ja" lang="ja"><%= post.title_ja_short ? post.title_ja_short : '　' %></span>
+                        </div>
+                      </td>
+                      <td class="board-td board-td--author"><%= post.author_nickname || '—' %></td>
+                      <td class="board-td board-td--date"><time datetime="<%= post.created_at %>"><%= post.display_time %></time></td>
+                      <td class="board-td board-td--views"><%= post.view_count %></td>
+                      <td class="board-td board-td--comments"><%= post.comment_count %></td>
+                    </tr>
+                  <% }); %>
+                <% } %>
+              </tbody>
+            </table>
+          </div>
         </div>
       </section>
 
@@ -107,20 +136,43 @@
             </div>
           </div>
           <div class="portfolio-block-posts">
-          <div class="posts-grid">
-            <% if (project.posts.length === 0) { %>
-              <div class="empty-posts">
-                <p>게시물이 존재하지 않습니다.</p>
-              </div>
-            <% } else { %>
-              <% project.posts.forEach(function(post) { %>
-                <article class="post-card" onclick="location.href='/posts/<%= post.id %>'">
-                  <h3 class="post-card-title"><%= post.title %></h3>
-                  <time class="post-card-date"><%= new Date(post.created_at).toLocaleDateString('ko-KR') %></time>
-                </article>
-              <% }); %>
-            <% } %>
-          </div>
+            <div class="board-table-wrap index-portfolio-table-wrap" role="region" aria-label="<%= project.name %> 대표 게시글">
+              <table class="board-table index-home-board-table">
+                <thead>
+                  <tr>
+                    <th class="board-th board-th--num" scope="col">번호</th>
+                    <th class="board-th board-th--title" scope="col">제목</th>
+                    <th class="board-th board-th--author" scope="col">작성자</th>
+                    <th class="board-th board-th--date" scope="col">작성일</th>
+                    <th class="board-th board-th--views" scope="col">조회수</th>
+                    <th class="board-th board-th--comments" scope="col">댓글</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <% if (project.posts.length === 0) { %>
+                    <tr>
+                      <td class="board-td board-td--empty" colspan="6">게시물이 존재하지 않습니다.</td>
+                    </tr>
+                  <% } else { %>
+                    <% project.posts.forEach(function (post) { %>
+                      <tr class="board-row">
+                        <td class="board-td board-td--num"><%= post.global_num %></td>
+                        <td class="board-td board-td--title">
+                          <div class="board-title-stack">
+                            <a href="/posts/<%= post.id %>" class="board-title-link board-title-line board-title-line--ko"><%= post.title_ko_short %></a>
+                            <span class="board-title-line board-title-line--ja" lang="ja"><%= post.title_ja_short ? post.title_ja_short : '　' %></span>
+                          </div>
+                        </td>
+                        <td class="board-td board-td--author"><%= post.author_nickname || '—' %></td>
+                        <td class="board-td board-td--date"><time datetime="<%= post.created_at %>"><%= post.display_time %></time></td>
+                        <td class="board-td board-td--views"><%= post.view_count %></td>
+                        <td class="board-td board-td--comments"><%= post.comment_count %></td>
+                      </tr>
+                    <% }); %>
+                  <% } %>
+                </tbody>
+              </table>
+            </div>
           </div>
         </section>
       <% }); %>
