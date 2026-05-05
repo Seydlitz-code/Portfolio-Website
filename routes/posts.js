@@ -511,9 +511,10 @@ router.post(
       }
     }
 
+    const ts = new Date().toISOString();
     await db.run(
-      'INSERT INTO comments (post_id, user_id, content, parent_id) VALUES (?, ?, ?, ?)',
-      [req.params.id, req.session.user.id, content, parentId]
+      'INSERT INTO comments (post_id, user_id, content, parent_id, updated_at) VALUES (?, ?, ?, ?, ?)',
+      [req.params.id, req.session.user.id, content, parentId, ts]
     );
 
     res.redirect(`/posts/${req.params.id}#comments`);

@@ -184,8 +184,9 @@ function initializeSqliteSync() {
   }
   commentCols = database.prepare('PRAGMA table_info(comments)').all();
   if (!commentCols.some((c) => c.name === 'updated_at')) {
-    database.exec('ALTER TABLE comments ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP');
-    database.exec('UPDATE comments SET updated_at = created_at WHERE updated_at IS NULL');
+    /* SQLite: ADD COLUMN에는 비상수 DEFAULT(CURRENT_TIMESTAMP 등) 사용 불가 */
+    database.exec('ALTER TABLE comments ADD COLUMN updated_at DATETIME');
+    database.exec('UPDATE comments SET updated_at = created_at');
   }
 
   console.log('[database] SQLite 파일:', path.join(getDataDir(), DB_FILE));
