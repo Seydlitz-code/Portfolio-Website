@@ -595,6 +595,10 @@ router.delete(
       req.params.commentId,
       req.params.postId
     ]);
+    const nextRaw = req.body && req.body.next != null ? String(req.body.next).trim() : '';
+    if (nextRaw === '/mypage/posts') {
+      return res.redirect('/mypage/posts');
+    }
     res.redirect(`/posts/${req.params.postId}#comments`);
   })
 );

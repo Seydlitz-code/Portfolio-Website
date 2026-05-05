@@ -2461,6 +2461,36 @@ body.register-crop-modal-open {
   word-break: break-word;
 }
 
+.mypage-writings-comment-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.15rem;
+}
+
+.mypage-comment-delete-form {
+  margin: 0;
+}
+
+.mypage-comment-delete-btn {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: #8b2b2b;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.mypage-comment-delete-btn:hover {
+  color: #c62828;
+}
+
 .mypage-writings-empty-plain {
   margin: 0.4rem 0 0;
   padding: 0;
