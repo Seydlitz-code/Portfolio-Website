@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><%= post ? '게시물 수정' : '새 게시물 작성' %> — <%= settings.site_name || '포트폴리오' %></title>
-  <link rel="stylesheet" href="/css/style.css?v=20260456">
+  <link rel="stylesheet" href="/css/style.css?v=20260471">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Inter:wght@300;400;500;700&display=swap" rel="stylesheet">
 </head>
@@ -25,6 +25,9 @@
       <% } %>
 
       <form id="postEditorForm" action="<%= formAction %>" method="<%= formMethod %>" class="post-editor-form">
+        <% if (!post) { %>
+          <input type="hidden" name="_cancel_href" value="<%= typeof cancelHref !== 'undefined' ? cancelHref : '/posts' %>">
+        <% } %>
         <div class="post-editor-title-grid">
           <label class="post-editor-field">
             <span class="post-editor-label">제목을 입력해주세요 (국문) <span class="required">*</span></span>
@@ -38,16 +41,27 @@
           </label>
         </div>
 
+        <% var _showLockedBoard = !post && typeof projectSelectLocked !== 'undefined' && projectSelectLocked && typeof lockedProject !== 'undefined' && lockedProject; %>
         <div class="post-editor-field post-editor-field--inline">
-          <span class="post-editor-label">게시판</span>
-          <select name="project_id" id="postProjectId" class="post-editor-select">
-            <option value="">-- 분류 없음 --</option>
-            <% projects.forEach(p => { %>
-              <option value="<%= p.id %>" <%= (post && post.project_id === p.id) || (!post && typeof defaultProjectId !== 'undefined' && defaultProjectId != null && Number(defaultProjectId) === Number(p.id)) ? 'selected' : '' %>>
-                <%= p.name %>
-              </option>
-            <% }) %>
-          </select>
+          <span class="post-editor-label">게시판<% if (!post) { %> <span class="required">*</span><% } %></span>
+          <% if (_showLockedBoard) { %>
+            <input type="hidden" name="_project_form_locked" value="1">
+            <input type="hidden" name="project_id" value="<%= lockedProject.id %>">
+            <p class="post-editor-readonly-board" id="postProjectReadonly"><%= lockedProject.name %><% if (lockedProject.name_ja != null && String(lockedProject.name_ja).trim() !== '') { %> <span class="post-editor-readonly-board-ja" lang="ja">(<%= lockedProject.name_ja %>)</span><% } %></p>
+          <% } else { %>
+            <select name="project_id" id="postProjectId" class="post-editor-select"<%= !post ? ' required' : '' %>>
+              <% if (!post) { %>
+                <option value="" disabled <% if (typeof defaultProjectId === 'undefined' || defaultProjectId == null) { %>selected<% } %>>게시판을 선택하세요</option>
+              <% } else { %>
+                <option value=""<%= (!post.project_id) ? ' selected' : '' %>>-- 분류 없음 --</option>
+              <% } %>
+              <% projects.forEach(p => { %>
+                <option value="<%= p.id %>" <%= (post && post.project_id === p.id) || (!post && typeof defaultProjectId !== 'undefined' && defaultProjectId != null && Number(defaultProjectId) === Number(p.id)) ? 'selected' : '' %>>
+                  <%= p.name %>
+                </option>
+              <% }) %>
+            </select>
+          <% } %>
         </div>
 
         <div class="post-editor-toolbars">
@@ -73,16 +87,18 @@
               <option value="Georgia, 'Times New Roman', serif">명조 계열</option>
               <option value="ui-monospace, 'Cascadia Code', monospace">고정폭</option>
             </select>
-            <select id="postEditorFontSize" class="post-editor-fmt-select" title="크기" aria-label="글자 크기">
-              <option value="">크기</option>
-              <option value="12">12</option>
-              <option value="14">14</option>
-              <option value="16">16</option>
-              <option value="18">18</option>
-              <option value="20">20</option>
-              <option value="24">24</option>
-              <option value="28">28</option>
-            </select>
+            <input type="text" id="postEditorFontSize" class="post-editor-fmt-size-input" list="postEditorFontSizeList"
+                   value="10" inputmode="numeric" maxlength="3" autocomplete="off" title="크기 (px)" aria-label="글자 크기 픽셀">
+            <datalist id="postEditorFontSizeList">
+              <option value="10"></option>
+              <option value="12"></option>
+              <option value="14"></option>
+              <option value="16"></option>
+              <option value="18"></option>
+              <option value="20"></option>
+              <option value="24"></option>
+              <option value="28"></option>
+            </datalist>
             <span class="post-editor-fmt-div" aria-hidden="true"></span>
             <button type="button" class="post-editor-fmt-btn" data-cmd="bold" title="굵게 (Ctrl+B)">
               <i class="fas fa-bold" aria-hidden="true"></i>
@@ -97,10 +113,29 @@
               <i class="fas fa-strikethrough" aria-hidden="true"></i>
             </button>
             <span class="post-editor-fmt-div" aria-hidden="true"></span>
-            <label class="post-editor-fmt-color" title="글자 색">
-              <span class="post-editor-fmt-color-label"><i class="fas fa-font" aria-hidden="true"></i></span>
-              <input type="color" id="postEditorForeColor" value="#1a1a1a" aria-label="글자 색">
-            </label>
+            <div class="post-editor-color-wrap">
+              <button type="button" id="postEditorColorBtn" class="post-editor-fmt-color post-editor-fmt-color--trigger"
+                      title="글자·배경 색" aria-label="글자·배경 색" aria-expanded="false" aria-haspopup="dialog">
+                <span class="post-editor-fmt-color-bar" aria-hidden="true"></span>
+                <i class="fas fa-font" aria-hidden="true"></i>
+              </button>
+              <div id="postEditorColorPanel" class="post-editor-color-panel is-hidden" role="dialog" aria-label="색 선택">
+                <div class="post-editor-color-col">
+                  <span class="post-editor-color-col-title">배경색</span>
+                  <button type="button" class="post-editor-color-preset" data-color-action="bg-transparent">투명으로 설정</button>
+                  <div id="postEditorBgGrid" class="post-editor-swatch-grid"></div>
+                  <button type="button" class="post-editor-color-more" data-color-more="bg">다른 색상 선택</button>
+                </div>
+                <div class="post-editor-color-col">
+                  <span class="post-editor-color-col-title">글자색</span>
+                  <button type="button" class="post-editor-color-preset" data-color-action="fg-black">검은색으로 설정</button>
+                  <div id="postEditorFgGrid" class="post-editor-swatch-grid"></div>
+                  <button type="button" class="post-editor-color-more" data-color-more="fg">다른 색상 선택</button>
+                </div>
+              </div>
+              <input type="color" id="postEditorFgColorHidden" class="post-editor-color-native" value="#000000" aria-hidden="true" tabindex="-1" title="글자색 직접 선택">
+              <input type="color" id="postEditorBgColorHidden" class="post-editor-color-native" value="#ffffff" aria-hidden="true" tabindex="-1" title="배경색 직접 선택">
+            </div>
             <span class="post-editor-fmt-div" aria-hidden="true"></span>
             <button type="button" class="post-editor-fmt-btn" data-justify="left" title="왼쪽 정렬">
               <i class="fas fa-align-left" aria-hidden="true"></i>
@@ -142,6 +177,6 @@
 
   <input type="hidden" id="post-editor-init-b64" value="<%= typeof editorInitJsonB64 !== 'undefined' ? editorInitJsonB64 : '' %>">
 
-  <script src="/js/post-editor.js?v=20260459" defer></script>
+  <script src="/js/post-editor.js?v=20260471" defer></script>
 </body>
 </html>

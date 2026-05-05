@@ -24,6 +24,49 @@ const { sanitizePostHtml, isPostContentMeaningful, postContentLooksLikeHtml } = 
 
 const ALL_POSTS_PAGE_SIZE = 200;
 
+function formatCommentDateTime(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleString('ko-KR', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  });
+}
+
+function sanitizeCommentInput(raw) {
+  let s = raw != null ? String(raw) : '';
+  s = s.replace(/\r\n|\r|\n/g, ' ').replace(/\s+/g, ' ').trim();
+  if (s.length > 100) s = s.slice(0, 100);
+  return s;
+}
+
+/** 평면 댓글 목록 → parent_id 기준 트리 (최상위만 roots) */
+function nestCommentRows(rows) {
+  const byId = new Map(rows.map((r) => [Number(r.id), { ...r, replies: [] }]));
+  const roots = [];
+  for (const r of rows) {
+    const node = byId.get(Number(r.id));
+    const rawPid = r.parent_id;
+    const pid = rawPid != null && rawPid !== '' ? Number(rawPid) : NaN;
+    if (Number.isFinite(pid) && byId.has(pid)) {
+      byId.get(pid).replies.push(node);
+    } else {
+      roots.push(node);
+    }
+  }
+  const cmp = (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+  roots.sort(cmp);
+  byId.forEach((n) => {
+    n.replies.sort(cmp);
+  });
+  return roots;
+}
+
 function editorInitB64From(obj) {
   return Buffer.from(
     JSON.stringify({
@@ -37,12 +80,47 @@ function editorInitB64From(obj) {
 
 function safeNewPostCancel(queryCancel) {
   if (queryCancel == null || typeof queryCancel !== 'string') return '/posts';
-  const t = queryCancel.trim();
-  if (!t.startsWith('/boards/')) return '/posts';
-  const rest = t.slice('/boards/'.length).split('?')[0];
-  const id = parseInt(rest, 10);
-  if (!Number.isFinite(id) || id < 1) return '/posts';
-  return `/boards/${id}`;
+  const t = queryCancel.trim().split('?')[0];
+  if (t.startsWith('/boards/')) {
+    const rest = t.slice('/boards/'.length);
+    const id = parseInt(rest, 10);
+    if (!Number.isFinite(id) || id < 1) return '/posts';
+    return `/boards/${id}`;
+  }
+  const postPath = /^\/posts\/(\d+)$/.exec(t);
+  if (postPath) return `/posts/${postPath[1]}`;
+  if (t === '/posts') return '/posts';
+  return '/posts';
+}
+
+/** POST 재표시 시 폼에 실었던 취소 경로만 허용 */
+function safeEchoCancelHref(raw) {
+  if (raw == null || typeof raw !== 'string') return '/posts';
+  const t = raw.trim();
+  if (t === '/posts') return '/posts';
+  const boards = /^\/boards\/(\d+)\/?$/.exec(t);
+  if (boards) return `/boards/${boards[1]}`;
+  const postPath = /^\/posts\/(\d+)\/?$/.exec(t);
+  if (postPath) return `/posts/${postPath[1]}`;
+  return '/posts';
+}
+
+function resolveNewPostProjectId(projects, body) {
+  if (body._project_form_locked === '1') {
+    const lid = parseInt(String(body.project_id != null ? body.project_id : '').trim(), 10);
+    if (!Number.isFinite(lid) || lid < 1 || !projects.some((p) => Number(p.id) === lid)) {
+      return { ok: false, error: '게시판 정보가 올바르지 않습니다.' };
+    }
+    return { ok: true, project_id: lid };
+  }
+  const pid = parseInt(String(body.project_id != null ? body.project_id : '').trim(), 10);
+  if (!Number.isFinite(pid) || pid < 1 || !projects.some((p) => Number(p.id) === pid)) {
+    return {
+      ok: false,
+      error: '게시판을 선택해주세요. (-- 분류 없음 -- 은 등록할 수 없습니다.)'
+    };
+  }
+  return { ok: true, project_id: pid };
 }
 
 function pickDefaultProjectId(projects, queryProjectId) {
@@ -181,6 +259,11 @@ router.get(
     const projects = await db.all('SELECT * FROM projects ORDER BY order_num ASC, name ASC');
     const cancelHref = safeNewPostCancel(req.query.cancel);
     const defaultProjectId = pickDefaultProjectId(projects, req.query.project_id);
+    const lockedProject =
+      defaultProjectId != null
+        ? projects.find((p) => Number(p.id) === Number(defaultProjectId)) || null
+        : null;
+    const projectSelectLocked = !!lockedProject;
     res.render('post-form', {
       post: null,
       projects,
@@ -189,6 +272,8 @@ router.get(
       settings: await getSiteSettings(),
       cancelHref,
       defaultProjectId,
+      projectSelectLocked,
+      lockedProject,
       editorInitJsonB64: editorInitB64From({ html: '', titleKo: '', titleJa: '' })
     });
   })
@@ -198,15 +283,47 @@ router.post(
   '/',
   requireAdmin,
   asyncRoute(async (req, res) => {
+    const projects = await db.all('SELECT * FROM projects ORDER BY order_num ASC, name ASC');
+    const cancelHref = safeEchoCancelHref(req.body._cancel_href);
+    const projectResolved = resolveNewPostProjectId(projects, req.body);
+    if (!projectResolved.ok) {
+      const projectSelectLocked = req.body._project_form_locked === '1';
+      const lockedProject = projectSelectLocked
+        ? projects.find(
+            (p) => Number(p.id) === parseInt(String(req.body.project_id || '').trim(), 10)
+          ) || null
+        : null;
+      return res.render('post-form', {
+        post: null,
+        projects,
+        formAction: '/posts',
+        formMethod: 'POST',
+        error: projectResolved.error,
+        settings: await getSiteSettings(),
+        cancelHref,
+        defaultProjectId: pickDefaultProjectId(projects, req.body.project_id),
+        projectSelectLocked,
+        lockedProject,
+        editorInitJsonB64: editorInitB64From({
+          html: req.body.content != null ? String(req.body.content) : '',
+          titleKo: req.body.title,
+          titleJa: req.body.title_ja
+        })
+      });
+    }
+    const project_id_final = projectResolved.project_id;
+
     const titleKo = (req.body.title != null ? String(req.body.title) : '').trim();
     const titleJaRaw = req.body.title_ja != null ? String(req.body.title_ja).trim() : '';
     const titleJa = titleJaRaw === '' ? null : titleJaRaw;
     const contentRaw = req.body.content != null ? String(req.body.content) : '';
     const content = sanitizePostHtml(contentRaw);
-    const { project_id } = req.body;
 
     if (!titleKo || !isPostContentMeaningful(content)) {
-      const projects = await db.all('SELECT * FROM projects ORDER BY order_num ASC');
+      const projectSelectLocked = req.body._project_form_locked === '1';
+      const lockedProject = projectSelectLocked
+        ? projects.find((p) => Number(p.id) === Number(project_id_final)) || null
+        : null;
       return res.render('post-form', {
         post: null,
         projects,
@@ -214,8 +331,10 @@ router.post(
         formMethod: 'POST',
         error: '국문 제목과 본문(또는 첨부 미디어)을 입력해주세요.',
         settings: await getSiteSettings(),
-        cancelHref: '/posts',
-        defaultProjectId: pickDefaultProjectId(projects, req.body.project_id),
+        cancelHref,
+        defaultProjectId: projectSelectLocked ? null : pickDefaultProjectId(projects, req.body.project_id),
+        projectSelectLocked,
+        lockedProject,
         editorInitJsonB64: editorInitB64From({
           html: contentRaw,
           titleKo: req.body.title,
@@ -227,7 +346,7 @@ router.post(
     const authorId = req.session.user && req.session.user.id != null ? req.session.user.id : null;
     const result = await db.run(
       'INSERT INTO posts (title, title_ja, content, project_id, author_id) VALUES (?, ?, ?, ?, ?)',
-      [titleKo, titleJa, content, project_id || null, authorId]
+      [titleKo, titleJa, content, project_id_final, authorId]
     );
 
     res.redirect(`/posts/${result.lastInsertRowid}`);
@@ -338,7 +457,7 @@ router.get(
 
     const comments = await db.all(
       `
-    SELECT c.*, u.nickname
+    SELECT c.*, u.nickname, u.avatar AS user_avatar
     FROM comments c
     JOIN users u ON c.user_id = u.id
     WHERE c.post_id = ?
@@ -347,9 +466,16 @@ router.get(
       [req.params.id]
     );
 
+    comments.forEach((c) => {
+      c.display_time = formatCommentDateTime(c.updated_at || c.created_at);
+    });
+    const commentTree = nestCommentRows(comments);
+
     res.render('post', {
       post,
       comments,
+      commentTree,
+      commentsCount: comments.length,
       settings: await getSiteSettings(),
       contentAsHtml: postContentLooksLikeHtml(post.content),
       postDisplayCreated: formatListTime(post.created_at),
@@ -363,23 +489,77 @@ router.post(
   '/:id/comments',
   requireLogin,
   asyncRoute(async (req, res) => {
-    const { content } = req.body;
-    if (!content || !content.trim()) return res.redirect(`/posts/${req.params.id}`);
+    const content = sanitizeCommentInput(req.body.content);
+    if (!content) return res.redirect(`/posts/${req.params.id}#comments`);
 
-    await db.run('INSERT INTO comments (post_id, user_id, content) VALUES (?, ?, ?)', [
-      req.params.id,
-      req.session.user.id,
-      content.trim()
-    ]);
+    let parentId = null;
+    const rawParent = req.body.parent_id != null ? String(req.body.parent_id).trim() : '';
+    if (rawParent !== '') {
+      const p = parseInt(rawParent, 10);
+      if (Number.isFinite(p) && p > 0) {
+        const parent = await db.get(
+          'SELECT id, post_id, parent_id FROM comments WHERE id = ?',
+          [p]
+        );
+        if (
+          parent &&
+          Number(parent.post_id) === Number(req.params.id) &&
+          (parent.parent_id == null || Number(parent.parent_id) === 0)
+        ) {
+          parentId = p;
+        }
+      }
+    }
+
+    await db.run(
+      'INSERT INTO comments (post_id, user_id, content, parent_id) VALUES (?, ?, ?, ?)',
+      [req.params.id, req.session.user.id, content, parentId]
+    );
 
     res.redirect(`/posts/${req.params.id}#comments`);
   })
 );
 
+router.put(
+  '/:postId/comments/:commentId',
+  requireLogin,
+  asyncRoute(async (req, res) => {
+    const content = sanitizeCommentInput(req.body.content);
+    if (!content) return res.redirect(`/posts/${req.params.postId}#comments`);
+
+    const row = await db.get(
+      'SELECT user_id FROM comments WHERE id = ? AND post_id = ?',
+      [req.params.commentId, req.params.postId]
+    );
+    if (!row) return res.status(404).render('error', { code: 404, message: '댓글을 찾을 수 없습니다.' });
+    if (Number(row.user_id) !== Number(req.session.user.id)) {
+      return res.status(403).render('error', { code: 403, message: '본인 댓글만 수정할 수 있습니다.' });
+    }
+
+    await db.run(
+      'UPDATE comments SET content = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND post_id = ?',
+      [content, req.params.commentId, req.params.postId]
+    );
+    res.redirect(`/posts/${req.params.postId}#comments`);
+  })
+);
+
 router.delete(
   '/:postId/comments/:commentId',
-  requireAdmin,
+  requireLogin,
   asyncRoute(async (req, res) => {
+    const row = await db.get(
+      'SELECT user_id FROM comments WHERE id = ? AND post_id = ?',
+      [req.params.commentId, req.params.postId]
+    );
+    if (!row) return res.redirect(`/posts/${req.params.postId}#comments`);
+
+    const isOwner = Number(row.user_id) === Number(req.session.user.id);
+    const isAdm = isUserAdmin(req.session.user);
+    if (!isOwner && !isAdm) {
+      return res.status(403).render('error', { code: 403, message: '이 댓글을 삭제할 권한이 없습니다.' });
+    }
+
     await db.run('DELETE FROM comments WHERE id = ? AND post_id = ?', [
       req.params.commentId,
       req.params.postId

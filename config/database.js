@@ -118,10 +118,13 @@ function initializeSqliteSync() {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       post_id INTEGER NOT NULL,
       user_id INTEGER NOT NULL,
+      parent_id INTEGER,
       content TEXT NOT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
-      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (parent_id) REFERENCES comments(id) ON DELETE CASCADE
     );
 
     CREATE TABLE IF NOT EXISTS site_settings (
@@ -173,6 +176,16 @@ function initializeSqliteSync() {
   }
   if (!userCols.some((c) => c.name === 'avatar_blob')) {
     database.exec('ALTER TABLE users ADD COLUMN avatar_blob');
+  }
+
+  let commentCols = database.prepare('PRAGMA table_info(comments)').all();
+  if (!commentCols.some((c) => c.name === 'parent_id')) {
+    database.exec('ALTER TABLE comments ADD COLUMN parent_id INTEGER');
+  }
+  commentCols = database.prepare('PRAGMA table_info(comments)').all();
+  if (!commentCols.some((c) => c.name === 'updated_at')) {
+    database.exec('ALTER TABLE comments ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP');
+    database.exec('UPDATE comments SET updated_at = created_at WHERE updated_at IS NULL');
   }
 
   console.log('[database] SQLite 파일:', path.join(getDataDir(), DB_FILE));
@@ -233,8 +246,10 @@ async function initializePostgres() {
       id SERIAL PRIMARY KEY,
       post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
       user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      parent_id INTEGER REFERENCES comments(id) ON DELETE CASCADE,
       content TEXT NOT NULL,
-      created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+      created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
     );
   `);
 
@@ -287,6 +302,18 @@ async function initializePostgres() {
   }
   if (!(await pgColumnExists(pool, 'users', 'avatar_blob'))) {
     await pool.query('ALTER TABLE users ADD COLUMN avatar_blob BYTEA');
+  }
+
+  if (!(await pgColumnExists(pool, 'comments', 'parent_id'))) {
+    await pool.query(
+      'ALTER TABLE comments ADD COLUMN parent_id INTEGER REFERENCES comments(id) ON DELETE CASCADE'
+    );
+  }
+  if (!(await pgColumnExists(pool, 'comments', 'updated_at'))) {
+    await pool.query(
+      'ALTER TABLE comments ADD COLUMN updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP'
+    );
+    await pool.query('UPDATE comments SET updated_at = created_at WHERE updated_at IS NULL');
   }
 
   await seedDefaultsPg(pool);

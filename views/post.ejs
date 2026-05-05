@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><%= post.title %><%= post.title_ja && String(post.title_ja).trim() ? ' / ' + String(post.title_ja).trim() : '' %> — 포트폴리오</title>
-  <link rel="stylesheet" href="/css/style.css?v=20260462">
+  <link rel="stylesheet" href="/css/style.css?v=20260472">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Inter:wght@300;400;500;700&display=swap" rel="stylesheet">
 </head>
@@ -48,8 +48,9 @@
           </div>
           <div class="post-meta-right">
             <span class="post-view-count" aria-label="조회수">조회 <%= post.view_count != null ? post.view_count : 0 %></span>
-            <button type="button" class="post-comment-jump" id="postCommentJumpBtn" aria-label="댓글 <%= comments.length %>개, 댓글 영역으로 이동">
-              댓글 <%= comments.length %>
+            <% var _commentTotal = typeof commentsCount !== 'undefined' ? commentsCount : comments.length; %>
+            <button type="button" class="post-comment-jump" id="postCommentJumpBtn" aria-label="댓글 <%= _commentTotal %>개, 댓글 영역으로 이동">
+              댓글 <%= _commentTotal %>
             </button>
           </div>
         </div>
@@ -82,40 +83,35 @@
       </article>
 
       <section class="comments-section" id="comments">
-        <h2 class="comments-title">댓글 <span class="comment-count"><%= comments.length %></span></h2>
+        <% var _cc = typeof commentsCount !== 'undefined' ? commentsCount : comments.length; %>
+        <% var _tree = typeof commentTree !== 'undefined' ? commentTree : []; %>
+        <h2 class="comments-title">댓글 <span class="comment-count"><%= _cc %></span></h2>
 
-        <% if (comments.length === 0) { %>
+        <% if (!_tree || _tree.length === 0) { %>
           <p class="no-comments">아직 댓글이 없습니다. 첫 댓글을 남겨보세요!</p>
         <% } else { %>
           <div class="comments-list">
-            <% comments.forEach(comment => { %>
+            <% _tree.forEach(function (c) { %>
               <div class="comment-item">
-                <div class="comment-header">
-                  <span class="comment-author"><%= comment.nickname %></span>
-                  <time class="comment-date">
-                    <%= new Date(comment.created_at).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' }) %>
-                  </time>
-                  <% if (isAdmin) { %>
-                    <form action="/posts/<%= post.id %>/comments/<%= comment.id %>?_method=DELETE" method="POST"
-                          class="inline-form comment-delete"
-                          onsubmit="return confirm('댓글을 삭제하시겠습니까?')">
-                      <button type="submit" class="btn-delete-sm">삭제</button>
-                    </form>
-                  <% } %>
-                </div>
-                <p class="comment-body"><%- comment.content.replace(/\n/g, '<br>') %></p>
+                <%- include('partials/comment-item', { comment: c, post, user, isAdmin, depth: 0 }) %>
               </div>
-            <% }) %>
+            <% }); %>
           </div>
         <% } %>
 
         <% if (user) { %>
-          <form action="/posts/<%= post.id %>/comments" method="POST" class="comment-form">
+          <form action="/posts/<%= post.id %>/comments" method="POST" class="comment-form" id="mainCommentForm">
+            <input type="hidden" name="parent_id" id="commentParentId" value="">
+            <div id="commentReplyBanner" class="comment-reply-banner is-hidden" role="status">
+              <span id="commentReplyBannerText"></span>
+              <button type="button" class="btn-comment-action" id="commentReplyCancel">답글 취소</button>
+            </div>
             <div class="comment-form-header">
               <span class="comment-form-user"><%= user.nickname %>으로 댓글 작성</span>
+              <span class="comment-char-count" id="commentCharCount" aria-live="polite">0 / 100</span>
             </div>
-            <textarea name="content" class="comment-textarea" rows="3"
-                      placeholder="댓글을 입력하세요..." required></textarea>
+            <textarea name="content" id="commentMainTextarea" class="comment-textarea" rows="3" maxlength="100"
+                      placeholder="댓글을 입력하세요... (최대 100자)" required></textarea>
             <button type="submit" class="btn-primary">댓글 등록</button>
           </form>
         <% } else { %>
@@ -135,6 +131,89 @@
       if (jump && target) {
         jump.addEventListener('click', function () {
           target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+      }
+
+      var mainForm = document.getElementById('mainCommentForm');
+      var parentInput = document.getElementById('commentParentId');
+      var replyBanner = document.getElementById('commentReplyBanner');
+      var replyBannerText = document.getElementById('commentReplyBannerText');
+      var replyCancel = document.getElementById('commentReplyCancel');
+      var ta = document.getElementById('commentMainTextarea');
+      var charCount = document.getElementById('commentCharCount');
+
+      function syncCharCount() {
+        if (!ta || !charCount) return;
+        var n = (ta.value || '').length;
+        charCount.textContent = n + ' / 100';
+      }
+
+      function clearReplyMode() {
+        if (parentInput) parentInput.value = '';
+        if (replyBanner) replyBanner.classList.add('is-hidden');
+        if (replyBannerText) replyBannerText.textContent = '';
+      }
+
+      if (ta && charCount && mainForm) {
+        ta.addEventListener('input', syncCharCount);
+        syncCharCount();
+        mainForm.addEventListener('submit', function () {
+          if ((ta.value || '').length > 100) {
+            ta.value = (ta.value || '').slice(0, 100);
+          }
+        });
+      }
+
+      if (replyCancel) {
+        replyCancel.addEventListener('click', clearReplyMode);
+      }
+
+      var commentsSection = document.getElementById('comments');
+      if (commentsSection) {
+        commentsSection.addEventListener('input', function (e) {
+          if (e.target.classList && e.target.classList.contains('comment-textarea--edit')) {
+            var v = e.target.value || '';
+            if (v.length > 100) e.target.value = v.slice(0, 100);
+          }
+        });
+        commentsSection.addEventListener('click', function (e) {
+          var replyBtn = e.target.closest('.comment-reply-btn');
+          if (replyBtn && parentInput && replyBanner && replyBannerText) {
+            var pid = replyBtn.getAttribute('data-reply-to');
+            var nick = replyBtn.getAttribute('data-reply-nick') || '';
+            parentInput.value = pid || '';
+            replyBannerText.textContent = nick ? '「' + nick + '」님에게 답글 작성 중' : '답글 작성 중';
+            replyBanner.classList.remove('is-hidden');
+            if (ta) {
+              ta.focus();
+            }
+            return;
+          }
+
+          var openEdit = e.target.closest('.comment-edit-open');
+          if (openEdit) {
+            var cid = openEdit.getAttribute('data-comment-id');
+            var view = document.getElementById('comment-view-' + cid);
+            var editForm = document.getElementById('comment-edit-' + cid);
+            if (view && editForm) {
+              view.classList.add('is-hidden');
+              editForm.classList.remove('is-hidden');
+              var et = editForm.querySelector('textarea');
+              if (et) et.focus();
+            }
+            return;
+          }
+
+          var cancelEdit = e.target.closest('.comment-edit-cancel');
+          if (cancelEdit) {
+            var cid2 = cancelEdit.getAttribute('data-comment-id');
+            var view2 = document.getElementById('comment-view-' + cid2);
+            var editForm2 = document.getElementById('comment-edit-' + cid2);
+            if (view2 && editForm2) {
+              editForm2.classList.add('is-hidden');
+              view2.classList.remove('is-hidden');
+            }
+          }
         });
       }
     })();
