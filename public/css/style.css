@@ -3366,6 +3366,26 @@ body.register-crop-modal-open {
   width: 5%;
 }
 
+/* 전체 게시물 페이지(/posts): 번호 열을 기준(2.25rem)의 약 30% 너비로 축소, 게시판 열 확대 */
+.posts-all-page .posts-all-table .board-th--num,
+.posts-all-page .posts-all-table .board-td--num {
+  width: max(1.35rem, calc(2.25rem * 0.3));
+  min-width: max(1.35rem, calc(2.25rem * 0.3));
+  max-width: 1.75rem;
+  padding-left: 0.2rem;
+  padding-right: 0.2rem;
+  white-space: nowrap;
+}
+
+.posts-all-page .posts-all-table .board-th--board,
+.posts-all-page .posts-all-table .board-td--board {
+  width: 21%;
+}
+
+.posts-all-page .posts-all-table .board-th--title {
+  width: 31%;
+}
+
 .posts-all-pagination {
   margin-top: 1.5rem;
 }
