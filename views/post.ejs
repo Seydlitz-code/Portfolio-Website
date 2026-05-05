@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><%= post.title %><%= post.title_ja && String(post.title_ja).trim() ? ' / ' + String(post.title_ja).trim() : '' %> — 포트폴리오</title>
-  <link rel="stylesheet" href="/css/style.css?v=20260460">
+  <link rel="stylesheet" href="/css/style.css?v=20260462">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Inter:wght@300;400;500;700&display=swap" rel="stylesheet">
 </head>
@@ -28,14 +28,6 @@
           <% } %>
         </header>
         <div class="post-board-rule" aria-hidden="true"></div>
-
-        <nav class="post-breadcrumb" aria-label="위치">
-          <a href="/posts">전체 게시물</a>
-          <% if (post.project_id && post.project_name) { %>
-            <span>/</span>
-            <a href="/boards/<%= post.project_id %>"><%= post.project_name %></a>
-          <% } %>
-        </nav>
 
         <h1 class="post-heading-title"><%= post.title %></h1>
         <% if (post.title_ja != null && String(post.title_ja).trim() !== '') { %>
@@ -62,7 +54,7 @@
           </div>
         </div>
 
-        <div class="post-content post-content--detail-frame<%= typeof contentAsHtml !== 'undefined' && contentAsHtml ? ' post-content--html' : '' %>">
+        <div class="post-content<%= typeof contentAsHtml !== 'undefined' && contentAsHtml ? ' post-content--html' : '' %>">
           <% if (typeof contentAsHtml !== 'undefined' && contentAsHtml) { %>
             <%- post.content %>
           <% } else { %>
