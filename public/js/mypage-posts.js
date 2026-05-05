@@ -20,6 +20,28 @@
     return s.slice(0, max) + '…';
   }
 
+  function buildPostDeleteForm(postId) {
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '/posts/' + postId + '?_method=DELETE';
+    form.className = 'mypage-comment-delete-form';
+    form.addEventListener('submit', function (ev) {
+      if (!window.confirm('정말로 삭제하시겠습니까?')) ev.preventDefault();
+    });
+    const nextInp = document.createElement('input');
+    nextInp.type = 'hidden';
+    nextInp.name = 'next';
+    nextInp.value = '/mypage/posts';
+    const delBtn = document.createElement('button');
+    delBtn.type = 'submit';
+    delBtn.className = 'mypage-comment-delete-btn';
+    delBtn.setAttribute('aria-label', '게시글 삭제');
+    delBtn.textContent = '삭제';
+    form.appendChild(nextInp);
+    form.appendChild(delBtn);
+    return form;
+  }
+
   function buildCommentDeleteForm(postId, commentId) {
     const form = document.createElement('form');
     form.method = 'POST';
@@ -79,8 +101,12 @@
           time.className = 'mypage-writings-item-meta';
           time.dateTime = post.created_at || '';
           time.textContent = formatDate(post.created_at);
+          const foot = document.createElement('div');
+          foot.className = 'mypage-writings-post-foot';
+          foot.appendChild(time);
+          foot.appendChild(buildPostDeleteForm(post.id));
           li.appendChild(a);
-          li.appendChild(time);
+          li.appendChild(foot);
           list.appendChild(li);
         });
         btn.setAttribute('data-next-offset', String(off + (data.items || []).length));

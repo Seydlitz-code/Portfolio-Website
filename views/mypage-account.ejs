@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>마이페이지 — 포트폴리오</title>
-  <link rel="stylesheet" href="/css/style.css?v=20260448">
+  <link rel="stylesheet" href="/css/style.css?v=20260449">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Inter:wght@300;400;500;700&display=swap" rel="stylesheet">
   <% if (typeof isAdmin !== 'undefined' && isAdmin && (activeTab === 'boardsManage' || activeTab === 'mainSettings')) { %>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -86,7 +86,13 @@
                     <% myPosts.forEach(function (post) { %>
                       <li class="mypage-writings-item">
                         <a href="/posts/<%= post.id %>" class="mypage-writings-item-title"><%= post.title %></a>
-                        <time class="mypage-writings-item-meta" datetime="<%= post.created_at %>"><%= new Date(post.created_at).toLocaleDateString('ko-KR') %></time>
+                        <div class="mypage-writings-post-foot">
+                          <time class="mypage-writings-item-meta" datetime="<%= post.created_at %>"><%= new Date(post.created_at).toLocaleDateString('ko-KR') %></time>
+                          <form action="/posts/<%= post.id %>?_method=DELETE" method="POST" class="mypage-comment-delete-form" onsubmit="return confirm('정말로 삭제하시겠습니까?');">
+                            <input type="hidden" name="next" value="/mypage/posts">
+                            <button type="submit" class="mypage-comment-delete-btn" aria-label="게시글 삭제">삭제</button>
+                          </form>
+                        </div>
                       </li>
                     <% }); %>
                   </ul>
@@ -133,7 +139,7 @@
           <script>
             window.__MYPAGE_POSTS_PAGE__ = <%= typeof myWritingsPageSize !== 'undefined' ? myWritingsPageSize : 10 %>;
           </script>
-          <script src="/js/mypage-posts.js?v=20260438"></script>
+          <script src="/js/mypage-posts.js?v=20260439"></script>
         <% } else if (activeTab === 'mainSettings') { %>
           <% if (typeof saved !== 'undefined' && saved) { %>
             <div class="mypage-account-alert"><div class="alert alert-success">적용이 완료되었습니다.</div></div>

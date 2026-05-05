@@ -440,10 +440,23 @@ router.put(
 
 router.delete(
   '/:id',
-  requireAdmin,
+  requireLogin,
   asyncRoute(async (req, res) => {
+    const post = await db.get('SELECT author_id FROM posts WHERE id = ?', [req.params.id]);
+    if (!post) {
+      return res.status(404).render('error', { code: 404, message: '게시물을 찾을 수 없습니다.' });
+    }
+    const isOwner = Number(post.author_id) === Number(req.session.user.id);
+    const isAdm = isUserAdmin(req.session.user);
+    if (!isOwner && !isAdm) {
+      return res.status(403).render('error', { code: 403, message: '이 게시물을 삭제할 권한이 없습니다.' });
+    }
     await db.run('DELETE FROM comments WHERE post_id = ?', [req.params.id]);
     await db.run('DELETE FROM posts WHERE id = ?', [req.params.id]);
+    const nextRaw = req.body && req.body.next != null ? String(req.body.next).trim() : '';
+    if (nextRaw === '/mypage/posts') {
+      return res.redirect('/mypage/posts');
+    }
     res.redirect('/posts');
   })
 );
