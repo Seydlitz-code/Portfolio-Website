@@ -42,19 +42,35 @@ function sanitizeCommentInput(raw) {
   let s = raw != null ? String(raw) : '';
   s = s.replace(/\r\n|\r|\n/g, ' ').replace(/\s+/g, ' ').trim();
   if (s.length > 100) s = s.slice(0, 100);
+  /* textarea·스크립트 경계 문자열로 인한 마크업 깨짐·서버 템플릿 오류 방지 */
+  s = s.replace(/<\/textarea\b/gi, '');
+  s = s.replace(/<\/script\b/gi, '');
   return s;
 }
 
-/** 평면 댓글 목록 → parent_id 기준 트리 (최상위만 roots) */
+/** 평면 댓글 목록 → parent_id 기준 트리 (부모는 최상위 댓글만 허용, 그 외·순환은 루트로) */
 function nestCommentRows(rows) {
-  const byId = new Map(rows.map((r) => [Number(r.id), { ...r, replies: [] }]));
+  const byId = new Map();
+  for (const r of rows) {
+    const idNum = Number(r.id);
+    if (!Number.isFinite(idNum)) continue;
+    byId.set(idNum, { ...r, id: idNum, user_id: Number(r.user_id), replies: [] });
+  }
   const roots = [];
   for (const r of rows) {
-    const node = byId.get(Number(r.id));
+    const idNum = Number(r.id);
+    const node = byId.get(idNum);
+    if (!node) continue;
     const rawPid = r.parent_id;
     const pid = rawPid != null && rawPid !== '' ? Number(rawPid) : NaN;
-    if (Number.isFinite(pid) && byId.has(pid)) {
-      byId.get(pid).replies.push(node);
+    const parentNode = Number.isFinite(pid) && pid !== idNum ? byId.get(pid) : null;
+    const parentIsRoot =
+      parentNode &&
+      (parentNode.parent_id == null ||
+        parentNode.parent_id === '' ||
+        Number(parentNode.parent_id) === 0);
+    if (parentNode && parentIsRoot) {
+      parentNode.replies.push(node);
     } else {
       roots.push(node);
     }
@@ -467,7 +483,15 @@ router.get(
     );
 
     comments.forEach((c) => {
-      c.display_time = formatCommentDateTime(c.updated_at || c.created_at);
+      c.id = Number(c.id);
+      c.user_id = Number(c.user_id);
+      c.post_id = Number(c.post_id);
+      if (c.parent_id != null && c.parent_id !== '') c.parent_id = Number(c.parent_id);
+      else c.parent_id = null;
+      const edited = isPostEdited(c.created_at, c.updated_at);
+      c.comment_edited = edited;
+      c.display_time_line =
+        formatCommentDateTime(c.updated_at || c.created_at) + (edited ? ' (수정)' : '');
     });
     const commentTree = nestCommentRows(comments);
 
@@ -512,9 +536,15 @@ router.post(
     }
 
     const ts = new Date().toISOString();
+    const postId = Number(req.params.id);
+    const userId = Number(req.session.user.id);
+    if (!Number.isFinite(postId) || postId < 1 || !Number.isFinite(userId) || userId < 1) {
+      return res.redirect('/auth/login?next=' + encodeURIComponent(req.originalUrl || '/posts'));
+    }
+    const parentSql = parentId == null || !Number.isFinite(Number(parentId)) ? null : Number(parentId);
     await db.run(
       'INSERT INTO comments (post_id, user_id, content, parent_id, updated_at) VALUES (?, ?, ?, ?, ?)',
-      [req.params.id, req.session.user.id, content, parentId, ts]
+      [postId, userId, content, parentSql, ts]
     );
 
     res.redirect(`/posts/${req.params.id}#comments`);

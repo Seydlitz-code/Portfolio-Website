@@ -4,44 +4,44 @@
 <% var showDelete = canEdit || isAdmin; %>
 <% var avSrc = comment.user_avatar && String(comment.user_avatar).trim() ? String(comment.user_avatar).trim() : '/media/user/' + comment.user_id + '/avatar'; %>
 <div class="comment-block<%= _depth > 0 ? ' comment-block--reply' : '' %>">
-  <div class="comment-row">
+  <div class="comment-top">
     <div class="comment-avatar-wrap">
-      <img src="<%= avSrc %>" alt="" class="comment-avatar" width="40" height="40" decoding="async" loading="lazy"
+      <img src="<%= avSrc %>" alt="" class="comment-avatar" width="44" height="44" decoding="async" loading="lazy"
            onerror="this.onerror=null;this.src='/images/default-profile.svg';">
     </div>
-    <div class="comment-body-wrap">
-      <div class="comment-header">
-        <span class="comment-author"><%= comment.nickname %></span>
-        <time class="comment-date" datetime="<%= comment.updated_at || comment.created_at %>"><%= comment.display_time || '' %></time>
-        <div class="comment-actions">
-          <% if (user && _depth === 0) { %>
-            <button type="button" class="btn-comment-action comment-reply-btn" data-reply-to="<%= comment.id %>" data-reply-nick="<%= comment.nickname %>">답글</button>
-          <% } %>
-          <% if (showEdit) { %>
-            <button type="button" class="btn-comment-action comment-edit-open" data-comment-id="<%= comment.id %>">수정</button>
-          <% } %>
-          <% if (showDelete) { %>
-            <form action="/posts/<%= post.id %>/comments/<%= comment.id %>?_method=DELETE" method="POST" class="inline-form comment-delete-form" onsubmit="return confirm('댓글을 삭제하시겠습니까?');">
-              <button type="submit" class="btn-comment-action btn-comment-action--danger">삭제</button>
-            </form>
-          <% } %>
-        </div>
-      </div>
-      <div class="comment-view" id="comment-view-<%= comment.id %>">
-        <p class="comment-body"><%= comment.content %></p>
-      </div>
+    <div class="comment-meta">
+      <span class="comment-author"><%= comment.nickname %></span>
+      <time class="comment-date" datetime="<%= comment.updated_at || comment.created_at %>"><%= comment.display_time_line != null ? comment.display_time_line : '' %></time>
+    </div>
+  </div>
+  <div class="comment-view" id="comment-view-<%= comment.id %>">
+    <p class="comment-body"><%= comment.content %></p>
+  </div>
+  <div class="comment-footer">
+    <div class="comment-actions-links">
+      <% if (user && _depth === 0) { %>
+        <button type="button" class="comment-link comment-reply-btn" data-reply-to="<%= comment.id %>" data-reply-nick="<%= comment.nickname %>">답글</button>
+      <% } %>
       <% if (showEdit) { %>
-        <form id="comment-edit-<%= comment.id %>" action="/posts/<%= post.id %>/comments/<%= comment.id %>?_method=PUT" method="POST" class="comment-edit-form is-hidden" autocomplete="off">
-          <textarea name="content" class="comment-textarea comment-textarea--edit" rows="3" maxlength="100" required><%= comment.content %></textarea>
-          <div class="comment-edit-actions">
-            <button type="submit" class="btn-primary btn-primary--sm">저장</button>
-            <button type="button" class="btn-secondary btn-secondary--sm comment-edit-cancel" data-comment-id="<%= comment.id %>">취소</button>
-          </div>
+        <button type="button" class="comment-link comment-edit-open" data-comment-id="<%= comment.id %>">수정</button>
+      <% } %>
+      <% if (showDelete) { %>
+        <form action="/posts/<%= post.id %>/comments/<%= comment.id %>?_method=DELETE" method="POST" class="comment-delete-form" onsubmit="return confirm('댓글을 삭제하시겠습니까?');">
+          <button type="submit" class="comment-link comment-link--danger">삭제</button>
         </form>
       <% } %>
     </div>
   </div>
-  <% if (comment.replies && comment.replies.length) { %>
+  <% if (showEdit) { %>
+    <form id="comment-edit-<%= comment.id %>" action="/posts/<%= post.id %>/comments/<%= comment.id %>?_method=PUT" method="POST" class="comment-edit-form is-hidden" autocomplete="off">
+      <textarea name="content" class="comment-textarea comment-textarea--edit" rows="3" maxlength="100" required><%= comment.content %></textarea>
+      <div class="comment-edit-actions">
+        <button type="submit" class="btn-primary btn-primary--sm">저장</button>
+        <button type="button" class="btn-secondary btn-secondary--sm comment-edit-cancel" data-comment-id="<%= comment.id %>">취소</button>
+      </div>
+    </form>
+  <% } %>
+  <% if (comment.replies && comment.replies.length && _depth < 24) { %>
     <div class="comment-replies">
       <% comment.replies.forEach(function (reply) { %>
         <%- include('partials/comment-item', { comment: reply, post, user, isAdmin, depth: _depth + 1 }) %>
