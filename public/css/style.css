@@ -955,6 +955,42 @@ body.index-page .portfolio-section {
   color: var(--text-primary);
 }
 
+/* 메인(index) 테이블: 헤더 가운데, 전체 게시물 표의 게시판·제목 본문 왼쪽, 열 사이 회색 세로선 */
+.portfolio-section .posts-all-table.index-home-recent-table .board-th,
+.portfolio-section .index-home-board-table .board-th {
+  text-align: center;
+}
+
+.portfolio-section .posts-all-table.index-home-recent-table .board-th--title,
+.portfolio-section .posts-all-table.index-home-recent-table .board-th--board,
+.portfolio-section .index-home-board-table .board-th--title {
+  text-align: center;
+}
+
+.portfolio-section .posts-all-table.index-home-recent-table .board-td--board,
+.portfolio-section .posts-all-table.index-home-recent-table .board-td--title {
+  text-align: left;
+}
+
+.portfolio-section .posts-all-table.index-home-recent-table .board-td--board .board-board-link {
+  align-items: flex-start;
+  text-align: left;
+}
+
+.portfolio-section .posts-all-table.index-home-recent-table th,
+.portfolio-section .posts-all-table.index-home-recent-table td,
+.portfolio-section .index-home-board-table th,
+.portfolio-section .index-home-board-table td {
+  border-right: 1px solid #d8d8d4;
+}
+
+.portfolio-section .posts-all-table.index-home-recent-table th:last-child,
+.portfolio-section .posts-all-table.index-home-recent-table td:last-child,
+.portfolio-section .index-home-board-table th:last-child,
+.portfolio-section .index-home-board-table td:last-child {
+  border-right: none;
+}
+
 .view-all-btn--below {
   margin-top: 0.15rem;
 }
@@ -3366,24 +3402,49 @@ body.register-crop-modal-open {
   width: 5%;
 }
 
-/* 전체 게시물 페이지(/posts): 번호 열을 기준(2.25rem)의 약 30% 너비로 축소, 게시판 열 확대 */
+/* 전체 게시물 페이지(/posts): 번호 열 축소(현재 대비 ~20%), 게시판 열 확대, 제목·게시판 본문 좌측·KO/JP 동일 타이포 */
 .posts-all-page .posts-all-table .board-th--num,
 .posts-all-page .posts-all-table .board-td--num {
-  width: max(1.35rem, calc(2.25rem * 0.3));
-  min-width: max(1.35rem, calc(2.25rem * 0.3));
-  max-width: 1.75rem;
-  padding-left: 0.2rem;
-  padding-right: 0.2rem;
+  width: max(0.85rem, calc(1.35rem * 0.2));
+  min-width: max(0.85rem, calc(1.35rem * 0.2));
+  max-width: 1.4rem;
+  padding-left: 0.15rem;
+  padding-right: 0.15rem;
   white-space: nowrap;
 }
 
 .posts-all-page .posts-all-table .board-th--board,
 .posts-all-page .posts-all-table .board-td--board {
-  width: 21%;
+  width: 32%;
 }
 
 .posts-all-page .posts-all-table .board-th--title {
-  width: 31%;
+  width: 24%;
+}
+
+.posts-all-page .posts-all-table .board-th--board,
+.posts-all-page .posts-all-table .board-td--board,
+.posts-all-page .posts-all-table .board-th--title,
+.posts-all-page .posts-all-table .board-td--title {
+  text-align: left;
+}
+
+.posts-all-page .posts-all-table .board-td--board .board-board-link {
+  align-items: flex-start;
+  text-align: left;
+}
+
+.posts-all-page .posts-all-table .board-td--board,
+.posts-all-page .posts-all-table .board-td--title .board-title-stack {
+  font-size: 0.86rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.posts-all-page .posts-all-table .board-title-line--ja {
+  font-size: inherit;
+  font-weight: inherit;
+  color: inherit;
 }
 
 .posts-all-pagination {

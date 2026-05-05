@@ -8,7 +8,8 @@ const {
   formatListTime,
   buildPaginationItems,
   truncatePostTitleLine,
-  truncateBoardNameLine
+  truncateBoardNameLine,
+  LIST_BOARD_NAME_ALL_POSTS_MAX
 } = require('../lib/listingHelpers');
 
 function isPostEdited(createdAt, updatedAt) {
@@ -137,9 +138,10 @@ router.get(
       global_num: p.global_num != null ? Number(p.global_num) : 0,
       title_ko_short: truncatePostTitleLine(p.title),
       title_ja_short: truncatePostTitleLine(p.title_ja != null ? p.title_ja : ''),
-      project_name_ko_short: truncateBoardNameLine(p.project_name || ''),
+      project_name_ko_short: truncateBoardNameLine(p.project_name || '', LIST_BOARD_NAME_ALL_POSTS_MAX),
       project_name_ja_short: truncateBoardNameLine(
-        p.project_name_ja != null ? String(p.project_name_ja) : ''
+        p.project_name_ja != null ? String(p.project_name_ja) : '',
+        LIST_BOARD_NAME_ALL_POSTS_MAX
       )
     }));
 
