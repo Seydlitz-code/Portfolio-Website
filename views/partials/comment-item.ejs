@@ -1,9 +1,8 @@
-<% var _depth = typeof depth !== 'undefined' ? depth : 0; %>
 <% var canEdit = user && Number(user.id) === Number(comment.user_id); %>
 <% var showEdit = canEdit; %>
 <% var showDelete = canEdit || isAdmin; %>
 <% var avSrc = comment.user_avatar && String(comment.user_avatar).trim() ? String(comment.user_avatar).trim() : '/media/user/' + comment.user_id + '/avatar'; %>
-<div class="comment-block<%= _depth > 0 ? ' comment-block--reply' : '' %>">
+<div class="comment-block">
   <div class="comment-top">
     <div class="comment-avatar-wrap">
       <img src="<%= avSrc %>" alt="" class="comment-avatar" width="44" height="44" decoding="async" loading="lazy"
@@ -19,9 +18,6 @@
   </div>
   <div class="comment-footer">
     <div class="comment-actions-links">
-      <% if (user && _depth === 0) { %>
-        <button type="button" class="comment-link comment-reply-btn" data-reply-to="<%= comment.id %>" data-reply-nick="<%= comment.nickname %>">답글</button>
-      <% } %>
       <% if (showEdit) { %>
         <button type="button" class="comment-link comment-edit-open" data-comment-id="<%= comment.id %>">수정</button>
       <% } %>
@@ -40,12 +36,5 @@
         <button type="button" class="btn-secondary btn-secondary--sm comment-edit-cancel" data-comment-id="<%= comment.id %>">취소</button>
       </div>
     </form>
-  <% } %>
-  <% if (comment.replies && comment.replies.length && _depth < 24) { %>
-    <div class="comment-replies">
-      <% comment.replies.forEach(function (reply) { %>
-        <%- include('partials/comment-item', { comment: reply, post, user, isAdmin, depth: _depth + 1 }) %>
-      <% }); %>
-    </div>
   <% } %>
 </div>

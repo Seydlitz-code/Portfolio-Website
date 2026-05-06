@@ -49,41 +49,6 @@ function sanitizeCommentInput(raw) {
   return s;
 }
 
-/** 평면 댓글 목록 → parent_id 기준 트리 (부모는 최상위 댓글만 허용, 그 외·순환은 루트로) */
-function nestCommentRows(rows) {
-  const byId = new Map();
-  for (const r of rows) {
-    const idNum = Number(r.id);
-    if (!Number.isFinite(idNum)) continue;
-    byId.set(idNum, { ...r, id: idNum, user_id: Number(r.user_id), replies: [] });
-  }
-  const roots = [];
-  for (const r of rows) {
-    const idNum = Number(r.id);
-    const node = byId.get(idNum);
-    if (!node) continue;
-    const rawPid = r.parent_id;
-    const pid = rawPid != null && rawPid !== '' ? Number(rawPid) : NaN;
-    const parentNode = Number.isFinite(pid) && pid !== idNum ? byId.get(pid) : null;
-    const parentIsRoot =
-      parentNode &&
-      (parentNode.parent_id == null ||
-        parentNode.parent_id === '' ||
-        Number(parentNode.parent_id) === 0);
-    if (parentNode && parentIsRoot) {
-      parentNode.replies.push(node);
-    } else {
-      roots.push(node);
-    }
-  }
-  const cmp = (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-  roots.sort(cmp);
-  byId.forEach((n) => {
-    n.replies.sort(cmp);
-  });
-  return roots;
-}
-
 function editorInitB64From(obj) {
   return Buffer.from(
     JSON.stringify({
@@ -498,19 +463,16 @@ router.get(
       c.id = Number(c.id);
       c.user_id = Number(c.user_id);
       c.post_id = Number(c.post_id);
-      if (c.parent_id != null && c.parent_id !== '') c.parent_id = Number(c.parent_id);
-      else c.parent_id = null;
       const edited = isPostEdited(c.created_at, c.updated_at);
       c.comment_edited = edited;
       c.display_time_line =
         formatCommentDateTime(c.updated_at || c.created_at) + (edited ? ' (수정)' : '');
     });
-    const commentTree = nestCommentRows(comments);
 
     res.render('post', {
       post,
       comments,
-      commentTree,
+      commentTree: comments,
       commentsCount: comments.length,
       settings: await getSiteSettings(),
       contentAsHtml: postContentLooksLikeHtml(post.content),
@@ -528,35 +490,15 @@ router.post(
     const content = sanitizeCommentInput(req.body.content);
     if (!content) return res.redirect(`/posts/${req.params.id}#comments`);
 
-    let parentId = null;
-    const rawParent = req.body.parent_id != null ? String(req.body.parent_id).trim() : '';
-    if (rawParent !== '') {
-      const p = parseInt(rawParent, 10);
-      if (Number.isFinite(p) && p > 0) {
-        const parent = await db.get(
-          'SELECT id, post_id, parent_id FROM comments WHERE id = ?',
-          [p]
-        );
-        if (
-          parent &&
-          Number(parent.post_id) === Number(req.params.id) &&
-          (parent.parent_id == null || Number(parent.parent_id) === 0)
-        ) {
-          parentId = p;
-        }
-      }
-    }
-
     const ts = new Date().toISOString();
     const postId = Number(req.params.id);
     const userId = Number(req.session.user.id);
     if (!Number.isFinite(postId) || postId < 1 || !Number.isFinite(userId) || userId < 1) {
       return res.redirect('/auth/login?next=' + encodeURIComponent(req.originalUrl || '/posts'));
     }
-    const parentSql = parentId == null || !Number.isFinite(Number(parentId)) ? null : Number(parentId);
     await db.run(
       'INSERT INTO comments (post_id, user_id, content, parent_id, updated_at) VALUES (?, ?, ?, ?, ?)',
-      [postId, userId, content, parentSql, ts]
+      [postId, userId, content, null, ts]
     );
 
     res.redirect(`/posts/${req.params.id}#comments`);

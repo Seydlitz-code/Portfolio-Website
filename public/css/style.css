@@ -2463,9 +2463,9 @@ body.register-crop-modal-open {
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 0.35rem 0.65rem;
-  margin-top: 0.4rem;
-  padding-top: 0.35rem;
-  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  margin-top: 0.35rem;
+  padding-top: 0;
+  border-top: none;
 }
 
 .mypage-writings-bottom-left {
@@ -2589,15 +2589,16 @@ body.register-crop-modal-open {
 }
 
 .mypage-writings-panel--cards .mypage-writings-list--stacked .mypage-writings-card {
-  padding: 0.55rem 0.15rem;
+  padding: 0.65rem 0.15rem;
   border: none;
   border-radius: 0;
   background: transparent;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.2);
 }
 
 .mypage-writings-panel--cards .mypage-writings-list--stacked .mypage-writings-card:last-child {
   border-bottom: none;
+  padding-bottom: 0.35rem;
 }
 
 .mypage-writings-panel--cards .mypage-writings-list--stacked .mypage-writings-card + .mypage-writings-card {
@@ -4657,17 +4658,6 @@ p.post-heading-title--ja {
   margin-bottom: 0;
 }
 
-.comment-block--reply {
-  margin-top: 0.75rem;
-  margin-left: 0.5rem;
-  padding-left: 0.85rem;
-  border-left: 2px solid #e0e0dc;
-}
-
-.comment-replies {
-  margin-top: 0.65rem;
-}
-
 .comment-top {
   display: flex;
   gap: 0.75rem;
@@ -4768,39 +4758,8 @@ p.post-heading-title--ja {
 }
 
 .comment-view.is-hidden,
-.comment-edit-form.is-hidden,
-.comment-reply-banner.is-hidden {
+.comment-edit-form.is-hidden {
   display: none !important;
-}
-
-.comment-reply-banner {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  padding: 0.45rem 0.65rem;
-  margin-bottom: 0.6rem;
-  font-size: 0.8rem;
-  background: #f0f0ec;
-  border: 1px solid #ccc;
-  border-radius: var(--radius);
-}
-
-.comment-reply-banner #commentReplyCancel {
-  margin: 0;
-  padding: 0;
-  border: none;
-  background: none;
-  font: inherit;
-  font-size: 0.82rem;
-  font-weight: 500;
-  color: var(--text-secondary);
-  cursor: pointer;
-  text-decoration: underline;
-}
-
-.comment-reply-banner #commentReplyCancel:hover {
-  color: var(--accent);
 }
 
 .comment-char-count {
