@@ -7,8 +7,9 @@ const db = require('../lib/db');
 const { requireLogin, requireAdmin } = require('../middleware/auth');
 const { getAccountShell } = require('../lib/mypageShell');
 const { getSiteHomeData, getSiteSettings } = require('../lib/siteData');
-const { buildPaginationItems } = require('../lib/listingHelpers');
+const { formatListTime } = require('../lib/listingHelpers');
 const { asyncRoute } = require('../lib/asyncRoute');
+const { writingsListUrl, writingsCommentsOnlyUrl, commentPreviewParts, buildWritingsPager } = require('../lib/mypageWritings');
 
 const uploadAvatar = multer({
   storage: multer.memoryStorage(),
@@ -59,45 +60,100 @@ async function postsPayload(req, extras) {
   const shell = await getAccountShell(req);
   if (!shell) return null;
   const uid = shell.profileUser.id;
+  const isAdmin = Boolean(shell.isAdmin);
 
-  const myPostsRow = await db.get('SELECT COUNT(*) as n FROM posts WHERE author_id = ?', [uid]);
-  const myPostsTotal = myPostsRow && myPostsRow.n != null ? Number(myPostsRow.n) : 0;
-  const myPosts = await db.all(
-    `
-    SELECT p.*, pr.name as project_name
+  const requestedPostPage = Math.max(1, parseInt(req.query.postPage, 10) || 1);
+  const requestedCommentPage = Math.max(1, parseInt(req.query.commentPage, 10) || 1);
+  const hadPostPageQuery = req.query.postPage != null && String(req.query.postPage).trim() !== '';
+
+  const myCommentsRow = await db.get('SELECT COUNT(*) as n FROM comments WHERE user_id = ?', [uid]);
+  const myCommentsTotal = myCommentsRow && myCommentsRow.n != null ? Number(myCommentsRow.n) : 0;
+  const myCommentsTotalPages = myCommentsTotal === 0 ? 1 : Math.ceil(myCommentsTotal / MY_WRITINGS_PAGE);
+  const myCommentsPage = Math.min(requestedCommentPage, myCommentsTotalPages);
+
+  let myPosts = [];
+  let myPostsTotal = 0;
+  let myPostsPage = 1;
+  let myPostsTotalPages = 1;
+  let myPostsPager = [];
+
+  if (isAdmin) {
+    const myPostsRow = await db.get('SELECT COUNT(*) as n FROM posts WHERE author_id = ?', [uid]);
+    myPostsTotal = myPostsRow && myPostsRow.n != null ? Number(myPostsRow.n) : 0;
+    myPostsTotalPages = myPostsTotal === 0 ? 1 : Math.ceil(myPostsTotal / MY_WRITINGS_PAGE);
+    myPostsPage = Math.min(requestedPostPage, myPostsTotalPages);
+
+    const postsOffset = (myPostsPage - 1) * MY_WRITINGS_PAGE;
+    myPosts = await db.all(
+      `
+    SELECT p.*, pr.name AS project_name, pr.name_ja AS project_name_ja,
+      (SELECT COUNT(*) FROM comments cm WHERE cm.post_id = p.id) AS comment_count
     FROM posts p
     LEFT JOIN projects pr ON p.project_id = pr.id
     WHERE p.author_id = ?
     ORDER BY p.created_at DESC
-    LIMIT ?
+    LIMIT ? OFFSET ?
   `,
-    [uid, MY_WRITINGS_PAGE]
-  );
+      [uid, MY_WRITINGS_PAGE, postsOffset]
+    );
 
-  const myCommentsRow = await db.get('SELECT COUNT(*) as n FROM comments WHERE user_id = ?', [uid]);
-  const myCommentsTotal = myCommentsRow && myCommentsRow.n != null ? Number(myCommentsRow.n) : 0;
-  const myComments = await db.all(
+    myPostsPager = buildWritingsPager(myPostsPage, myPostsTotalPages, (pn) =>
+      writingsListUrl(pn, myCommentsPage)
+    );
+  }
+
+  const canonicalUrl = isAdmin
+    ? writingsListUrl(myPostsPage, myCommentsPage)
+    : writingsCommentsOnlyUrl(myCommentsPage);
+  const writingsNeedsRedirect = isAdmin
+    ? requestedPostPage !== myPostsPage || requestedCommentPage !== myCommentsPage
+    : requestedCommentPage !== myCommentsPage || hadPostPageQuery;
+
+  const commentsOffset = (myCommentsPage - 1) * MY_WRITINGS_PAGE;
+
+  const myCommentsRaw = await db.all(
     `
-    SELECT c.id, c.content, c.created_at, c.post_id, p.title as post_title
+    SELECT c.id, c.content, c.created_at, c.post_id, p.title AS post_title, p.title_ja AS post_title_ja
     FROM comments c
     JOIN posts p ON p.id = c.post_id
     WHERE c.user_id = ?
     ORDER BY c.created_at DESC
-    LIMIT ?
+    LIMIT ? OFFSET ?
   `,
-    [uid, MY_WRITINGS_PAGE]
+    [uid, MY_WRITINGS_PAGE, commentsOffset]
   );
+
+  const hrefForCommentPage = isAdmin
+    ? (cn) => writingsListUrl(myPostsPage, cn)
+    : (cn) => writingsCommentsOnlyUrl(cn);
+
+  const myCommentsPager = buildWritingsPager(myCommentsPage, myCommentsTotalPages, hrefForCommentPage);
+
+  const myComments = myCommentsRaw.map((c) => {
+    const { previewText, previewTwoLine } = commentPreviewParts(c.content);
+    return { ...c, preview_text: previewText, preview_two_line: previewTwoLine };
+  });
+
+  const mypageWritingsNext = canonicalUrl;
 
   return {
     ...shell,
     activeTab: 'posts',
     myPosts,
     myPostsTotal,
-    myPostsHasMore: myPostsTotal > MY_WRITINGS_PAGE,
+    myPostsPage,
+    myPostsTotalPages,
+    myPostsPager,
     myComments,
     myCommentsTotal,
-    myCommentsHasMore: myCommentsTotal > MY_WRITINGS_PAGE,
+    myCommentsPage,
+    myCommentsTotalPages,
+    myCommentsPager,
     myWritingsPageSize: MY_WRITINGS_PAGE,
+    formatListTime,
+    writingsNeedsRedirect,
+    writingsCanonicalUrl: canonicalUrl,
+    mypageWritingsNext,
     ...(extras || {})
   };
 }
@@ -141,63 +197,12 @@ router.get(
   asyncRoute(async (req, res) => {
     const data = await postsPayload(req);
     if (!data) return res.redirect('/auth/logout');
+    if (data.writingsNeedsRedirect) {
+      return res.redirect(302, data.writingsCanonicalUrl);
+    }
+    delete data.writingsNeedsRedirect;
+    delete data.writingsCanonicalUrl;
     res.render('mypage-account', await accountViewLocals(data));
-  })
-);
-
-router.get(
-  '/api/my-posts',
-  requireLogin,
-  asyncRoute(async (req, res) => {
-    const uid = req.session.user.id;
-    const offset = Math.max(0, parseInt(req.query.offset, 10) || 0);
-    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit, 10) || MY_WRITINGS_PAGE));
-    const totalRow = await db.get('SELECT COUNT(*) as n FROM posts WHERE author_id = ?', [uid]);
-    const total = totalRow && totalRow.n != null ? Number(totalRow.n) : 0;
-    const items = await db.all(
-      `
-    SELECT p.*, pr.name as project_name
-    FROM posts p
-    LEFT JOIN projects pr ON p.project_id = pr.id
-    WHERE p.author_id = ?
-    ORDER BY p.created_at DESC
-    LIMIT ? OFFSET ?
-  `,
-      [uid, limit, offset]
-    );
-    res.json({
-      items,
-      total,
-      hasMore: offset + items.length < total
-    });
-  })
-);
-
-router.get(
-  '/api/my-comments',
-  requireLogin,
-  asyncRoute(async (req, res) => {
-    const uid = req.session.user.id;
-    const offset = Math.max(0, parseInt(req.query.offset, 10) || 0);
-    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit, 10) || MY_WRITINGS_PAGE));
-    const totalRow = await db.get('SELECT COUNT(*) as n FROM comments WHERE user_id = ?', [uid]);
-    const total = totalRow && totalRow.n != null ? Number(totalRow.n) : 0;
-    const items = await db.all(
-      `
-    SELECT c.id, c.content, c.created_at, c.post_id, p.title as post_title
-    FROM comments c
-    JOIN posts p ON p.id = c.post_id
-    WHERE c.user_id = ?
-    ORDER BY c.created_at DESC
-    LIMIT ? OFFSET ?
-  `,
-      [uid, limit, offset]
-    );
-    res.json({
-      items,
-      total,
-      hasMore: offset + items.length < total
-    });
   })
 );
 

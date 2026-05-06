@@ -2398,6 +2398,187 @@ body.register-crop-modal-open {
   margin: 0 0 0.85rem;
 }
 
+.mypage-writings-panel--cards {
+  background: transparent;
+  border: none;
+  padding: 0;
+  border-radius: 0;
+}
+
+.mypage-writings-list--stacked {
+  margin: 0 0 0.75rem;
+}
+
+.mypage-writings-card {
+  list-style: none;
+  margin: 0;
+  padding: 0.55rem 0.68rem;
+  border: 1px solid rgba(0, 0, 0, 0.38);
+}
+
+.mypage-writings-list--stacked .mypage-writings-card + .mypage-writings-card {
+  margin-top: -1px;
+}
+
+.mypage-writings-row-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem 0.85rem;
+}
+
+.mypage-writings-heading-link {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-decoration: none;
+  flex: 1;
+  min-width: 0;
+  word-break: break-word;
+}
+
+.mypage-writings-heading-link:hover {
+  text-decoration: underline;
+}
+
+.mypage-writings-title-sep {
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.mypage-writings-title-ja {
+  font-weight: 600;
+}
+
+.mypage-writings-meta-bracket {
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-left: 0.2rem;
+  white-space: nowrap;
+}
+
+.mypage-writings-row-time {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.mypage-writings-row-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.65rem;
+  margin-top: 0.4rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.mypage-writings-bottom-left {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.5rem;
+  flex: 1;
+  min-width: 0;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+.mypage-writings-board-line {
+  word-break: break-word;
+}
+
+.mypage-writings-bottom-time {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.mypage-writings-delete-form {
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.mypage-writings-comment-preview {
+  margin: 0;
+  font-size: 0.84rem;
+  line-height: 1.45;
+  color: var(--text-primary);
+  word-break: break-word;
+  flex: 1;
+  min-width: 0;
+}
+
+.mypage-writings-comment-preview.is-clamp-2 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+.mypage-writings-post-ref {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-decoration: none;
+  flex: 1;
+  min-width: 0;
+  word-break: break-word;
+}
+
+.mypage-writings-post-ref:hover {
+  text-decoration: underline;
+}
+
+.mypage-writings-pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem 0.5rem;
+  padding: 0.5rem 0.15rem 0.15rem;
+  font-size: 0.84rem;
+}
+
+.mypage-writings-pager-link,
+.mypage-writings-pager-page {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2rem;
+  padding: 0.25rem 0.45rem;
+  border-radius: 6px;
+  color: var(--text-primary);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.mypage-writings-pager-link:hover,
+.mypage-writings-pager-page:not(.is-current):hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.mypage-writings-pager-link.is-disabled,
+.mypage-writings-pager-page.is-disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.mypage-writings-pager-page.is-current {
+  background: rgba(0, 0, 0, 0.12);
+  font-weight: 700;
+  cursor: default;
+}
+
+.mypage-writings-pager-ellipsis {
+  padding: 0 0.15rem;
+  color: var(--text-muted);
+  user-select: none;
+}
+
 .mypage-writings-panel {
   background: #e4e0d8;
   border: 1px solid rgba(0, 0, 0, 0.08);

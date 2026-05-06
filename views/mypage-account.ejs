@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>마이페이지 — 포트폴리오</title>
-  <link rel="stylesheet" href="/css/style.css?v=20260449">
+  <link rel="stylesheet" href="/css/style.css?v=20260506">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Inter:wght@300;400;500;700&display=swap" rel="stylesheet">
   <% if (typeof isAdmin !== 'undefined' && isAdmin && (activeTab === 'boardsManage' || activeTab === 'mainSettings')) { %>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -74,34 +74,57 @@
           </form>
         <% } else if (activeTab === 'posts') { %>
           <div class="mypage-writings">
+            <% if (typeof isAdmin !== 'undefined' && isAdmin) { %>
             <section class="mypage-writings-block" aria-labelledby="mypageWritingsPostsTitle">
-              <h2 class="mypage-writings-title" id="mypageWritingsPostsTitle">게시글 (<%= typeof myPostsTotal !== 'undefined' ? myPostsTotal : 0 %>)</h2>
+              <h2 class="mypage-writings-title" id="mypageWritingsPostsTitle">작성한 게시물 (<%= typeof myPostsTotal !== 'undefined' ? myPostsTotal : 0 %>)</h2>
               <div class="mypage-writings-divider" role="presentation"></div>
               <% if (!myPosts || myPosts.length === 0) { %>
                 <p class="mypage-writings-empty-plain" id="myPostsEmpty">작성한 게시글이 없습니다.</p>
                 <ul class="mypage-writings-list is-hidden" id="myPostsList" aria-label="게시글 목록"></ul>
               <% } else { %>
-                <div class="mypage-writings-panel">
-                  <ul class="mypage-writings-list" id="myPostsList">
+                <div class="mypage-writings-panel mypage-writings-panel--cards">
+                  <ul class="mypage-writings-list mypage-writings-list--stacked" id="myPostsList">
                     <% myPosts.forEach(function (post) { %>
-                      <li class="mypage-writings-item">
-                        <a href="/posts/<%= post.id %>" class="mypage-writings-item-title"><%= post.title %></a>
-                        <div class="mypage-writings-post-foot">
-                          <time class="mypage-writings-item-meta" datetime="<%= post.created_at %>"><%= new Date(post.created_at).toLocaleDateString('ko-KR') %></time>
-                          <form action="/posts/<%= post.id %>?_method=DELETE" method="POST" class="mypage-comment-delete-form" onsubmit="return confirm('정말로 삭제하시겠습니까?');">
-                            <input type="hidden" name="next" value="/mypage/posts">
+                      <% var _ncc = post.comment_count != null ? Number(post.comment_count) : 0; if (!Number.isFinite(_ncc)) _ncc = 0; %>
+                      <% var _pko = String(post.title || '').trim(); %>
+                      <% var _pja = post.title_ja != null ? String(post.title_ja).trim() : ''; %>
+                      <% var _bn = post.project_name != null && String(post.project_name).trim() !== '' ? String(post.project_name).trim() : '분류 없음'; %>
+                      <% var _bnJa = post.project_name_ja != null && String(post.project_name_ja).trim() !== '' ? String(post.project_name_ja).trim() : '未分類'; %>
+                      <% var _tn = typeof mypageWritingsNext !== 'undefined' ? mypageWritingsNext : '/mypage/posts'; %>
+                      <li class="mypage-writings-card mypage-writings-card--post">
+                        <div class="mypage-writings-row-top">
+                          <a href="/posts/<%= post.id %>" class="mypage-writings-heading-link">
+                            <span class="mypage-writings-title-ko"><%= _pko %></span>
+                            <% if (_pja !== '') { %>
+                              <span class="mypage-writings-title-sep" aria-hidden="true"> / </span>
+                              <span class="mypage-writings-title-ja" lang="ja"><%= _pja %></span>
+                            <% } %>
+                            <span class="mypage-writings-meta-bracket">[<%= _ncc %>]</span>
+                          </a>
+                          <time class="mypage-writings-row-time" datetime="<%= post.created_at %>"><%= formatListTime(post.created_at) %></time>
+                        </div>
+                        <div class="mypage-writings-row-bottom">
+                          <div class="mypage-writings-bottom-left">
+                            <span class="mypage-writings-board-line">
+                              <span><%= _bn %></span>
+                              <span class="mypage-writings-title-sep" aria-hidden="true"> / </span>
+                              <span lang="ja"><%= _bnJa %></span>
+                            </span>
+                            <time class="mypage-writings-bottom-time" datetime="<%= post.created_at %>"><%= formatListTime(post.created_at) %></time>
+                          </div>
+                          <form action="/posts/<%= post.id %>?_method=DELETE" method="POST" class="mypage-comment-delete-form mypage-writings-delete-form" onsubmit="return confirm('정말로 삭제하시겠습니까?');">
+                            <input type="hidden" name="next" value="<%= _tn %>">
                             <button type="submit" class="mypage-comment-delete-btn" aria-label="게시글 삭제">삭제</button>
                           </form>
                         </div>
                       </li>
                     <% }); %>
                   </ul>
-                  <% if (typeof myPostsHasMore !== 'undefined' && myPostsHasMore) { %>
-                    <button type="button" class="mypage-writings-more" id="myPostsMoreBtn" data-next-offset="<%= myWritingsPageSize %>">더보기</button>
-                  <% } %>
+                  <%- include('partials/mypage-writings-pager', { pager: typeof myPostsPager !== 'undefined' ? myPostsPager : [], pagerAria: '작성한 게시물 페이지' }) %>
                 </div>
               <% } %>
             </section>
+            <% } %>
 
             <section class="mypage-writings-block" aria-labelledby="mypageWritingsCommentsTitle">
               <h2 class="mypage-writings-title" id="mypageWritingsCommentsTitle">댓글 (<%= typeof myCommentsTotal !== 'undefined' ? myCommentsTotal : 0 %>)</h2>
@@ -110,36 +133,39 @@
                 <p class="mypage-writings-empty-plain" id="myCommentsEmpty">작성한 댓글이 없습니다.</p>
                 <ul class="mypage-writings-list is-hidden" id="myCommentsList" aria-label="댓글 목록"></ul>
               <% } else { %>
-                <div class="mypage-writings-panel">
-                  <ul class="mypage-writings-list" id="myCommentsList">
+                <div class="mypage-writings-panel mypage-writings-panel--cards">
+                  <ul class="mypage-writings-list mypage-writings-list--stacked" id="myCommentsList">
                     <% myComments.forEach(function (c) { %>
-                      <% var _raw = String(c.content || '').replace(/\s+/g, ' ').trim(); var _snip = _raw.length > 140 ? _raw.slice(0, 140) + '…' : _raw; %>
-                      <li class="mypage-writings-item mypage-writings-item--comment">
-                        <div class="mypage-writings-comment-body">
-                          <a href="/posts/<%= c.post_id %>#comments" class="mypage-writings-item-title"><%= c.post_title %></a>
-                          <p class="mypage-writings-comment-snippet"><%= _snip %></p>
-                          <div class="mypage-writings-comment-foot">
-                            <time class="mypage-writings-item-meta" datetime="<%= c.created_at %>"><%= new Date(c.created_at).toLocaleDateString('ko-KR') %></time>
-                            <form action="/posts/<%= c.post_id %>/comments/<%= c.id %>?_method=DELETE" method="POST" class="mypage-comment-delete-form" onsubmit="return confirm('정말로 삭제하시겠습니까?');">
-                              <input type="hidden" name="next" value="/mypage/posts">
-                              <button type="submit" class="mypage-comment-delete-btn" aria-label="댓글 삭제">삭제</button>
-                            </form>
-                          </div>
+                      <% var _pt = String(c.post_title || '').trim(); %>
+                      <% var _ptJa = c.post_title_ja != null ? String(c.post_title_ja).trim() : ''; %>
+                      <% var _tn = typeof mypageWritingsNext !== 'undefined' ? mypageWritingsNext : '/mypage/posts'; %>
+                      <% var _clamp = c.preview_two_line ? 'mypage-writings-comment-preview is-clamp-2' : 'mypage-writings-comment-preview'; %>
+                      <li class="mypage-writings-card mypage-writings-card--comment">
+                        <div class="mypage-writings-row-top">
+                          <p class="<%= _clamp %>"><%= c.preview_text %></p>
+                          <time class="mypage-writings-row-time" datetime="<%= c.created_at %>"><%= formatListTime(c.created_at) %></time>
+                        </div>
+                        <div class="mypage-writings-row-bottom">
+                          <a href="/posts/<%= c.post_id %>#comments" class="mypage-writings-post-ref">
+                            <span class="mypage-writings-title-ko"><%= _pt %></span>
+                            <% if (_ptJa !== '') { %>
+                              <span class="mypage-writings-title-sep" aria-hidden="true"> / </span>
+                              <span class="mypage-writings-title-ja" lang="ja"><%= _ptJa %></span>
+                            <% } %>
+                          </a>
+                          <form action="/posts/<%= c.post_id %>/comments/<%= c.id %>?_method=DELETE" method="POST" class="mypage-comment-delete-form mypage-writings-delete-form" onsubmit="return confirm('정말로 삭제하시겠습니까?');">
+                            <input type="hidden" name="next" value="<%= _tn %>">
+                            <button type="submit" class="mypage-comment-delete-btn" aria-label="댓글 삭제">삭제</button>
+                          </form>
                         </div>
                       </li>
                     <% }); %>
                   </ul>
-                  <% if (typeof myCommentsHasMore !== 'undefined' && myCommentsHasMore) { %>
-                    <button type="button" class="mypage-writings-more" id="myCommentsMoreBtn" data-next-offset="<%= myWritingsPageSize %>">더보기</button>
-                  <% } %>
+                  <%- include('partials/mypage-writings-pager', { pager: typeof myCommentsPager !== 'undefined' ? myCommentsPager : [], pagerAria: '작성한 댓글 페이지' }) %>
                 </div>
               <% } %>
             </section>
           </div>
-          <script>
-            window.__MYPAGE_POSTS_PAGE__ = <%= typeof myWritingsPageSize !== 'undefined' ? myWritingsPageSize : 10 %>;
-          </script>
-          <script src="/js/mypage-posts.js?v=20260439"></script>
         <% } else if (activeTab === 'mainSettings') { %>
           <% if (typeof saved !== 'undefined' && saved) { %>
             <div class="mypage-account-alert"><div class="alert alert-success">적용이 완료되었습니다.</div></div>

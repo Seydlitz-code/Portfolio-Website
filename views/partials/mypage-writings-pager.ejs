@@ -1,0 +1,27 @@
+<% if (typeof pager !== 'undefined' && pager && pager.length) { %>
+  <nav class="mypage-writings-pager" aria-label="<%= typeof pagerAria !== 'undefined' ? pagerAria : '페이지' %>">
+    <% pager.forEach(function (it) { %>
+      <% if (it.kind === 'prev') { %>
+        <% if (it.disabled) { %>
+          <span class="mypage-writings-pager-link is-disabled" aria-disabled="true"><%= it.label %></span>
+        <% } else { %>
+          <a class="mypage-writings-pager-link" href="<%= it.href %>" rel="prev"><%= it.label %></a>
+        <% } %>
+      <% } else if (it.kind === 'next') { %>
+        <% if (it.disabled) { %>
+          <span class="mypage-writings-pager-link is-disabled" aria-disabled="true"><%= it.label %></span>
+        <% } else { %>
+          <a class="mypage-writings-pager-link" href="<%= it.href %>" rel="next"><%= it.label %></a>
+        <% } %>
+      <% } else if (it.kind === 'ellipsis') { %>
+        <span class="mypage-writings-pager-ellipsis" aria-hidden="true">…</span>
+      <% } else if (it.kind === 'page') { %>
+        <% if (it.current) { %>
+          <span class="mypage-writings-pager-page is-current" aria-current="page"><%= it.label %></span>
+        <% } else { %>
+          <a class="mypage-writings-pager-page" href="<%= it.href %>"><%= it.label %></a>
+        <% } %>
+      <% } %>
+    <% }); %>
+  </nav>
+<% } %>

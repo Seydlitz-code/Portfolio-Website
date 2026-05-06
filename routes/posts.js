@@ -20,6 +20,7 @@ function isPostEdited(createdAt, updatedAt) {
   return u - c > 2000;
 }
 const { asyncRoute } = require('../lib/asyncRoute');
+const { sanitizeMypageWritingsNext } = require('../lib/mypageWritings');
 const { sanitizePostHtml, isPostContentMeaningful, postContentLooksLikeHtml } = require('../lib/postHtml');
 
 const ALL_POSTS_PAGE_SIZE = 200;
@@ -453,10 +454,8 @@ router.delete(
     }
     await db.run('DELETE FROM comments WHERE post_id = ?', [req.params.id]);
     await db.run('DELETE FROM posts WHERE id = ?', [req.params.id]);
-    const nextRaw = req.body && req.body.next != null ? String(req.body.next).trim() : '';
-    if (nextRaw === '/mypage/posts') {
-      return res.redirect('/mypage/posts');
-    }
+    const nextSafe = sanitizeMypageWritingsNext(req.body && req.body.next != null ? req.body.next : '');
+    if (nextSafe) return res.redirect(nextSafe);
     res.redirect('/posts');
   })
 );
@@ -608,10 +607,8 @@ router.delete(
       req.params.commentId,
       req.params.postId
     ]);
-    const nextRaw = req.body && req.body.next != null ? String(req.body.next).trim() : '';
-    if (nextRaw === '/mypage/posts') {
-      return res.redirect('/mypage/posts');
-    }
+    const nextSafe = sanitizeMypageWritingsNext(req.body && req.body.next != null ? req.body.next : '');
+    if (nextSafe) return res.redirect(nextSafe);
     res.redirect(`/posts/${req.params.postId}#comments`);
   })
 );
