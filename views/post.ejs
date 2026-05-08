@@ -84,16 +84,15 @@
 
       <section class="comments-section" id="comments">
         <% var _cc = typeof commentsCount !== 'undefined' ? commentsCount : comments.length; %>
-        <% var _tree = typeof commentTree !== 'undefined' ? commentTree : []; %>
         <h2 class="comments-title">댓글 <span class="comments-title-count">(<%= _cc %>)</span></h2>
 
-        <% if (!_tree || _tree.length === 0) { %>
+        <% if (!comments || comments.length === 0) { %>
           <p class="no-comments">아직 댓글이 없습니다. 첫 댓글을 남겨보세요!</p>
         <% } else { %>
           <div class="comments-list">
-            <% _tree.forEach(function (c) { %>
+            <% comments.forEach(function (c) { %>
               <div class="comment-item">
-                <%- include('partials/comment-item', { comment: c, post, user, isAdmin, depth: 0 }) %>
+                <%- include('partials/comment-item', { comment: c, post, user, isAdmin }) %>
               </div>
             <% }); %>
           </div>
@@ -119,112 +118,6 @@
     </div>
   </main>
 
-  <script>
-    (function () {
-      var jump = document.getElementById('postCommentJumpBtn');
-      var target = document.getElementById('comments');
-      if (jump && target) {
-        jump.addEventListener('click', function () {
-          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        });
-      }
-
-      var mainForm = document.getElementById('mainCommentForm');
-      var ta = document.getElementById('commentMainTextarea');
-      var charCount = document.getElementById('commentCharCount');
-
-      function syncCharCount() {
-        if (!ta || !charCount) return;
-        var n = (ta.value || '').length;
-        charCount.textContent = n + ' / 100';
-      }
-
-      if (ta && charCount && mainForm) {
-        ta.addEventListener('input', syncCharCount);
-        syncCharCount();
-        mainForm.addEventListener('submit', function () {
-          if ((ta.value || '').length > 100) {
-            ta.value = (ta.value || '').slice(0, 100);
-          }
-        });
-      }
-
-      var commentsSection = document.getElementById('comments');
-      if (commentsSection) {
-        commentsSection.addEventListener('input', function (e) {
-          if (e.target.classList && e.target.classList.contains('comment-textarea--edit')) {
-            var v = e.target.value || '';
-            if (v.length > 100) e.target.value = v.slice(0, 100);
-          }
-          if (e.target.classList && e.target.classList.contains('comment-textarea--reply')) {
-            var vr = e.target.value || '';
-            if (vr.length > 100) e.target.value = vr.slice(0, 100);
-            var replyWrap = e.target.closest('.comment-reply-wrap');
-            if (replyWrap) {
-              var rc = replyWrap.querySelector('.comment-reply-char');
-              if (rc) rc.textContent = (e.target.value || '').length + ' / 100';
-            }
-          }
-        });
-        commentsSection.addEventListener('click', function (e) {
-          var replyOpen = e.target.closest('.comment-reply-open');
-          if (replyOpen) {
-            var rid = replyOpen.getAttribute('data-comment-id');
-            var wrap = document.getElementById('comment-reply-wrap-' + rid);
-            if (wrap) {
-              wrap.classList.remove('is-hidden');
-              var rta = wrap.querySelector('textarea');
-              if (rta) {
-                var rc = wrap.querySelector('.comment-reply-char');
-                if (rc) rc.textContent = (rta.value || '').length + ' / 100';
-                rta.focus();
-              }
-            }
-            return;
-          }
-          var replyCancel = e.target.closest('.comment-reply-cancel');
-          if (replyCancel) {
-            var rid2 = replyCancel.getAttribute('data-comment-id');
-            var wrap2 = document.getElementById('comment-reply-wrap-' + rid2);
-            if (wrap2) {
-              wrap2.classList.add('is-hidden');
-              var rta2 = wrap2.querySelector('textarea');
-              if (rta2) {
-                rta2.value = '';
-                var rc2 = wrap2.querySelector('.comment-reply-char');
-                if (rc2) rc2.textContent = '0 / 100';
-              }
-            }
-            return;
-          }
-          var openEdit = e.target.closest('.comment-edit-open');
-          if (openEdit) {
-            var cid = openEdit.getAttribute('data-comment-id');
-            var view = document.getElementById('comment-view-' + cid);
-            var editForm = document.getElementById('comment-edit-' + cid);
-            if (view && editForm) {
-              view.classList.add('is-hidden');
-              editForm.classList.remove('is-hidden');
-              var et = editForm.querySelector('textarea');
-              if (et) et.focus();
-            }
-            return;
-          }
-
-          var cancelEdit = e.target.closest('.comment-edit-cancel');
-          if (cancelEdit) {
-            var cid2 = cancelEdit.getAttribute('data-comment-id');
-            var view2 = document.getElementById('comment-view-' + cid2);
-            var editForm2 = document.getElementById('comment-edit-' + cid2);
-            if (view2 && editForm2) {
-              editForm2.classList.add('is-hidden');
-              view2.classList.remove('is-hidden');
-            }
-          }
-        });
-      }
-    })();
-  </script>
   <% if (isAdmin) { %>
     <% var _newPostQs2 = post.project_id ? ('?project_id=' + post.project_id + '&cancel=' + encodeURIComponent('/posts/' + post.id)) : ('?cancel=' + encodeURIComponent('/posts/' + post.id)); %>
     <dialog id="postWriteGuideDialog" class="post-write-guide-dialog">
@@ -258,23 +151,8 @@
         </div>
       </div>
     </dialog>
-    <script>
-      (function () {
-        var dlg = document.getElementById('postWriteGuideDialog');
-        var openBtn = document.getElementById('postWriteGuideBtn');
-        var closeBtn = document.getElementById('postWriteGuideClose');
-        if (dlg && openBtn) {
-          openBtn.addEventListener('click', function () {
-            if (dlg.showModal) dlg.showModal();
-          });
-        }
-        if (dlg && closeBtn) {
-          closeBtn.addEventListener('click', function () {
-            dlg.close();
-          });
-        }
-      })();
-    </script>
   <% } %>
+
+  <script src="/js/post-detail.js?v=20260507" defer></script>
 </body>
 </html>

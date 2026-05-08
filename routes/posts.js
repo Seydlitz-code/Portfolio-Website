@@ -20,7 +20,6 @@ function isPostEdited(createdAt, updatedAt) {
   return u - c > 2000;
 }
 const { asyncRoute } = require('../lib/asyncRoute');
-const { buildCommentTree } = require('../lib/commentTree');
 const { sanitizeMypageWritingsNext } = require('../lib/mypageWritings');
 const { sanitizePostHtml, isPostContentMeaningful, postContentLooksLikeHtml } = require('../lib/postHtml');
 
@@ -481,23 +480,15 @@ router.get(
       c.id = Number(c.id);
       c.user_id = Number(c.user_id);
       c.post_id = Number(c.post_id);
-      if (c.parent_id != null && c.parent_id !== '') {
-        c.parent_id = Number(c.parent_id);
-      } else {
-        c.parent_id = null;
-      }
       const edited = isPostEdited(c.created_at, c.updated_at);
       c.comment_edited = edited;
       c.display_time_line =
         formatCommentDateTime(c.updated_at || c.created_at) + (edited ? ' (수정)' : '');
     });
 
-    const commentTree = buildCommentTree(comments);
-
     res.render('post', {
       post,
       comments,
-      commentTree,
       commentsCount: comments.length,
       settings: await getSiteSettings(),
       contentAsHtml: postContentLooksLikeHtml(post.content),
@@ -521,26 +512,12 @@ router.post(
       return res.redirect('/auth/login?next=' + encodeURIComponent(req.originalUrl || '/posts'));
     }
 
-    let parentId = null;
-    const rawParent = bodyScalarPreferLast(req.body && req.body.parent_id);
-    if (rawParent != null && String(rawParent).trim() !== '') {
-      const pid = parseInt(String(rawParent).trim(), 10);
-      if (Number.isFinite(pid) && pid >= 1) {
-        const parentRow = await db.get(
-          'SELECT id FROM comments WHERE id = ? AND post_id = ?',
-          [pid, postId]
-        );
-        if (parentRow) parentId = pid;
-      }
-    }
-
     /*
      * PG·SQLite 공통: 타임스탬프는 CURRENT_TIMESTAMP로 두 DB에서 동일 처리.
-     * (클라이언트 ISO 문자열·DB DEFAULT 불일치 가능성 제거)
      */
     await db.run(
-      'INSERT INTO comments (post_id, user_id, content, parent_id, created_at, updated_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)',
-      [postId, userId, content, parentId]
+      'INSERT INTO comments (post_id, user_id, content, created_at, updated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)',
+      [postId, userId, content]
     );
 
     res.redirect(`/posts/${req.params.id}#comments`);
