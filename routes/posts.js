@@ -2,7 +2,6 @@ const express = require('express');
 const multer = require('multer');
 const router = express.Router();
 const db = require('../lib/db');
-const { usePostgres } = db;
 const { requireAdmin, requireLogin, isUserAdmin } = require('../middleware/auth');
 const { getSiteSettings } = require('../lib/siteData');
 const {
@@ -39,6 +38,21 @@ function formatCommentDateTime(iso) {
     minute: '2-digit',
     hour12: false
   });
+}
+
+/** express.urlencoded가 같은 키를 배열로 줄 때, 비어 있지 않은 값 중 마지막을 택함 */
+function bodyScalarPreferLast(v) {
+  if (v == null) return null;
+  const xs = Array.isArray(v) ? v : [v];
+  let last = null;
+  for (let i = 0; i < xs.length; i++) {
+    const x = xs[i];
+    if (x == null) continue;
+    const s = String(x).trim();
+    if (s === '') continue;
+    last = s;
+  }
+  return last;
 }
 
 function sanitizeCommentInput(raw) {
@@ -456,7 +470,7 @@ router.get(
       `
     SELECT c.*, u.nickname, u.avatar AS user_avatar
     FROM comments c
-    JOIN users u ON c.user_id = u.id
+    LEFT JOIN users u ON c.user_id = u.id
     WHERE c.post_id = ?
     ORDER BY c.created_at ASC
   `,
@@ -498,7 +512,7 @@ router.post(
   '/:id/comments',
   requireLogin,
   asyncRoute(async (req, res) => {
-    const content = sanitizeCommentInput(req.body.content);
+    const content = sanitizeCommentInput(bodyScalarPreferLast(req.body && req.body.content));
     if (!content) return res.redirect(`/posts/${req.params.id}#comments`);
 
     const postId = Number(req.params.id);
@@ -508,23 +522,26 @@ router.post(
     }
 
     let parentId = null;
-    const rawParent = req.body != null ? req.body.parent_id : null;
+    const rawParent = bodyScalarPreferLast(req.body && req.body.parent_id);
     if (rawParent != null && String(rawParent).trim() !== '') {
       const pid = parseInt(String(rawParent).trim(), 10);
       if (Number.isFinite(pid) && pid >= 1) {
-        const parentRow = await db.get('SELECT id FROM comments WHERE id = ? AND post_id = ?', [
-          pid,
-          postId
-        ]);
+        const parentRow = await db.get(
+          'SELECT id FROM comments WHERE id = ? AND post_id = ?',
+          [pid, postId]
+        );
         if (parentRow) parentId = pid;
       }
     }
 
-    /* PG: DB 기본값으로 시각 일치. SQLite: ALTER로 nullable인 updated_at 대비 명시 */
-    const insertSql = usePostgres()
-      ? 'INSERT INTO comments (post_id, user_id, content, parent_id) VALUES (?, ?, ?, ?)'
-      : "INSERT INTO comments (post_id, user_id, content, parent_id, updated_at) VALUES (?, ?, ?, ?, datetime('now'))";
-    await db.run(insertSql, [postId, userId, content, parentId]);
+    /*
+     * PG·SQLite 공통: 타임스탬프는 CURRENT_TIMESTAMP로 두 DB에서 동일 처리.
+     * (클라이언트 ISO 문자열·DB DEFAULT 불일치 가능성 제거)
+     */
+    await db.run(
+      'INSERT INTO comments (post_id, user_id, content, parent_id, created_at, updated_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)',
+      [postId, userId, content, parentId]
+    );
 
     res.redirect(`/posts/${req.params.id}#comments`);
   })
@@ -534,7 +551,7 @@ router.put(
   '/:postId/comments/:commentId',
   requireLogin,
   asyncRoute(async (req, res) => {
-    const content = sanitizeCommentInput(req.body.content);
+    const content = sanitizeCommentInput(bodyScalarPreferLast(req.body && req.body.content));
     if (!content) return res.redirect(`/posts/${req.params.postId}#comments`);
 
     const row = await db.get(

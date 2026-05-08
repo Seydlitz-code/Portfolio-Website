@@ -133,6 +133,9 @@ app.use((req, res) => {
 
 app.use((err, req, res, next) => {
   console.error(err.stack);
+  if (err.code) {
+    console.error('[http 500] code:', err.code, err.detail || '', err.constraint || '');
+  }
   res.status(500).render('error', { code: 500, message: '서버 오류가 발생했습니다.' });
 });
 
