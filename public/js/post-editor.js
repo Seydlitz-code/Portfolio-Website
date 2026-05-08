@@ -114,7 +114,46 @@
     hidden.value = clone.innerHTML;
   }
 
+  let savedEditorRange = null;
+
+  /** 툴바 클릭 시 contenteditable 선택이 유지되지 않아 복원용으로 스냅샷 저장 */
+  function saveEditorSelection(editor) {
+    if (!editor) return;
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) {
+      savedEditorRange = null;
+      return;
+    }
+    const r = sel.getRangeAt(0);
+    if (!editor.contains(r.commonAncestorContainer)) {
+      savedEditorRange = null;
+      return;
+    }
+    savedEditorRange = r.cloneRange();
+  }
+
+  function restoreEditorSelection(editor) {
+    if (!editor || !savedEditorRange) return false;
+    try {
+      if (!editor.contains(savedEditorRange.commonAncestorContainer)) return false;
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(savedEditorRange);
+      editor.focus();
+      return true;
+    } catch (err) {
+      savedEditorRange = null;
+      return false;
+    }
+  }
+
+  function clearStoredSelection() {
+    savedEditorRange = null;
+  }
+
   function applyInlineStyle(editor, prop, value) {
+    restoreEditorSelection(editor);
+    clearStoredSelection();
     editor.focus();
     const sel = window.getSelection();
     if (!sel || !sel.rangeCount) return;
@@ -155,6 +194,8 @@
   }
 
   function execRtf(editor, cmd, val) {
+    restoreEditorSelection(editor);
+    clearStoredSelection();
     editor.focus();
     try {
       document.execCommand('styleWithCSS', false, true);
@@ -286,6 +327,7 @@
     const ytCancel = document.getElementById('postYtCancel');
     const fmtBar = document.querySelector('.post-editor-toolbar--format');
     const selFont = document.getElementById('postEditorFontFamily');
+    const selSizePreset = document.getElementById('postEditorFontSizePreset');
     const inpSize = document.getElementById('postEditorFontSize');
     const colorBtn = document.getElementById('postEditorColorBtn');
     const colorPanel = document.getElementById('postEditorColorPanel');
@@ -380,6 +422,14 @@
     });
 
     if (fmtBar) {
+      fmtBar.addEventListener(
+        'mousedown',
+        function () {
+          saveEditorSelection(editor);
+        },
+        true
+      );
+
       fmtBar.addEventListener('mousedown', function (e) {
         if (
           e.target.closest &&
@@ -427,6 +477,18 @@
       applyPlaceholderClass();
     }
 
+    if (selSizePreset) {
+      selSizePreset.addEventListener('change', function () {
+        const raw = String(this.value || '').trim();
+        if (!raw) return;
+        const px = clampFontSizePx(raw);
+        if (inpSize) inpSize.value = String(px);
+        applyInlineStyle(editor, 'fontSize', px + 'px');
+        this.selectedIndex = 0;
+        applyPlaceholderClass();
+      });
+    }
+
     if (inpSize) {
       inpSize.addEventListener('change', applyFontSizeFromInput);
       inpSize.addEventListener('blur', function () {
@@ -443,7 +505,6 @@
     }
 
     function applyColor(kind, hex) {
-      editor.focus();
       if (kind === 'fg') {
         execRtf(editor, 'foreColor', hex);
       } else {

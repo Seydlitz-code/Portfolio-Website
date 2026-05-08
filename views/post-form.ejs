@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><%= post ? '게시물 수정' : '새 게시물 작성' %> — <%= settings.site_name || '포트폴리오' %></title>
-  <link rel="stylesheet" href="/css/style.css?v=20260471">
+  <link rel="stylesheet" href="/css/style.css?v=20260509">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Inter:wght@300;400;500;700&display=swap" rel="stylesheet">
 </head>
@@ -82,10 +82,31 @@
           <div class="post-editor-toolbar post-editor-toolbar--format" role="toolbar" aria-label="글자 서식">
             <select id="postEditorFontFamily" class="post-editor-fmt-select" title="글꼴" aria-label="글꼴">
               <option value="">글꼴</option>
-              <option value="'Noto Sans KR', 'Malgun Gothic', sans-serif">본고딕 계열</option>
-              <option value="'Malgun Gothic', sans-serif">맑은 고딕</option>
-              <option value="Georgia, 'Times New Roman', serif">명조 계열</option>
-              <option value="ui-monospace, 'Cascadia Code', monospace">고정폭</option>
+              <option value="'Noto Sans KR', 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif">본고딕 (Noto Sans KR)</option>
+              <option value="'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif">맑은 고딕</option>
+              <option value="'Batang', 'BatangChe', Georgia, 'Times New Roman', serif">바탕·명조 계열</option>
+              <option value="Georgia, 'Times New Roman', 'Batang', serif">명조 (Georgia)</option>
+              <option value="'Gulim', 'Dotum', 'Malgun Gothic', sans-serif">굴림·돋움 계열</option>
+              <option value="ui-monospace, 'Consolas', 'Malgun Gothic', monospace">고정폭</option>
+            </select>
+            <select id="postEditorFontSizePreset" class="post-editor-fmt-select post-editor-fmt-select--sizes" title="글자 크기 프리셋" aria-label="글자 크기 프리셋">
+              <option value="">크기</option>
+              <option value="8">8</option>
+              <option value="9">9</option>
+              <option value="10">10</option>
+              <option value="11">11</option>
+              <option value="12">12</option>
+              <option value="14">14</option>
+              <option value="16">16</option>
+              <option value="18">18</option>
+              <option value="20">20</option>
+              <option value="22">22</option>
+              <option value="24">24</option>
+              <option value="28">28</option>
+              <option value="30">30</option>
+              <option value="36">36</option>
+              <option value="50">50</option>
+              <option value="72">72</option>
             </select>
             <input type="text" id="postEditorFontSize" class="post-editor-fmt-size-input" list="postEditorFontSizeList"
                    value="10" inputmode="numeric" maxlength="3" autocomplete="off" title="크기 (px)" aria-label="글자 크기 픽셀">
@@ -177,6 +198,6 @@
 
   <input type="hidden" id="post-editor-init-b64" value="<%= typeof editorInitJsonB64 !== 'undefined' ? editorInitJsonB64 : '' %>">
 
-  <script src="/js/post-editor.js?v=20260471" defer></script>
+  <script src="/js/post-editor.js?v=20260509" defer></script>
 </body>
 </html>
