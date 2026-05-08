@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>마이페이지 — 포트폴리오</title>
-  <link rel="stylesheet" href="/css/style.css?v=20260511">
+  <link rel="stylesheet" href="/css/style.css?v=20260512">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Inter:wght@300;400;500;700&display=swap" rel="stylesheet">
   <% if (typeof isAdmin !== 'undefined' && isAdmin && (activeTab === 'boardsManage' || activeTab === 'mainSettings')) { %>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -336,26 +336,29 @@
           </div>
 
           <div id="editBoardModal" class="modal-overlay" style="display:none" onclick="closeModalOnOverlay(event, 'editBoardModal')">
-            <div class="modal-box modal-box--boards-create" onclick="event.stopPropagation()">
-              <button type="button" class="mypage-boards-modal-back" onclick="closeEditBoardModal()">뒤로 가기</button>
+            <div class="modal-box modal-box--boards-create modal-box--boards-edit" onclick="event.stopPropagation()">
+              <button type="button" class="mypage-boards-modal-back" onclick="closeEditBoardModal()"><span class="mypage-boards-modal-back-icon" aria-hidden="true">←</span> 뒤로 가기</button>
               <h3 class="mypage-boards-modal-title">게시판 수정하기</h3>
               <p id="editBoardFormError" class="mypage-boards-form-error" role="alert"></p>
               <form id="editBoardForm" method="POST" action="">
                 <input type="hidden" name="_method" value="PUT">
-                <div class="form-group">
-                  <label class="form-label" for="editBoardNameKo">게시판 이름 입력 (국문) <span class="required">*</span></label>
-                  <input type="text" id="editBoardNameKo" name="name" class="form-input" maxlength="120" autocomplete="off">
+                <div class="mypage-boards-edit-fields">
+                  <div class="form-group">
+                    <label class="form-label" for="editBoardNameKo">게시판 이름 입력 (국문)</label>
+                    <input type="text" id="editBoardNameKo" name="name" class="form-input" maxlength="120" autocomplete="off" placeholder="국문 게시판 이름을 입력하세요">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="editBoardNameJa">게시판 이름 입력 (일본어)</label>
+                    <input type="text" id="editBoardNameJa" name="name_ja" class="form-input" maxlength="120" autocomplete="off" placeholder="日본語の掲示板名を入力してください">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="editBoardDesc">게시판에 대한 간단한 소개문</label>
+                    <textarea id="editBoardDesc" name="description" class="form-input" rows="4" maxlength="2000" placeholder="게시판 소개문을 입력하세요"></textarea>
+                  </div>
                 </div>
-                <div class="form-group">
-                  <label class="form-label" for="editBoardNameJa">게시판 이름 입력 (일본어) <span class="required">*</span></label>
-                  <input type="text" id="editBoardNameJa" name="name_ja" class="form-input" maxlength="120" autocomplete="off">
-                </div>
-                <div class="form-group">
-                  <label class="form-label" for="editBoardDesc">게시판에 대한 간단한 소개문 <span class="required">*</span></label>
-                  <textarea id="editBoardDesc" name="description" class="form-input" rows="4" maxlength="2000"></textarea>
-                </div>
-                <div class="mypage-boards-modal-submit-wrap">
-                  <button type="submit" class="btn-primary mypage-boards-submit-wide">수정 완료</button>
+                <div class="mypage-boards-modal-actions" role="group" aria-label="게시판 수정">
+                  <button type="button" class="mypage-boards-modal-btn mypage-boards-modal-btn--ghost" onclick="closeEditBoardModal()">취소</button>
+                  <button type="submit" class="mypage-boards-modal-btn mypage-boards-modal-btn--solid">게시판 수정하기</button>
                 </div>
               </form>
             </div>
@@ -405,7 +408,7 @@
   <script src="/js/mypage-main-settings.js?v=20260433"></script>
   <% } %>
   <% if (activeTab === 'boardsManage') { %>
-  <script src="/js/mypage-boards.js?v=20260511"></script>
+  <script src="/js/mypage-boards.js?v=20260512"></script>
   <% } %>
 </body>
 </html>

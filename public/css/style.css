@@ -2299,6 +2299,71 @@ body.register-crop-modal-open {
   margin-top: 1.25rem;
 }
 
+.mypage-boards-modal-back-icon {
+  display: inline-block;
+  margin-right: 0.2rem;
+  text-decoration: none;
+}
+
+/* 게시판 수정 모달 — 회색 필드 + 하단 취소/수정 2버튼 */
+.modal-box--boards-edit .mypage-boards-edit-fields .form-input {
+  background: #ebebeb;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+}
+
+.modal-box--boards-edit .mypage-boards-edit-fields .form-input:focus {
+  background: #fff;
+  border-color: #000;
+  outline: none;
+}
+
+.modal-box--boards-edit .mypage-boards-edit-fields .form-group {
+  margin-bottom: 1.1rem;
+}
+
+.modal-box--boards-edit .mypage-boards-modal-title {
+  margin-bottom: 1.25rem;
+}
+
+.mypage-boards-modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-top: 1.5rem;
+}
+
+.mypage-boards-modal-btn {
+  flex: 1 1 8rem;
+  min-height: 2.75rem;
+  padding: 0.55rem 0.85rem;
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 2px solid #000;
+  text-align: center;
+}
+
+.mypage-boards-modal-btn--ghost {
+  background: #000;
+  color: #faf9f6;
+}
+
+.mypage-boards-modal-btn--ghost:hover {
+  opacity: 0.88;
+}
+
+.mypage-boards-modal-btn--solid {
+  background: #000;
+  color: #faf9f6;
+}
+
+.mypage-boards-modal-btn--solid:hover {
+  opacity: 0.88;
+}
+
 .mypage-boards-submit-wide {
   width: 100%;
   display: inline-flex;
