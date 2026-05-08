@@ -327,7 +327,6 @@
     const ytCancel = document.getElementById('postYtCancel');
     const fmtBar = document.querySelector('.post-editor-toolbar--format');
     const selFont = document.getElementById('postEditorFontFamily');
-    const selSizePreset = document.getElementById('postEditorFontSizePreset');
     const inpSize = document.getElementById('postEditorFontSize');
     const colorBtn = document.getElementById('postEditorColorBtn');
     const colorPanel = document.getElementById('postEditorColorPanel');
@@ -475,18 +474,6 @@
       inpSize.value = String(px);
       applyInlineStyle(editor, 'fontSize', px + 'px');
       applyPlaceholderClass();
-    }
-
-    if (selSizePreset) {
-      selSizePreset.addEventListener('change', function () {
-        const raw = String(this.value || '').trim();
-        if (!raw) return;
-        const px = clampFontSizePx(raw);
-        if (inpSize) inpSize.value = String(px);
-        applyInlineStyle(editor, 'fontSize', px + 'px');
-        this.selectedIndex = 0;
-        applyPlaceholderClass();
-      });
     }
 
     if (inpSize) {

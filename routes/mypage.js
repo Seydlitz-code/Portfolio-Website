@@ -7,7 +7,7 @@ const db = require('../lib/db');
 const { requireLogin, requireAdmin } = require('../middleware/auth');
 const { getAccountShell } = require('../lib/mypageShell');
 const { getSiteHomeData, getSiteSettings } = require('../lib/siteData');
-const { formatListTime } = require('../lib/listingHelpers');
+const { formatListTime, buildPaginationItems } = require('../lib/listingHelpers');
 const { asyncRoute } = require('../lib/asyncRoute');
 const { writingsListUrl, writingsCommentsOnlyUrl, commentPreviewParts, buildWritingsPager } = require('../lib/mypageWritings');
 

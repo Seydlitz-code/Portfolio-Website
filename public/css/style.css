@@ -4247,10 +4247,9 @@ p.post-heading-title--ja {
   padding: 0.42rem 0.55rem;
 }
 
-.post-editor-fmt-select--sizes {
-  min-width: 4.25rem;
-  max-width: 5rem;
-}
+.post-editor-fmt-select {
+  min-width: 6.5rem;
+  max-width: 10rem;
   padding: 0.35rem 0.45rem;
   font-size: 0.8rem;
   border: 1px solid #1a1a1a;
@@ -4259,6 +4258,11 @@ p.post-heading-title--ja {
   font-family: inherit;
   color: var(--text-primary);
   cursor: pointer;
+}
+
+.post-editor-fmt-size-combo {
+  min-width: 4.5rem;
+  max-width: 5.5rem;
 }
 
 .post-editor-fmt-btn {
