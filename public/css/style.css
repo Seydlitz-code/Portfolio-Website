@@ -4207,10 +4207,28 @@ p.post-heading-title--ja {
 }
 
 .post-editor-page .inner-header-inner {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   max-width: none;
   width: 100%;
   padding-left: clamp(1rem, 3vw, 2rem);
   padding-right: clamp(1rem, 3vw, 2rem);
+  min-height: 2.75rem;
+}
+
+.post-editor-page .inner-logo {
+  text-align: center;
+  font-weight: 600;
+}
+
+.post-editor-page .inner-nav {
+  position: absolute;
+  top: 50%;
+  right: clamp(1rem, 3vw, 2rem);
+  transform: translateY(-50%);
+  max-width: min(50vw, 22rem);
 }
 
 .post-editor-main {
