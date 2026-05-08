@@ -4878,6 +4878,62 @@ p.post-heading-title--ja {
   padding-bottom: 0;
 }
 
+.comment-item--nested {
+  border-bottom: none;
+  padding-bottom: 0;
+  padding-left: 0.75rem;
+  border-left: 3px solid rgba(0, 0, 0, 0.07);
+  margin-bottom: 1rem;
+  margin-top: 0;
+}
+
+.comment-item--nested:last-child {
+  margin-bottom: 0;
+}
+
+.comment-replies {
+  margin-top: 0.75rem;
+}
+
+.comment-reply-wrap {
+  margin-top: 0.6rem;
+  padding: 0.65rem 0.85rem;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.comment-reply-wrap.is-hidden {
+  display: none !important;
+}
+
+.comment-reply-label {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 0.45rem;
+}
+
+.comment-reply-form .comment-textarea--reply {
+  margin-bottom: 0;
+}
+
+.comment-reply-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.55rem;
+}
+
+.comment-reply-btns {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
 .comment-block {
   margin-bottom: 0;
 }

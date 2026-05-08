@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><%= post.title %><%= post.title_ja && String(post.title_ja).trim() ? ' / ' + String(post.title_ja).trim() : '' %> — 포트폴리오</title>
-  <link rel="stylesheet" href="/css/style.css?v=20260508">
+  <link rel="stylesheet" href="/css/style.css?v=20260516">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Inter:wght@300;400;500;700&display=swap" rel="stylesheet">
 </head>
@@ -93,7 +93,7 @@
           <div class="comments-list">
             <% _tree.forEach(function (c) { %>
               <div class="comment-item">
-                <%- include('partials/comment-item', { comment: c, post, user, isAdmin }) %>
+                <%- include('partials/comment-item', { comment: c, post, user, isAdmin, depth: 0 }) %>
               </div>
             <% }); %>
           </div>
@@ -156,8 +156,47 @@
             var v = e.target.value || '';
             if (v.length > 100) e.target.value = v.slice(0, 100);
           }
+          if (e.target.classList && e.target.classList.contains('comment-textarea--reply')) {
+            var vr = e.target.value || '';
+            if (vr.length > 100) e.target.value = vr.slice(0, 100);
+            var replyWrap = e.target.closest('.comment-reply-wrap');
+            if (replyWrap) {
+              var rc = replyWrap.querySelector('.comment-reply-char');
+              if (rc) rc.textContent = (e.target.value || '').length + ' / 100';
+            }
+          }
         });
         commentsSection.addEventListener('click', function (e) {
+          var replyOpen = e.target.closest('.comment-reply-open');
+          if (replyOpen) {
+            var rid = replyOpen.getAttribute('data-comment-id');
+            var wrap = document.getElementById('comment-reply-wrap-' + rid);
+            if (wrap) {
+              wrap.classList.remove('is-hidden');
+              var rta = wrap.querySelector('textarea');
+              if (rta) {
+                var rc = wrap.querySelector('.comment-reply-char');
+                if (rc) rc.textContent = (rta.value || '').length + ' / 100';
+                rta.focus();
+              }
+            }
+            return;
+          }
+          var replyCancel = e.target.closest('.comment-reply-cancel');
+          if (replyCancel) {
+            var rid2 = replyCancel.getAttribute('data-comment-id');
+            var wrap2 = document.getElementById('comment-reply-wrap-' + rid2);
+            if (wrap2) {
+              wrap2.classList.add('is-hidden');
+              var rta2 = wrap2.querySelector('textarea');
+              if (rta2) {
+                rta2.value = '';
+                var rc2 = wrap2.querySelector('.comment-reply-char');
+                if (rc2) rc2.textContent = '0 / 100';
+              }
+            }
+            return;
+          }
           var openEdit = e.target.closest('.comment-edit-open');
           if (openEdit) {
             var cid = openEdit.getAttribute('data-comment-id');

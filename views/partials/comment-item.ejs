@@ -1,8 +1,9 @@
 <% var canEdit = user && Number(user.id) === Number(comment.user_id); %>
 <% var showEdit = canEdit; %>
 <% var showDelete = canEdit || isAdmin; %>
+<% var children = comment.children && comment.children.length ? comment.children : []; %>
 <% var avSrc = comment.user_avatar && String(comment.user_avatar).trim() ? String(comment.user_avatar).trim() : '/media/user/' + comment.user_id + '/avatar'; %>
-<div class="comment-block">
+<div class="comment-block<%= typeof depth !== 'undefined' && depth > 0 ? ' comment-block--reply' : '' %>">
   <div class="comment-top">
     <div class="comment-avatar-wrap">
       <img src="<%= avSrc %>" alt="" class="comment-avatar" width="44" height="44" decoding="async" loading="lazy"
@@ -18,6 +19,9 @@
   </div>
   <div class="comment-footer">
     <div class="comment-actions-links">
+      <% if (user) { %>
+        <button type="button" class="comment-link comment-reply-open" data-comment-id="<%= comment.id %>">답글</button>
+      <% } %>
       <% if (showEdit) { %>
         <button type="button" class="comment-link comment-edit-open" data-comment-id="<%= comment.id %>">수정</button>
       <% } %>
@@ -28,6 +32,23 @@
       <% } %>
     </div>
   </div>
+  <% if (user) { %>
+    <div id="comment-reply-wrap-<%= comment.id %>" class="comment-reply-wrap is-hidden">
+      <form action="/posts/<%= post.id %>/comments" method="POST" class="comment-reply-form" id="comment-reply-form-<%= comment.id %>">
+        <input type="hidden" name="parent_id" value="<%= comment.id %>">
+        <label class="comment-reply-label" for="comment-reply-ta-<%= comment.id %>"><%= comment.nickname %>님에게 답글</label>
+        <textarea name="content" id="comment-reply-ta-<%= comment.id %>" class="comment-textarea comment-textarea--reply" rows="2" maxlength="100"
+                  placeholder="답글을 입력하세요... (최대 100자)" required></textarea>
+        <div class="comment-reply-actions">
+          <span class="comment-char-count comment-reply-char" aria-live="polite">0 / 100</span>
+          <div class="comment-reply-btns">
+            <button type="button" class="btn-secondary btn-secondary--sm comment-reply-cancel" data-comment-id="<%= comment.id %>">취소</button>
+            <button type="submit" class="btn-primary btn-primary--sm">답글 등록</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  <% } %>
   <% if (showEdit) { %>
     <form id="comment-edit-<%= comment.id %>" action="/posts/<%= post.id %>/comments/<%= comment.id %>?_method=PUT" method="POST" class="comment-edit-form is-hidden" autocomplete="off">
       <textarea name="content" class="comment-textarea comment-textarea--edit" rows="3" maxlength="100" required><%= comment.content %></textarea>
@@ -36,5 +57,14 @@
         <button type="button" class="btn-secondary btn-secondary--sm comment-edit-cancel" data-comment-id="<%= comment.id %>">취소</button>
       </div>
     </form>
+  <% } %>
+  <% if (children.length > 0) { %>
+    <div class="comment-replies" role="list">
+      <% children.forEach(function (child) { %>
+        <div class="comment-item comment-item--nested" role="listitem">
+          <%- include('partials/comment-item', { comment: child, post, user, isAdmin, depth: (typeof depth !== 'undefined' ? depth : 0) + 1 }) %>
+        </div>
+      <% }); %>
+    </div>
   <% } %>
 </div>
