@@ -13,6 +13,31 @@
       <span class="nav-nickname-mute" aria-label="로그인 전">—</span>
     </span>
   <% } %>
+  <% if (typeof isAdmin !== 'undefined' && isAdmin && user) { %>
+    <div class="nav-notify-wrap" id="navNotifyWrap">
+      <button type="button" class="nav-notify-btn" id="navNotifyBtn"
+              aria-expanded="false" aria-haspopup="dialog" aria-controls="navNotifyPanel"
+              aria-label="댓글 알림 열기">
+        <span class="nav-notify-icon" aria-hidden="true"><i class="fa-regular fa-bell"></i></span>
+        <% var nuc = typeof notificationUnreadCount !== 'undefined' ? Number(notificationUnreadCount) : 0; %>
+        <% if (nuc > 0) { %>
+          <span class="nav-notify-dot" aria-label="안 읽은 알림 <%= nuc %>건"></span>
+        <% } %>
+      </button>
+      <div id="navNotifyPanel" class="nav-notify-panel is-hidden" role="dialog" aria-label="알림" aria-modal="false" hidden>
+        <div class="nav-notify-panel-inner">
+          <div class="nav-notify-panel-head">
+            <h2 class="nav-notify-title">알림</h2>
+            <button type="button" class="nav-notify-read-all" id="navNotifyReadAll">모두 읽음</button>
+          </div>
+          <div class="nav-notify-loading is-hidden" id="navNotifyLoading">불러오는 중…</div>
+          <div class="nav-notify-empty is-hidden" id="navNotifyEmpty">새 알림이 없습니다.</div>
+          <ul class="nav-notify-list" id="navNotifyList" role="list"></ul>
+        </div>
+      </div>
+      <script src="/js/nav-notifications.js?v=20260507" defer></script>
+    </div>
+  <% } %>
   <div class="nav-actions">
     <% if (!user) { %>
       <a href="/auth/login" class="nav-btn">로그인</a>

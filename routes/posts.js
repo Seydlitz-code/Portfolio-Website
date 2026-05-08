@@ -21,6 +21,7 @@ function isPostEdited(createdAt, updatedAt) {
 }
 const { asyncRoute } = require('../lib/asyncRoute');
 const { sanitizeMypageWritingsNext } = require('../lib/mypageWritings');
+const { createCommentNotification } = require('../lib/commentNotifications');
 const { sanitizePostHtml, isPostContentMeaningful, postContentLooksLikeHtml } = require('../lib/postHtml');
 
 const ALL_POSTS_PAGE_SIZE = 200;
@@ -515,10 +516,22 @@ router.post(
     /*
      * PG·SQLite 공통: 타임스탬프는 CURRENT_TIMESTAMP로 두 DB에서 동일 처리.
      */
-    await db.run(
+    const ins = await db.run(
       'INSERT INTO comments (post_id, user_id, content, created_at, updated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)',
       [postId, userId, content]
     );
+
+    const newCommentId =
+      ins && ins.lastInsertRowid != null && Number.isFinite(Number(ins.lastInsertRowid))
+        ? Number(ins.lastInsertRowid)
+        : null;
+    if (newCommentId != null) {
+      try {
+        await createCommentNotification(db, postId, newCommentId, userId);
+      } catch (_) {
+        /* 테이블 미구성 등 — 댓글은 유지 */
+      }
+    }
 
     res.redirect(`/posts/${req.params.id}#comments`);
   })

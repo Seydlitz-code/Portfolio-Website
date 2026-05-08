@@ -17,6 +17,7 @@ const mypageRoutes = require('./routes/mypage');
 const { isUserAdmin } = require('./middleware/auth');
 const { getSiteHomeData } = require('./lib/siteData');
 const mediaRoutes = require('./routes/media');
+const notificationsRoutes = require('./routes/notifications');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -109,6 +110,18 @@ app.use(
       res.locals.user = null;
     }
     res.locals.isAdmin = isUserAdmin(req.session.user);
+    res.locals.notificationUnreadCount = 0;
+    if (sess && sess.id != null && res.locals.isAdmin) {
+      try {
+        const cnt = await db.get(
+          `SELECT COUNT(*) AS c FROM comment_notifications WHERE recipient_user_id = ? AND read_at IS NULL`,
+          [sess.id]
+        );
+        res.locals.notificationUnreadCount = cnt != null ? Number(cnt.c || 0) : 0;
+      } catch (_) {
+        res.locals.notificationUnreadCount = 0;
+      }
+    }
     next();
   })
 );
@@ -118,6 +131,7 @@ app.use('/boards', boardsRoutes);
 app.use('/posts', postsRoutes);
 app.use('/admin', adminRoutes);
 app.use('/mypage', mypageRoutes);
+app.use('/api', notificationsRoutes);
 
 app.get(
   '/',

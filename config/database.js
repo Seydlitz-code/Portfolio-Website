@@ -127,6 +127,17 @@ function initializeSqliteSync() {
       FOREIGN KEY (parent_id) REFERENCES comments(id) ON DELETE CASCADE
     );
 
+    CREATE TABLE IF NOT EXISTS comment_notifications (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      recipient_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      comment_id INTEGER NOT NULL REFERENCES comments(id) ON DELETE CASCADE,
+      post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+      actor_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      read_at DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(comment_id)
+    );
+
     CREATE TABLE IF NOT EXISTS site_settings (
       key TEXT PRIMARY KEY,
       value TEXT
@@ -253,6 +264,22 @@ async function initializePostgres() {
       updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
     );
   `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS comment_notifications (
+      id SERIAL PRIMARY KEY,
+      recipient_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      comment_id INTEGER NOT NULL UNIQUE REFERENCES comments(id) ON DELETE CASCADE,
+      post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+      actor_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      read_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
+  await pool.query(
+    `CREATE INDEX IF NOT EXISTS idx_comment_notifications_recipient ON comment_notifications (recipient_user_id)`
+  );
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS site_settings (
