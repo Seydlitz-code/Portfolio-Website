@@ -2,6 +2,7 @@ const express = require('express');
 const multer = require('multer');
 const router = express.Router();
 const db = require('../lib/db');
+const { usePostgres } = db;
 const { requireAdmin, requireLogin, isUserAdmin } = require('../middleware/auth');
 const { getSiteSettings } = require('../lib/siteData');
 const {
@@ -42,6 +43,8 @@ function formatCommentDateTime(iso) {
 
 function sanitizeCommentInput(raw) {
   let s = raw != null ? String(raw) : '';
+  /* PostgreSQL TEXT에 NUL 문자는 허용되지 않음 */
+  s = s.replace(/\0/g, '');
   s = s.replace(/\r\n|\r|\n/g, ' ').replace(/\s+/g, ' ').trim();
   if (s.length > 100) s = s.slice(0, 100);
   /* textarea·스크립트 경계 문자열로 인한 마크업 깨짐·서버 템플릿 오류 방지 */
@@ -498,7 +501,6 @@ router.post(
     const content = sanitizeCommentInput(req.body.content);
     if (!content) return res.redirect(`/posts/${req.params.id}#comments`);
 
-    const ts = new Date().toISOString();
     const postId = Number(req.params.id);
     const userId = Number(req.session.user.id);
     if (!Number.isFinite(postId) || postId < 1 || !Number.isFinite(userId) || userId < 1) {
@@ -518,10 +520,11 @@ router.post(
       }
     }
 
-    await db.run(
-      'INSERT INTO comments (post_id, user_id, content, parent_id, updated_at) VALUES (?, ?, ?, ?, ?)',
-      [postId, userId, content, parentId, ts]
-    );
+    /* PG: DB 기본값으로 시각 일치. SQLite: ALTER로 nullable인 updated_at 대비 명시 */
+    const insertSql = usePostgres()
+      ? 'INSERT INTO comments (post_id, user_id, content, parent_id) VALUES (?, ?, ?, ?)'
+      : "INSERT INTO comments (post_id, user_id, content, parent_id, updated_at) VALUES (?, ?, ?, ?, datetime('now'))";
+    await db.run(insertSql, [postId, userId, content, parentId]);
 
     res.redirect(`/posts/${req.params.id}#comments`);
   })
