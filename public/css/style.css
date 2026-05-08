@@ -465,7 +465,7 @@ body.index-page .portfolio-section {
   line-height: 1.7;
   white-space: pre-wrap;
   max-width: min(63rem, 100%);
-  text-align: center;
+  text-align: left;
 }
 
 .bio-empty {
@@ -476,6 +476,8 @@ body.index-page .portfolio-section {
 .hero-bio-wrap {
   margin-bottom: 1.5rem;
   max-width: min(63rem, 100%);
+  align-self: stretch;
+  text-align: left;
 }
 
 /* Social Links */
@@ -4372,9 +4374,111 @@ p.post-heading-title--ja {
   cursor: pointer;
 }
 
-.post-editor-fmt-size-combo {
-  min-width: 4.5rem;
-  max-width: 5.5rem;
+.post-editor-fmt-size-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: stretch;
+  min-width: 4rem;
+}
+
+.post-editor-fmt-size-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+  width: 100%;
+  min-width: 4.25rem;
+  padding: 0.32rem 0.42rem;
+  font: inherit;
+  font-size: 0.82rem;
+  border: 1px solid #1a1a1a;
+  border-radius: 2px;
+  background: #fff;
+  color: var(--text-primary);
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.post-editor-fmt-size-trigger:hover {
+  background: #f9f9f7;
+}
+
+.post-editor-fmt-size-trigger[aria-expanded="true"] .post-editor-fmt-size-trigger-chevron {
+  transform: rotate(-180deg);
+}
+
+.post-editor-fmt-size-trigger-value {
+  min-width: 1.35rem;
+  text-align: left;
+}
+
+.post-editor-fmt-size-trigger-chevron {
+  flex-shrink: 0;
+  font-size: 0.58rem;
+  opacity: 0.75;
+  transition: transform 0.15s ease;
+}
+
+.post-editor-fmt-size-menu {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0;
+  min-width: 100%;
+  z-index: 50;
+  margin: 0;
+  padding: 0.25rem 0;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.18);
+  border-radius: 4px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  max-height: min(280px, 45vh);
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+.post-editor-fmt-size-option {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  width: 100%;
+  margin: 0;
+  padding: 0.4rem 0.65rem;
+  border: none;
+  background: transparent;
+  font: inherit;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  cursor: pointer;
+  text-align: left;
+  box-sizing: border-box;
+}
+
+.post-editor-fmt-size-option:hover {
+  background: #f4f4f0;
+}
+
+.post-editor-fmt-size-option.is-selected {
+  font-weight: 600;
+}
+
+.post-editor-fmt-size-option-check {
+  flex-shrink: 0;
+  width: 1.1rem;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 0.72rem;
+  color: #2563eb;
+  visibility: hidden;
+}
+
+.post-editor-fmt-size-option.is-selected .post-editor-fmt-size-option-check {
+  visibility: visible;
+}
+
+.post-editor-fmt-size-option-num {
+  flex: 1;
+  min-width: 0;
 }
 
 .post-editor-fmt-btn {
@@ -4406,21 +4510,6 @@ p.post-heading-title--ja {
   min-height: 1.5rem;
   background: #999;
   margin: 0 0.15rem;
-}
-
-.post-editor-fmt-size-input {
-  width: 2.65rem;
-  min-width: 2.35rem;
-  max-width: 3.5rem;
-  padding: 0.35rem 0.25rem;
-  font-size: 0.8rem;
-  text-align: center;
-  border: 1px solid #1a1a1a;
-  border-radius: 2px;
-  background: #fff;
-  font-family: inherit;
-  color: var(--text-primary);
-  box-sizing: border-box;
 }
 
 .post-editor-color-wrap {
@@ -5012,7 +5101,7 @@ p.post-heading-title--ja {
   }
 
   .hero-bio {
-    text-align: center;
+    text-align: left;
   }
 
   .portfolio-body {

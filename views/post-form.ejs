@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><%= post ? '게시물 수정' : '새 게시물 작성' %> — <%= settings.site_name || '포트폴리오' %></title>
-  <link rel="stylesheet" href="/css/style.css?v=20260510">
+  <link rel="stylesheet" href="/css/style.css?v=20260514">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Inter:wght@300;400;500;700&display=swap" rel="stylesheet">
 </head>
@@ -89,27 +89,13 @@
               <option value="'Gulim', 'Dotum', 'Malgun Gothic', sans-serif">굴림·돋움 계열</option>
               <option value="ui-monospace, 'Consolas', 'Malgun Gothic', monospace">고정폭</option>
             </select>
-            <input type="text" id="postEditorFontSize" class="post-editor-fmt-size-input post-editor-fmt-size-combo"
-                   list="postEditorFontSizeList" value="10" inputmode="numeric" maxlength="3" autocomplete="off"
-                   title="글자 크기 (px) — 목록에서 고르거나 숫자 입력" aria-label="글자 크기 px, 목록 선택 또는 직접 입력">
-            <datalist id="postEditorFontSizeList">
-              <option value="8"></option>
-              <option value="9"></option>
-              <option value="10"></option>
-              <option value="11"></option>
-              <option value="12"></option>
-              <option value="14"></option>
-              <option value="16"></option>
-              <option value="18"></option>
-              <option value="20"></option>
-              <option value="22"></option>
-              <option value="24"></option>
-              <option value="28"></option>
-              <option value="30"></option>
-              <option value="36"></option>
-              <option value="50"></option>
-              <option value="72"></option>
-            </datalist>
+            <div class="post-editor-fmt-size-wrap" id="postEditorFontSizeWrap">
+              <button type="button" id="postEditorFontSizeTrigger" class="post-editor-fmt-size-trigger" aria-haspopup="listbox" aria-expanded="false" title="글자 크기 (px)" aria-label="글자 크기 선택">
+                <span class="post-editor-fmt-size-trigger-value" id="postEditorFontSizeValue">10</span>
+                <i class="fas fa-chevron-down post-editor-fmt-size-trigger-chevron" aria-hidden="true"></i>
+              </button>
+              <div id="postEditorFontSizeMenu" class="post-editor-fmt-size-menu is-hidden" role="listbox" aria-label="글자 크기"></div>
+            </div>
             <span class="post-editor-fmt-div" aria-hidden="true"></span>
             <button type="button" class="post-editor-fmt-btn" data-cmd="bold" title="굵게 (Ctrl+B)">
               <i class="fas fa-bold" aria-hidden="true"></i>
@@ -188,6 +174,6 @@
 
   <input type="hidden" id="post-editor-init-b64" value="<%= typeof editorInitJsonB64 !== 'undefined' ? editorInitJsonB64 : '' %>">
 
-  <script src="/js/post-editor.js?v=20260510" defer></script>
+  <script src="/js/post-editor.js?v=20260514" defer></script>
 </body>
 </html>

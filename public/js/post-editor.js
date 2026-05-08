@@ -305,10 +305,22 @@
     return clone.textContent.replace(/\u00a0/g, ' ').replace(/\u200b/g, '').replace(/\s+/g, ' ').trim();
   }
 
-  function clampFontSizePx(v) {
-    const n = parseInt(v, 10);
+  const FONT_SIZE_PRESETS = [8, 9, 10, 11, 12, 13, 14, 16, 18, 20, 22, 24, 26, 28, 30, 36, 42, 50, 72, 96];
+
+  function snapToPreset(px) {
+    const n = parseInt(px, 10);
     if (Number.isNaN(n)) return 10;
-    return Math.min(72, Math.max(6, n));
+    let best = FONT_SIZE_PRESETS[0];
+    let bd = Infinity;
+    for (let i = 0; i < FONT_SIZE_PRESETS.length; i += 1) {
+      const p = FONT_SIZE_PRESETS[i];
+      const d = Math.abs(p - n);
+      if (d < bd) {
+        bd = d;
+        best = p;
+      }
+    }
+    return best;
   }
 
   document.addEventListener('DOMContentLoaded', function () {
@@ -327,7 +339,10 @@
     const ytCancel = document.getElementById('postYtCancel');
     const fmtBar = document.querySelector('.post-editor-toolbar--format');
     const selFont = document.getElementById('postEditorFontFamily');
-    const inpSize = document.getElementById('postEditorFontSize');
+    const sizeWrap = document.getElementById('postEditorFontSizeWrap');
+    const sizeTrigger = document.getElementById('postEditorFontSizeTrigger');
+    const sizeMenu = document.getElementById('postEditorFontSizeMenu');
+    const sizeValue = document.getElementById('postEditorFontSizeValue');
     const colorBtn = document.getElementById('postEditorColorBtn');
     const colorPanel = document.getElementById('postEditorColorPanel');
     const fgGrid = document.getElementById('postEditorFgGrid');
@@ -433,7 +448,8 @@
         if (
           e.target.closest &&
           (e.target.closest('button.post-editor-fmt-btn') ||
-            e.target.closest('#postEditorColorBtn'))
+            e.target.closest('#postEditorColorBtn') ||
+            e.target.closest('#postEditorFontSizeTrigger'))
         ) {
           e.preventDefault();
         }
@@ -468,26 +484,98 @@
       });
     }
 
-    function applyFontSizeFromInput() {
-      if (!inpSize) return;
-      const px = clampFontSizePx(inpSize.value);
-      inpSize.value = String(px);
-      applyInlineStyle(editor, 'fontSize', px + 'px');
+    let selectedFontSizePx = 10;
+
+    function syncFontSizeMenuSelection() {
+      if (!sizeMenu) return;
+      sizeMenu.querySelectorAll('.post-editor-fmt-size-option').forEach(function (btn) {
+        const px = Number(btn.getAttribute('data-px'));
+        const sel = px === selectedFontSizePx;
+        btn.setAttribute('aria-selected', sel ? 'true' : 'false');
+        btn.classList.toggle('is-selected', sel);
+      });
+    }
+
+    function setFontSizeDisplay(px) {
+      selectedFontSizePx = snapToPreset(px);
+      if (sizeValue) sizeValue.textContent = String(selectedFontSizePx);
+      syncFontSizeMenuSelection();
+    }
+
+    function applyFontSize(px) {
+      const p = FONT_SIZE_PRESETS.indexOf(px) >= 0 ? px : snapToPreset(px);
+      setFontSizeDisplay(p);
+      applyInlineStyle(editor, 'fontSize', p + 'px');
       applyPlaceholderClass();
     }
 
-    if (inpSize) {
-      inpSize.addEventListener('change', applyFontSizeFromInput);
-      inpSize.addEventListener('blur', function () {
-        const px = clampFontSizePx(inpSize.value);
-        inpSize.value = String(px);
+    function openFontSizeMenu() {
+      if (!sizeMenu || !sizeTrigger) return;
+      if (colorPanel && !colorPanel.classList.contains('is-hidden')) {
+        closeColorPanel();
+      }
+      sizeMenu.classList.remove('is-hidden');
+      sizeTrigger.setAttribute('aria-expanded', 'true');
+    }
+
+    function closeFontSizeMenu() {
+      if (!sizeMenu || !sizeTrigger) return;
+      sizeMenu.classList.add('is-hidden');
+      sizeTrigger.setAttribute('aria-expanded', 'false');
+    }
+
+    function toggleFontSizeMenu() {
+      if (!sizeMenu) return;
+      if (sizeMenu.classList.contains('is-hidden')) openFontSizeMenu();
+      else closeFontSizeMenu();
+    }
+
+    function buildFontSizeMenu() {
+      if (!sizeMenu) return;
+      sizeMenu.textContent = '';
+      const frag = document.createDocumentFragment();
+      FONT_SIZE_PRESETS.forEach(function (px) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'post-editor-fmt-size-option';
+        b.setAttribute('role', 'option');
+        b.setAttribute('data-px', String(px));
+        b.setAttribute('aria-selected', 'false');
+        const check = document.createElement('span');
+        check.className = 'post-editor-fmt-size-option-check';
+        check.setAttribute('aria-hidden', 'true');
+        check.innerHTML = '<i class="fas fa-check"></i>';
+        const num = document.createElement('span');
+        num.className = 'post-editor-fmt-size-option-num';
+        num.textContent = String(px);
+        b.appendChild(check);
+        b.appendChild(num);
+        frag.appendChild(b);
       });
-      inpSize.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          applyFontSizeFromInput();
-          inpSize.blur();
-        }
+      sizeMenu.appendChild(frag);
+    }
+
+    if (sizeMenu && sizeTrigger && sizeValue) {
+      buildFontSizeMenu();
+      setFontSizeDisplay(10);
+
+      sizeTrigger.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleFontSizeMenu();
+      });
+
+      sizeMenu.addEventListener('click', function (e) {
+        const opt = e.target.closest('.post-editor-fmt-size-option');
+        if (!opt) return;
+        e.preventDefault();
+        const px = Number(opt.getAttribute('data-px'));
+        if (!Number.isFinite(px)) return;
+        restoreEditorSelection(editor);
+        clearStoredSelection();
+        editor.focus();
+        applyFontSize(px);
+        closeFontSizeMenu();
       });
     }
 
@@ -522,6 +610,7 @@
 
     function openColorPanel() {
       if (!colorPanel) return;
+      closeFontSizeMenu();
       colorPanel.classList.remove('is-hidden');
       if (colorBtn) colorBtn.setAttribute('aria-expanded', 'true');
     }
@@ -593,7 +682,18 @@
       });
     }
 
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && sizeMenu && !sizeMenu.classList.contains('is-hidden')) {
+        closeFontSizeMenu();
+      }
+    });
+
     document.addEventListener('mousedown', function (e) {
+      if (sizeWrap && sizeMenu && !sizeMenu.classList.contains('is-hidden')) {
+        if (!sizeWrap.contains(e.target)) {
+          closeFontSizeMenu();
+        }
+      }
       if (!colorPanel || colorPanel.classList.contains('is-hidden')) return;
       if (colorPanel.contains(e.target)) return;
       if (colorBtn && colorBtn.contains(e.target)) return;
