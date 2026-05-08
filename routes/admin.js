@@ -119,6 +119,35 @@ router.post(
   })
 );
 
+router.put(
+  '/projects/:id',
+  requireAdmin,
+  asyncRoute(async (req, res) => {
+    const idRaw = req.params.id;
+    const id = parseInt(idRaw, 10);
+    if (!Number.isFinite(id) || id < 1) {
+      return res.redirect('/mypage/boards?editErr=1');
+    }
+    const row = await db.get('SELECT id FROM projects WHERE id = ?', [id]);
+    if (!row) {
+      return res.redirect('/mypage/boards?editErr=1');
+    }
+    const name = (req.body.name != null ? String(req.body.name) : '').trim();
+    const nameJa = (req.body.name_ja != null ? String(req.body.name_ja) : '').trim();
+    const description = (req.body.description != null ? String(req.body.description) : '').trim();
+    if (!name || !nameJa || !description) {
+      return res.redirect('/mypage/boards?editErr=1');
+    }
+    await db.run('UPDATE projects SET name = ?, name_ja = ?, description = ? WHERE id = ?', [
+      name,
+      nameJa,
+      description,
+      id
+    ]);
+    res.redirect('/mypage/boards?editSaved=1');
+  })
+);
+
 router.delete(
   '/projects/:id',
   requireAdmin,

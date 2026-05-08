@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>마이페이지 — 포트폴리오</title>
-  <link rel="stylesheet" href="/css/style.css?v=20260508">
+  <link rel="stylesheet" href="/css/style.css?v=20260511">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Inter:wght@300;400;500;700&display=swap" rel="stylesheet">
   <% if (typeof isAdmin !== 'undefined' && isAdmin && (activeTab === 'boardsManage' || activeTab === 'mainSettings')) { %>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -214,6 +214,13 @@
             <div class="mypage-account-alert"><div class="alert alert-success">게시판이 삭제되었습니다.</div></div>
           <% } %>
 
+          <% if (typeof boardsEditSaved !== 'undefined' && boardsEditSaved) { %>
+            <div class="mypage-account-alert"><div class="alert alert-success">게시판 정보가 수정되었습니다.</div></div>
+          <% } %>
+          <% if (typeof boardsEditErr !== 'undefined' && boardsEditErr) { %>
+            <div class="mypage-account-alert"><div class="alert alert-error">게시판 수정에 실패했습니다. 필수 항목을 확인해 주세요.</div></div>
+          <% } %>
+
           <div class="mypage-boards-head">
             <h2 class="mypage-profile-section-title mypage-boards-head-title">게시판 전체 보기</h2>
             <div class="mypage-boards-head-actions">
@@ -227,10 +234,22 @@
                 <tr>
                   <th class="board-th mypage-boards-th-title" scope="col">게시판</th>
                   <th class="board-th mypage-boards-th-count" scope="col">게시물 수</th>
-                  <th class="board-th mypage-boards-th-del" scope="col">삭제</th>
+                  <th class="board-th mypage-boards-th-actions" scope="col">수정·삭제</th>
                 </tr>
               </thead>
               <tbody>
+                <tr class="board-row board-row--all-posts">
+                  <td class="board-td mypage-boards-td-title">
+                    <a href="/posts" class="board-title-link board-title-link--all-posts">전체 게시물 <span class="board-title-sep" aria-hidden="true">/</span> <span lang="ja">すべての投稿</span></a>
+                  </td>
+                  <td class="board-td mypage-boards-td-count"><%= typeof boardsAllPostsCount !== 'undefined' ? boardsAllPostsCount : 0 %></td>
+                  <td class="board-td mypage-boards-td-actions">
+                    <div class="mypage-boards-action-cell" role="group" aria-label="전체 게시물 관리">
+                      <a href="/posts" class="mypage-boards-edit" aria-label="전체 게시물 수정·관리"><i class="fas fa-pen" aria-hidden="true"></i><span class="mypage-boards-edit-label">수정하기</span></a>
+                      <span class="mypage-boards-no-del" aria-hidden="true">—</span>
+                    </div>
+                  </td>
+                </tr>
                 <% if (!boardsList || boardsList.length === 0) { %>
                   <tr>
                     <td class="board-td board-td--empty" colspan="3">등록된 게시판이 없습니다.</td>
@@ -243,10 +262,22 @@
                         <a href="/boards/<%= b.id %>" class="board-title-link"><%= b.name %><% if (b.name_ja) { %> / <%= b.name_ja %><% } %></a>
                       </td>
                       <td class="board-td mypage-boards-td-count"><%= _pc %></td>
-                      <td class="board-td mypage-boards-td-del">
-                        <button type="button" class="mypage-boards-trash" data-board-delete="<%= b.id %>" data-post-count="<%= _pc %>" aria-label="<%= _label %> 삭제">
-                          <i class="fas fa-trash-alt" aria-hidden="true"></i>
-                        </button>
+                      <td class="board-td mypage-boards-td-actions">
+                        <div class="mypage-boards-action-cell" role="group" aria-label="<%= _label %> 관리">
+                          <button
+                            type="button"
+                            class="mypage-boards-edit"
+                            data-board-edit="<%= b.id %>"
+                            data-name="<%= encodeURIComponent(b.name || '') %>"
+                            data-name-ja="<%= encodeURIComponent(b.name_ja || '') %>"
+                            data-description="<%= encodeURIComponent(b.description || '') %>"
+                            aria-label="<%= _label %> 수정">
+                            <i class="fas fa-pen" aria-hidden="true"></i><span class="mypage-boards-edit-label">수정하기</span>
+                          </button>
+                          <button type="button" class="mypage-boards-trash" data-board-delete="<%= b.id %>" data-post-count="<%= _pc %>" aria-label="<%= _label %> 삭제">
+                            <i class="fas fa-trash-alt" aria-hidden="true"></i>
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   <% }); %>
@@ -304,6 +335,32 @@
             </div>
           </div>
 
+          <div id="editBoardModal" class="modal-overlay" style="display:none" onclick="closeModalOnOverlay(event, 'editBoardModal')">
+            <div class="modal-box modal-box--boards-create" onclick="event.stopPropagation()">
+              <button type="button" class="mypage-boards-modal-back" onclick="closeEditBoardModal()">뒤로 가기</button>
+              <h3 class="mypage-boards-modal-title">게시판 수정하기</h3>
+              <p id="editBoardFormError" class="mypage-boards-form-error" role="alert"></p>
+              <form id="editBoardForm" method="POST" action="">
+                <input type="hidden" name="_method" value="PUT">
+                <div class="form-group">
+                  <label class="form-label" for="editBoardNameKo">게시판 이름 입력 (국문) <span class="required">*</span></label>
+                  <input type="text" id="editBoardNameKo" name="name" class="form-input" maxlength="120" autocomplete="off">
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="editBoardNameJa">게시판 이름 입력 (일본어) <span class="required">*</span></label>
+                  <input type="text" id="editBoardNameJa" name="name_ja" class="form-input" maxlength="120" autocomplete="off">
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="editBoardDesc">게시판에 대한 간단한 소개문 <span class="required">*</span></label>
+                  <textarea id="editBoardDesc" name="description" class="form-input" rows="4" maxlength="2000"></textarea>
+                </div>
+                <div class="mypage-boards-modal-submit-wrap">
+                  <button type="submit" class="btn-primary mypage-boards-submit-wide">수정 완료</button>
+                </div>
+              </form>
+            </div>
+          </div>
+
           <div id="boardDeleteConfirmModal" class="modal-overlay" style="display:none" onclick="closeModalOnOverlay(event, 'boardDeleteConfirmModal')">
             <div class="modal-box modal-box--narrow" onclick="event.stopPropagation()">
               <h3 class="modal-header" style="border:none;padding:0;margin:0 0 1rem;font-size:1.1rem">삭제하시겠습니까?</h3>
@@ -348,7 +405,7 @@
   <script src="/js/mypage-main-settings.js?v=20260433"></script>
   <% } %>
   <% if (activeTab === 'boardsManage') { %>
-  <script src="/js/mypage-boards.js?v=20260445"></script>
+  <script src="/js/mypage-boards.js?v=20260511"></script>
   <% } %>
 </body>
 </html>

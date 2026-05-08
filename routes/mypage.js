@@ -254,6 +254,9 @@ router.get(
   `,
       [BOARDS_ADMIN_PAGE_SIZE, offset]
     );
+    const allPostsCountRow = await db.get('SELECT COUNT(*) AS c FROM posts');
+    const boardsAllPostsCount =
+      allPostsCountRow && allPostsCountRow.c != null ? Number(allPostsCountRow.c) : 0;
     const boardsPaginationItems = buildPaginationItems(page, totalPages);
     const home = await getSiteHomeData();
     res.render(
@@ -263,6 +266,7 @@ router.get(
         ...home,
         activeTab: 'boardsManage',
         boardsList,
+        boardsAllPostsCount,
         boardsPage: page,
         boardsTotalPages: totalPages,
         boardsTotal: total,
@@ -271,7 +275,9 @@ router.get(
         boardsSaved: req.query.saved === '1',
         boardsDeleted: req.query.deleted === '1',
         boardsDeleteBlocked: req.query.deleteBlocked === '1',
-        boardsCreateErr: req.query.createErr === '1'
+        boardsCreateErr: req.query.createErr === '1',
+        boardsEditSaved: req.query.editSaved === '1',
+        boardsEditErr: req.query.editErr === '1'
       })
     );
   })

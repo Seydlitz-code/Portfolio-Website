@@ -1,5 +1,5 @@
 /**
- * 마이페이지 — 게시판 생성&삭제: 생성 모달, 삭제 확인·차단
+ * 마이페이지 — 게시판 생성·수정·삭제: 생성/수정 모달, 삭제 확인·차단
  */
 (function () {
   const LABEL_KO = '게시판 국문 이름';
@@ -35,6 +35,49 @@
     closeModal('createBoardModal');
   };
 
+  window.closeEditBoardModal = function () {
+    closeModal('editBoardModal');
+  };
+
+  function decodedAttr(btn, attr) {
+    const raw = btn.getAttribute(attr);
+    if (raw == null || raw === '') return '';
+    try {
+      return decodeURIComponent(raw);
+    } catch (e) {
+      return '';
+    }
+  }
+
+  window.openEditBoardModal = function (btnOrId) {
+    let btn = btnOrId;
+    if (typeof btnOrId === 'string' || typeof btnOrId === 'number') {
+      btn = document.querySelector('[data-board-edit="' + String(btnOrId) + '"]');
+    }
+    if (!btn) return;
+    const id = btn.getAttribute('data-board-edit');
+    if (!id) return;
+
+    const err = document.getElementById('editBoardFormError');
+    if (err) {
+      err.textContent = '';
+      err.style.display = 'none';
+    }
+
+    const form = document.getElementById('editBoardForm');
+    const nameKo = document.getElementById('editBoardNameKo');
+    const nameJa = document.getElementById('editBoardNameJa');
+    const desc = document.getElementById('editBoardDesc');
+    if (!form || !nameKo || !nameJa || !desc) return;
+
+    form.action = '/admin/projects/' + encodeURIComponent(id);
+    nameKo.value = decodedAttr(btn, 'data-name');
+    nameJa.value = decodedAttr(btn, 'data-name-ja');
+    desc.value = decodedAttr(btn, 'data-description');
+
+    openModal('editBoardModal');
+  };
+
   function validateCreateForm() {
     const err = document.getElementById('createBoardFormError');
     const name = (document.getElementById('createBoardNameKo') || {}).value;
@@ -53,10 +96,35 @@
     return false;
   }
 
+  function validateEditForm() {
+    const err = document.getElementById('editBoardFormError');
+    const name = (document.getElementById('editBoardNameKo') || {}).value;
+    const nameJa = (document.getElementById('editBoardNameJa') || {}).value;
+    const desc = (document.getElementById('editBoardDesc') || {}).value;
+    const missing = [];
+    if (!name || !String(name).trim()) missing.push(LABEL_KO);
+    if (!nameJa || !String(nameJa).trim()) missing.push(LABEL_JA);
+    if (!desc || !String(desc).trim()) missing.push(LABEL_DESC);
+    if (missing.length === 0) return true;
+    const part = missing.join(', ');
+    if (err) {
+      err.textContent = '(' + part + ')을(를) 작성하지 않아 게시판을 수정할 수 없습니다.';
+      err.style.display = 'block';
+    }
+    return false;
+  }
+
   const createForm = document.getElementById('createBoardForm');
   if (createForm) {
     createForm.addEventListener('submit', function (e) {
       if (!validateCreateForm()) e.preventDefault();
+    });
+  }
+
+  const editForm = document.getElementById('editBoardForm');
+  if (editForm) {
+    editForm.addEventListener('submit', function (e) {
+      if (!validateEditForm()) e.preventDefault();
     });
   }
 
@@ -91,6 +159,12 @@
     closeModal('boardDeleteBlockedModal');
     window.location.href = '/mypage/boards';
   };
+
+  document.querySelectorAll('[data-board-edit]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      window.openEditBoardModal(btn);
+    });
+  });
 
   document.querySelectorAll('[data-board-delete]').forEach(function (btn) {
     btn.addEventListener('click', function () {
