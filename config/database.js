@@ -14,9 +14,25 @@ const fs = require('fs');
  * 서버 환경변수 ADMIN_BOOTSTRAP_USERNAME, ADMIN_BOOTSTRAP_PASSWORD(평문·서버에서 bcrypt 해시)로
  * 최초 1명을 생성합니다. 선택: ADMIN_BOOTSTRAP_NICKNAME.
  * 프로덕션에서 관리자가 없는데 위 변수가 없으면 기동을 중단합니다.
+ *
+ * Postgres: `DATABASE_URL`(기본), 없으면 `POSTGRES_URL` 등 플랫폼별 변수를 순서대로 사용합니다.
  */
+function getDatabaseUrl() {
+  const candidates = [
+    process.env.DATABASE_URL,
+    process.env.POSTGRES_URL,
+    process.env.POSTGRES_PUBLIC_URL,
+    process.env.POSTGRES_PRIVATE_URL
+  ];
+  for (let i = 0; i < candidates.length; i++) {
+    const v = candidates[i];
+    if (v != null && String(v).trim() !== '') return String(v).trim();
+  }
+  return '';
+}
+
 function usePostgres() {
-  return Boolean(process.env.DATABASE_URL && String(process.env.DATABASE_URL).trim());
+  return Boolean(getDatabaseUrl());
 }
 
 function getDataDir() {
@@ -65,7 +81,7 @@ function getPool() {
   }
   if (!pgPool) {
     pgPool = new Pool({
-      connectionString: process.env.DATABASE_URL,
+      connectionString: getDatabaseUrl(),
       max: 20,
       idleTimeoutMillis: 30000,
       ssl:

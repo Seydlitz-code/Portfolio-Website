@@ -2,6 +2,7 @@ const express = require('express');
 const session = require('express-session');
 const methodOverride = require('method-override');
 const path = require('path');
+const fs = require('fs');
 const Database = require('better-sqlite3');
 const SqliteSessionStore = require('better-sqlite3-session-store')(session);
 const pgSession = require('connect-pg-simple')(session);
@@ -65,6 +66,9 @@ function buildSessionMiddleware() {
   }
 
   const dataDir = getDataDir();
+  if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir, { recursive: true });
+  }
   const sessionDbPath = path.join(dataDir, 'sessions.db');
   const sessionDb = new Database(sessionDbPath);
   sessionDb.pragma('journal_mode = WAL');
