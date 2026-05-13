@@ -1,6 +1,7 @@
 <header class="inner-header">
   <div class="inner-header-inner">
-    <a href="/" class="inner-logo"><%= typeof settings !== 'undefined' && settings && settings.site_name ? settings.site_name : 'Donghawan Lee / @lilip' %></a>
+    <% var __ilNm = ''; if (typeof sitePlainText === 'function' && typeof settings !== 'undefined' && settings && settings.site_name) { __ilNm = sitePlainText(settings.site_name); } %>
+    <a href="/" class="inner-logo"><%= __ilNm || 'Donghawan Lee / @lilip' %></a>
     <nav class="inner-nav inner-nav--cluster" aria-label="사용자 메뉴">
       <%- include('nav-cluster') %>
     </nav>

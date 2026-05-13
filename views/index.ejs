@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title><%= settings.site_name || 'Donghawan Lee / @lilip' %></title>
+  <title><% var __st = typeof sitePlainText === 'function' ? sitePlainText(settings.site_name) : ''; %><%= __st !== '' ? __st : 'Donghawan Lee / @lilip' %></title>
   <link rel="stylesheet" href="/css/style.css?v=20260513">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -31,10 +31,11 @@
       </div>
 
       <div class="hero-info">
-        <h1 class="hero-name"><%= settings.site_name || 'Donghawan Lee / @lilip' %></h1>
+        <% var __hn = typeof sanitizeSiteHtml === 'function' ? sanitizeSiteHtml(settings.site_name || '') : ''; %>
+        <h1 class="hero-name"><%- __hn !== '' ? __hn : 'Donghawan Lee / @lilip' %></h1>
         <div class="hero-bio-wrap">
-          <% if (settings.bio && settings.bio.trim()) { %>
-            <p class="hero-bio"><%= settings.bio %></p>
+          <% if (settings.bio && String(settings.bio).replace(/\s/g, '').length) { %>
+            <div class="hero-bio"><%- typeof sanitizeSiteHtml === 'function' ? sanitizeSiteHtml(settings.bio) : '' %></div>
           <% } %>
         </div>
         <div class="social-links">

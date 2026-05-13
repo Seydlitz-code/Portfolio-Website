@@ -6,6 +6,7 @@ const { requireAdmin } = require('../middleware/auth');
 const multer = require('multer');
 const { asyncRoute } = require('../lib/asyncRoute');
 const { upsertSiteProfileImage } = require('../lib/binaryAssets');
+const { sanitizePostHtml, stripHtmlToPlain } = require('../lib/postHtml');
 
 const router = express.Router();
 
@@ -73,8 +74,14 @@ router.post(
   requireAdmin,
   asyncRoute(async (req, res) => {
     const { site_name, bio } = req.body;
-    if (site_name !== undefined) await db.upsertSiteSetting('site_name', (site_name + '').trim());
-    if (bio !== undefined) await db.upsertSiteSetting('bio', (bio + '').trim());
+    if (site_name !== undefined) {
+      const sanitized = sanitizePostHtml(String(site_name));
+      if (!stripHtmlToPlain(sanitized).length) {
+        return res.status(400).send('메인 페이지 표기 이름은 비워둘 수 없습니다.');
+      }
+      await db.upsertSiteSetting('site_name', sanitized);
+    }
+    if (bio !== undefined) await db.upsertSiteSetting('bio', sanitizePostHtml(String(bio)));
     res.redirect('/mypage/main-settings?saved=1');
   })
 );

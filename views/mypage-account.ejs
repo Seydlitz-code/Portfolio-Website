@@ -195,13 +195,38 @@
               </div>
               <div class="mypage-main-settings-fields">
                 <div class="form-group">
-                  <label class="form-label" for="mypageMainSiteName">메인 페이지 표기 이름</label>
-                  <input type="text" name="site_name" id="mypageMainSiteName" class="form-input" required
-                         value="<%= settings.site_name || 'Donghawan Lee / @lilip' %>">
+                  <span class="form-label" id="mypageMainSiteNameLabel">메인 페이지 표기 이름</span>
+                  <div class="mypage-rich-stack" id="mypageRichStackSn" aria-labelledby="mypageMainSiteNameLabel">
+                    <%- include('partials/mypage-main-format-toolbar', { pfx: 'Sn' }) %>
+                    <div
+                      id="mypageEditorSn"
+                      class="post-editor-body mypage-main-rich-body mypage-main-rich-body--site"
+                      contenteditable="true"
+                      spellcheck="true"
+                      role="textbox"
+                      aria-multiline="true"
+                      aria-labelledby="mypageMainSiteNameLabel"
+                      data-placeholder="표기 이름을 입력하세요."
+                    ></div>
+                    <input type="hidden" name="site_name" id="mypageHiddenSn" class="mypage-main-rich-hidden" value="" aria-hidden="true">
+                  </div>
                 </div>
                 <div class="form-group">
-                  <label class="form-label" for="mypageMainBio">자기소개 · 이력</label>
-                  <textarea name="bio" id="mypageMainBio" class="form-input" rows="10" placeholder="내용을 입력하세요."><%= settings.bio || '' %></textarea>
+                  <span class="form-label" id="mypageMainBioLabel">자기소개 · 이력</span>
+                  <div class="mypage-rich-stack" id="mypageRichStackBio" aria-labelledby="mypageMainBioLabel">
+                    <%- include('partials/mypage-main-format-toolbar', { pfx: 'Bio' }) %>
+                    <div
+                      id="mypageEditorBio"
+                      class="post-editor-body mypage-main-rich-body mypage-main-rich-body--bio"
+                      contenteditable="true"
+                      spellcheck="true"
+                      role="textbox"
+                      aria-multiline="true"
+                      aria-labelledby="mypageMainBioLabel"
+                      data-placeholder="내용을 입력하세요."
+                    ></div>
+                    <input type="hidden" name="bio" id="mypageHiddenBio" class="mypage-main-rich-hidden" value="" aria-hidden="true">
+                  </div>
                 </div>
               </div>
             </section>
@@ -400,12 +425,13 @@
   <% if (activeTab === 'mainSettings') { %>
   <script>
     window.__MYPAGE_MAIN_SETTINGS__ = <%- JSON.stringify({
-      site_name: (settings && settings.site_name) ? settings.site_name : 'Donghawan Lee / @lilip',
-      bio: settings && settings.bio ? settings.bio : '',
+      site_name: typeof siteNameRecover !== 'undefined' && siteNameRecover != null ? siteNameRecover : ((settings && settings.site_name) ? settings.site_name : 'Donghawan Lee / @lilip'),
+      bio: typeof bioRecover !== 'undefined' && bioRecover != null ? bioRecover : (settings && settings.bio ? settings.bio : ''),
       profile_image: settings && settings.profile_image ? settings.profile_image : ''
     }) %>;
   </script>
-  <script src="/js/mypage-main-settings.js?v=20260433"></script>
+  <script src="/js/mypage-main-settings-rich.js?v=202605061"></script>
+  <script src="/js/mypage-main-settings.js?v=202605061"></script>
   <% } %>
   <% if (activeTab === 'boardsManage') { %>
   <script src="/js/mypage-boards.js?v=20260512"></script>
