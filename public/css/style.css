@@ -545,6 +545,12 @@ body.index-page .portfolio-section {
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
+  /* 긴 이력 텍스트 시 하단 스크롤 힌트와 겹치지 않도록 영역 제한 */
+  flex-shrink: 1;
+  min-height: 0;
+  max-height: calc(100vh - 7.5rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .profile-area {
@@ -665,16 +671,35 @@ body.index-page .portfolio-section {
   text-align: left;
 }
 
-.hero-bio p {
-  margin: 0.35em 0;
+/*
+ * 메인 설정 리치 에디터(contenteditable) 저장 HTML은 브라우저가 부여한
+ * margin / line-height 등이 인라인으로 붙는 경우가 많아, 여기서만 타이포를 고정한다.
+ * (!important: 인라인 스타일보다 우선해 과도한 줄간격을 제거)
+ */
+.hero-bio :where(p, div, pre, h1, h2, h3, h4, h5, h6) {
+  margin-block: 0 !important;
+  margin-inline: 0 !important;
+  line-height: inherit !important;
 }
 
-.hero-bio p:first-child {
-  margin-top: 0;
+.hero-bio
+  :where(p, div, pre, h1, h2, h3, h4, h5, h6)
+  + :where(p, div, pre, h1, h2, h3, h4, h5, h6) {
+  margin-top: 0.35em !important;
 }
 
-.hero-bio p:last-child {
-  margin-bottom: 0;
+.hero-bio :where(ul, ol) {
+  margin-block: 0 !important;
+  line-height: inherit !important;
+}
+
+.hero-bio li {
+  margin-block: 0 !important;
+  line-height: inherit !important;
+}
+
+.hero-bio li + li {
+  margin-top: 0.25em !important;
 }
 
 .bio-empty {
