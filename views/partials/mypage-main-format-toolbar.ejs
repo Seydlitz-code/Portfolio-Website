@@ -12,19 +12,9 @@
     <option value="'Gulim', 'Dotum', 'Malgun Gothic', sans-serif">굴림·돋움 계열</option>
     <option value="ui-monospace, 'Consolas', 'Malgun Gothic', monospace">고정폭</option>
   </select>
-  <div class="post-editor-fmt-size-wrap" id="mypageFmtFontSizeWrap<%= px %>">
-    <button type="button" id="mypageFmtFontSizeTrigger<%= px %>" class="post-editor-fmt-size-trigger" aria-haspopup="listbox" aria-expanded="false" title="글자 크기 (px)" aria-label="글자 크기 선택">
-      <span class="post-editor-fmt-size-trigger-value" id="mypageFmtFontSizeValue<%= px %>">10</span>
-      <i class="fas fa-chevron-down post-editor-fmt-size-trigger-chevron" aria-hidden="true"></i>
-    </button>
-    <div id="mypageFmtFontSizeMenu<%= px %>" class="post-editor-fmt-size-menu is-hidden" role="listbox" aria-label="글자 크기"></div>
-  </div>
   <span class="post-editor-fmt-div" aria-hidden="true"></span>
   <button type="button" class="post-editor-fmt-btn" data-cmd="bold" title="굵게 (Ctrl+B)">
     <i class="fas fa-bold" aria-hidden="true"></i>
-  </button>
-  <button type="button" class="post-editor-fmt-btn" data-cmd="italic" title="기울임 (Ctrl+I)">
-    <i class="fas fa-italic" aria-hidden="true"></i>
   </button>
   <button type="button" class="post-editor-fmt-btn" data-cmd="underline" title="밑줄 (Ctrl+U)">
     <i class="fas fa-underline" aria-hidden="true"></i>
@@ -56,14 +46,4 @@
     <input type="color" id="mypageFmtFgColorHidden<%= px %>" class="post-editor-color-native" value="#000000" aria-hidden="true" tabindex="-1" title="글자색 직접 선택">
     <input type="color" id="mypageFmtBgColorHidden<%= px %>" class="post-editor-color-native" value="#ffffff" aria-hidden="true" tabindex="-1" title="배경색 직접 선택">
   </div>
-  <span class="post-editor-fmt-div" aria-hidden="true"></span>
-  <button type="button" class="post-editor-fmt-btn" data-justify="left" title="왼쪽 정렬">
-    <i class="fas fa-align-left" aria-hidden="true"></i>
-  </button>
-  <button type="button" class="post-editor-fmt-btn" data-justify="center" title="가운데 정렬">
-    <i class="fas fa-align-center" aria-hidden="true"></i>
-  </button>
-  <button type="button" class="post-editor-fmt-btn" data-justify="right" title="오른쪽 정렬">
-    <i class="fas fa-align-right" aria-hidden="true"></i>
-  </button>
 </div>

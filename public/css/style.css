@@ -648,27 +648,43 @@ body.index-page .portfolio-section {
 
 .hero-name {
   font-family: 'Inter', sans-serif;
-  font-size: clamp(2.175rem, 4.275vw + 0.9rem, 4.5rem);
-  font-weight: 400;
+  font-size: 72px;
+  font-weight: 700;
   letter-spacing: -0.01em;
   color: var(--text-primary);
   line-height: 1.2;
   white-space: normal;
   word-break: break-word;
+  text-align: center;
 }
 
 .hero-name p {
   margin: 0;
 }
 
+.hero-name :where(p, div, span, font) {
+  font-size: 72px !important;
+  font-weight: 700 !important;
+  font-style: normal !important;
+  text-align: center !important;
+}
+
 .hero-bio {
-  font-size: clamp(1.425rem, 2.325vw, 1.68rem);
+  font-size: 18px;
+  font-weight: 700;
   color: var(--text-secondary);
   line-height: 1.7;
   white-space: normal;
   word-break: break-word;
   max-width: min(63rem, 100%);
   text-align: left;
+}
+
+.hero-bio :where(p, div, span, font, ul, ol, li) {
+  font-size: 18px !important;
+  font-weight: 700 !important;
+  font-style: normal !important;
+  text-align: left !important;
 }
 
 /*
@@ -700,6 +716,19 @@ body.index-page .portfolio-section {
 
 .hero-bio li + li {
   margin-top: 0.25em !important;
+}
+
+.hero-bio span,
+.hero-bio font {
+  line-height: inherit !important;
+}
+
+.hero-bio .post-editor-first-line {
+  min-height: 0 !important;
+}
+
+.hero-bio :where(div, p):has(> br:only-child) {
+  display: none !important;
 }
 
 .bio-empty {
@@ -3147,6 +3176,22 @@ body.register-crop-modal-open {
   min-height: 12rem;
 }
 
+.mypage-main-rich-body--site.post-editor-body,
+.mypage-main-rich-body--site.post-editor-body :where(p, div, span, font) {
+  font-size: 72px !important;
+  font-weight: 700 !important;
+  font-style: normal !important;
+  text-align: center !important;
+}
+
+.mypage-main-rich-body--bio.post-editor-body,
+.mypage-main-rich-body--bio.post-editor-body :where(p, div, span, font, ul, ol, li) {
+  font-size: 18px !important;
+  font-weight: 700 !important;
+  font-style: normal !important;
+  text-align: left !important;
+}
+
 .mypage-board-controls {
   margin: 0.5rem 0 1rem;
 }
@@ -5359,8 +5404,9 @@ p.post-heading-title--ja {
     height: 300px;
   }
 
-  .hero-name {
-    font-size: clamp(1.5rem, 6.3vw + 0.675rem, 2.775rem);
+  .hero-name,
+  .hero-name :where(p, div, span, font) {
+    font-size: clamp(2rem, 10vw, 72px) !important;
   }
 
   .name-display,

@@ -6,7 +6,7 @@ const { requireAdmin } = require('../middleware/auth');
 const multer = require('multer');
 const { asyncRoute } = require('../lib/asyncRoute');
 const { upsertSiteProfileImage } = require('../lib/binaryAssets');
-const { sanitizePostHtml, stripHtmlToPlain } = require('../lib/postHtml');
+const { sanitizePostHtml, sanitizeBioHtml, stripHtmlToPlain } = require('../lib/postHtml');
 
 const router = express.Router();
 
@@ -59,7 +59,7 @@ router.post(
       await db.upsertSiteSetting('site_name', v);
     }
     if (bio !== undefined) {
-      await db.upsertSiteSetting('bio', (bio + '').trim());
+      await db.upsertSiteSetting('bio', sanitizeBioHtml(String(bio).trim()));
     }
     if (req.file && req.file.buffer && req.file.buffer.length) {
       await upsertSiteProfileImage(req.file.buffer, req.file.mimetype);
@@ -81,7 +81,7 @@ router.post(
       }
       await db.upsertSiteSetting('site_name', sanitized);
     }
-    if (bio !== undefined) await db.upsertSiteSetting('bio', sanitizePostHtml(String(bio)));
+    if (bio !== undefined) await db.upsertSiteSetting('bio', sanitizeBioHtml(String(bio).trim()));
     res.redirect('/mypage/main-settings?saved=1');
   })
 );

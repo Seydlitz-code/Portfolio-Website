@@ -22,7 +22,7 @@ const notificationsRoutes = require('./routes/notifications');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const { sanitizePostHtml, stripHtmlToPlain } = require('./lib/postHtml');
+const { sanitizePostHtml, sanitizeBioHtml, stripHtmlToPlain } = require('./lib/postHtml');
 
 app.set('trust proxy', 1);
 
@@ -31,6 +31,7 @@ app.set('views', path.join(__dirname, 'views'));
 
 app.use((req, res, next) => {
   res.locals.sanitizeSiteHtml = sanitizePostHtml;
+  res.locals.sanitizeBioHtml = sanitizeBioHtml;
   res.locals.sitePlainText = function sitePlainText(html) {
     return stripHtmlToPlain(sanitizePostHtml(html || ''));
   };

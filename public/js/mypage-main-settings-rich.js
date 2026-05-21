@@ -4,8 +4,6 @@
 (function () {
   'use strict';
 
-  const FONT_SIZE_PRESETS = [8, 9, 10, 11, 12, 13, 14, 16, 18, 20, 22, 24, 26, 28, 30, 36, 42, 50, 72, 96];
-
   /** 색 격자 (게시글 편집기와 동일) */
   function colorSwatchList() {
     const rows = [
@@ -52,11 +50,45 @@
     return typeof str === 'string' && /<\s*[a-z][\s\S]*>/i.test(str);
   }
 
+  /** 브라우저가 끼워 넣은 빈 블록(<div><br></div> 등) — 텍스트상 빈 줄은 없어도 한 줄 높이 공간을 만든다 */
+  function stripBioVoidBlocks(root) {
+    function isVoidBlock(el) {
+      if (!el || !/^DIV|P$/i.test(el.tagName)) return false;
+      const clone = el.cloneNode(true);
+      clone.querySelectorAll('.post-editor-guide-inline').forEach(function (n) {
+        n.remove();
+      });
+      clone.querySelectorAll('br').forEach(function (n) {
+        n.remove();
+      });
+      const text = clone.textContent.replace(/\u200b/g, '').replace(/\ufeff/g, '').replace(/\u00a0/g, ' ').trim();
+      return text.length === 0;
+    }
+
+    var guard = 0;
+    while (guard < 64) {
+      guard += 1;
+      var removed = false;
+      Array.from(root.querySelectorAll('div, p'))
+        .reverse()
+        .forEach(function (el) {
+          if (isVoidBlock(el)) {
+            el.remove();
+            removed = true;
+          }
+        });
+      if (!removed) break;
+    }
+  }
+
   function syncEditorToHidden(editor, hidden) {
     const clone = editor.cloneNode(true);
     clone.querySelectorAll('.post-editor-guide-inline').forEach(function (n) {
       n.remove();
     });
+    if (editor && editor.id === 'mypageEditorBio') {
+      stripBioVoidBlocks(clone);
+    }
     hidden.value = clone.innerHTML;
   }
 
@@ -70,7 +102,7 @@
 
   function refreshFmtButtonStates(fmtBar, editor) {
     if (!fmtBar) return;
-    const cmds = ['bold', 'italic', 'underline', 'strikeThrough'];
+    const cmds = ['bold', 'underline', 'strikeThrough'];
     cmds.forEach(function (cmd) {
       const btn = fmtBar.querySelector('[data-cmd="' + cmd + '"]');
       if (!btn) return;
@@ -84,22 +116,6 @@
         btn.classList.remove('is-active');
       }
     });
-  }
-
-  function snapToPreset(px) {
-    const n = parseInt(px, 10);
-    if (Number.isNaN(n)) return 10;
-    let best = FONT_SIZE_PRESETS[0];
-    let bd = Infinity;
-    for (let i = 0; i < FONT_SIZE_PRESETS.length; i += 1) {
-      const p = FONT_SIZE_PRESETS[i];
-      const d = Math.abs(p - n);
-      if (d < bd) {
-        bd = d;
-        best = p;
-      }
-    }
-    return best;
   }
 
   const floatingApis = [];
@@ -122,10 +138,6 @@
 
     const fmtBar = document.getElementById('mypageFmtBar' + sx);
     const selFont = document.getElementById('mypageFmtFontFamily' + sx);
-    const sizeWrap = document.getElementById('mypageFmtFontSizeWrap' + sx);
-    const sizeTrigger = document.getElementById('mypageFmtFontSizeTrigger' + sx);
-    const sizeMenu = document.getElementById('mypageFmtFontSizeMenu' + sx);
-    const sizeValue = document.getElementById('mypageFmtFontSizeValue' + sx);
     const colorBtn = document.getElementById('mypageFmtColorBtn' + sx);
     const colorPanel = document.getElementById('mypageFmtColorPanel' + sx);
     const fgGrid = document.getElementById('mypageFmtFgGrid' + sx);
@@ -308,99 +320,6 @@
       }, 80);
     });
 
-    let selectedFontSizePxLocal = 10;
-
-    function closeFontSizeMenu() {
-      if (!sizeMenu || !sizeTrigger) return;
-      sizeMenu.classList.add('is-hidden');
-      sizeTrigger.setAttribute('aria-expanded', 'false');
-    }
-
-    function openFontSizeMenu() {
-      if (!sizeMenu || !sizeTrigger) return;
-      floatingApis.forEach(function (x) {
-        if (x !== api) x.closeFloaters();
-      });
-      sizeMenu.classList.remove('is-hidden');
-      sizeTrigger.setAttribute('aria-expanded', 'true');
-    }
-
-    function toggleFontSizeMenu() {
-      if (!sizeMenu) return;
-      if (sizeMenu.classList.contains('is-hidden')) openFontSizeMenu();
-      else closeFontSizeMenu();
-    }
-
-    function syncFontSizeMenuSelection() {
-      if (!sizeMenu) return;
-      sizeMenu.querySelectorAll('.post-editor-fmt-size-option').forEach(function (btn) {
-        const px = Number(btn.getAttribute('data-px'));
-        const sel = px === selectedFontSizePxLocal;
-        btn.setAttribute('aria-selected', sel ? 'true' : 'false');
-        btn.classList.toggle('is-selected', sel);
-      });
-    }
-
-    function setFontSizeDisplay(px) {
-      selectedFontSizePxLocal = snapToPreset(px);
-      if (sizeValue) sizeValue.textContent = String(selectedFontSizePxLocal);
-      syncFontSizeMenuSelection();
-    }
-
-    function applyFontSize(px) {
-      const p = FONT_SIZE_PRESETS.indexOf(px) >= 0 ? px : snapToPreset(px);
-      setFontSizeDisplay(p);
-      applyInlineStyleLocal('fontSize', p + 'px');
-      syncEditorToHidden(editor, hidden);
-    }
-
-    function buildFontSizeMenu() {
-      if (!sizeMenu) return;
-      sizeMenu.textContent = '';
-      const frag = document.createDocumentFragment();
-      FONT_SIZE_PRESETS.forEach(function (px) {
-        const b = document.createElement('button');
-        b.type = 'button';
-        b.className = 'post-editor-fmt-size-option';
-        b.setAttribute('role', 'option');
-        b.setAttribute('data-px', String(px));
-        b.setAttribute('aria-selected', 'false');
-        const check = document.createElement('span');
-        check.className = 'post-editor-fmt-size-option-check';
-        check.setAttribute('aria-hidden', 'true');
-        check.innerHTML = '<i class="fas fa-check"></i>';
-        const num = document.createElement('span');
-        num.className = 'post-editor-fmt-size-option-num';
-        num.textContent = String(px);
-        b.appendChild(check);
-        b.appendChild(num);
-        frag.appendChild(b);
-      });
-      sizeMenu.appendChild(frag);
-    }
-
-    if (sizeMenu && sizeTrigger && sizeValue) {
-      buildFontSizeMenu();
-      setFontSizeDisplay(10);
-      sizeTrigger.addEventListener('click', function (e) {
-        e.preventDefault();
-        e.stopPropagation();
-        toggleFontSizeMenu();
-      });
-      sizeMenu.addEventListener('click', function (e) {
-        const opt = e.target.closest('.post-editor-fmt-size-option');
-        if (!opt) return;
-        e.preventDefault();
-        const px = Number(opt.getAttribute('data-px'));
-        if (!Number.isFinite(px)) return;
-        restoreEditorSelection();
-        clearStoredSelection();
-        editor.focus();
-        applyFontSize(px);
-        closeFontSizeMenu();
-      });
-    }
-
     function closeColorPanelFn() {
       if (!colorPanel) return;
       colorPanel.classList.add('is-hidden');
@@ -412,7 +331,6 @@
       floatingApis.forEach(function (x) {
         if (x !== api) x.closeFloaters();
       });
-      closeFontSizeMenu();
       colorPanel.classList.remove('is-hidden');
       if (colorBtn) colorBtn.setAttribute('aria-expanded', 'true');
     }
@@ -463,9 +381,7 @@
       fmtBar.addEventListener('mousedown', function (e) {
         if (
           e.target.closest &&
-          (e.target.closest('button.post-editor-fmt-btn') ||
-            e.target.closest('[id^="mypageFmtColorBtn"]') ||
-            e.target.closest('[id^="mypageFmtFontSizeTrigger"]'))
+          (e.target.closest('button.post-editor-fmt-btn') || e.target.closest('[id^="mypageFmtColorBtn"]'))
         ) {
           e.preventDefault();
         }
@@ -478,14 +394,6 @@
           execRtfLocal(cmd);
           syncEditorToHidden(editor, hidden);
           refreshFmtButtonStates(fmtBar, editor);
-          return;
-        }
-        const jBtn = e.target.closest('[data-justify]');
-        if (jBtn) {
-          const j = jBtn.getAttribute('data-justify');
-          const map = { left: 'justifyLeft', center: 'justifyCenter', right: 'justifyRight' };
-          if (map[j]) execRtfLocal(map[j]);
-          syncEditorToHidden(editor, hidden);
         }
       });
     }
@@ -563,11 +471,6 @@
         execRtfLocal('bold');
         refreshFmtButtonStates(fmtBar, editor);
         syncEditorToHidden(editor, hidden);
-      } else if (k === 'i') {
-        e.preventDefault();
-        execRtfLocal('italic');
-        refreshFmtButtonStates(fmtBar, editor);
-        syncEditorToHidden(editor, hidden);
       } else if (k === 'u') {
         e.preventDefault();
         execRtfLocal('underline');
@@ -582,7 +485,6 @@
       hidden: hidden,
       closeColorPanel: closeColorPanelFn,
       closeFloaters: function () {
-        closeFontSizeMenu();
         closeColorPanelFn();
       }
     };
