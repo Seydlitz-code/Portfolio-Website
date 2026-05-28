@@ -216,10 +216,30 @@
         sel.addRange(range);
       }
     }
+    var TOGGLE_CMDS_LOCAL = ['bold', 'italic', 'underline', 'strikeThrough'];
+
     function execRtfLocal(cmd, val) {
       restoreEditorSelection();
       clearStoredSelection();
       editor.focus();
+      if (TOGGLE_CMDS_LOCAL.indexOf(cmd) >= 0 && val === undefined) {
+        try {
+          document.execCommand('styleWithCSS', false, false);
+        } catch (_e1) {
+          /* ignore */
+        }
+        try {
+          document.execCommand(cmd, false, null);
+        } catch (_e3) {
+          /* ignore */
+        }
+        try {
+          document.execCommand('styleWithCSS', false, true);
+        } catch (_e4) {
+          /* ignore */
+        }
+        return;
+      }
       try {
         document.execCommand('styleWithCSS', false, true);
       } catch (_e1) {

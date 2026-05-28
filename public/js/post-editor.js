@@ -193,10 +193,30 @@
     }
   }
 
+  var TOGGLE_CMDS = ['bold', 'italic', 'underline', 'strikeThrough'];
+
   function execRtf(editor, cmd, val) {
     restoreEditorSelection(editor);
     clearStoredSelection();
     editor.focus();
+    if (TOGGLE_CMDS.indexOf(cmd) >= 0 && val === undefined) {
+      try {
+        document.execCommand('styleWithCSS', false, false);
+      } catch (e1) {
+        /* ignore */
+      }
+      try {
+        document.execCommand(cmd, false, null);
+      } catch (e3) {
+        /* ignore */
+      }
+      try {
+        document.execCommand('styleWithCSS', false, true);
+      } catch (e4) {
+        /* ignore */
+      }
+      return;
+    }
     try {
       document.execCommand('styleWithCSS', false, true);
     } catch (e1) {
