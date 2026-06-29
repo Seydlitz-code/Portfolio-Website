@@ -164,8 +164,21 @@ function scrollToPortfolio(event) {
     event.preventDefault();
     event.stopPropagation();
   }
-  var portfolio = document.getElementById('portfolio');
-  if (portfolio) {
-    portfolio.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  var hero = document.getElementById('hero');
+  var topnav = document.getElementById('topnav');
+  if (!hero) {
+    window.scrollTo({ top: window.innerHeight, behavior: 'smooth' });
+    return;
   }
+  var headerHeight = 56;
+  if (topnav) {
+    var hadDock = topnav.classList.contains('topnav--dock-phase');
+    topnav.classList.add('topnav--dock-phase');
+    void topnav.offsetHeight;
+    headerHeight = topnav.offsetHeight;
+    if (!hadDock) topnav.classList.remove('topnav--dock-phase');
+  }
+  headerHeight = Math.max(Math.round(headerHeight), 48);
+  var targetTop = Math.max(0, hero.offsetHeight - headerHeight);
+  window.scrollTo({ top: targetTop, behavior: 'smooth' });
 }
