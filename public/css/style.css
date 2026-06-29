@@ -901,7 +901,14 @@ body.index-page .portfolio-section {
   gap: 0.4rem;
   font-size: 0.75rem;
   color: var(--text-muted);
-  pointer-events: none;
+  cursor: pointer;
+  pointer-events: auto;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: color var(--transition);
+}
+.scroll-down-hint:hover {
+  color: var(--accent);
 }
 
 .bounce {

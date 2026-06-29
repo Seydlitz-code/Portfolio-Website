@@ -36,7 +36,7 @@
   }
 
   if (indexPage) {
-    let heroSnapLockUntil = 0;
+    var heroSnapLockUntil = 0;
     window.addEventListener(
       'wheel',
       function (e) {
@@ -55,6 +55,99 @@
       },
       { passive: false }
     );
+
+    /* ---- upward scroll assist: portfolio-top lock → hero snap ---- */
+    var upwardLockedAtBreakpoint = false;
+    var upwardLockThrottleUntil = 0;
+    var upLastKnownY = window.scrollY;
+    var BREAKPOINT_ZONE = 80;
+
+    window.addEventListener('scroll', function () {
+      upLastKnownY = window.scrollY;
+    }, { passive: true });
+
+    window.addEventListener('resize', function () {
+      upwardLockedAtBreakpoint = false;
+    }, { passive: true });
+
+    window.addEventListener(
+      'wheel',
+      function (e) {
+        if (e.deltaY >= 0) {
+          upwardLockedAtBreakpoint = false;
+          return;
+        }
+
+        var y = window.scrollY;
+        var vh = window.innerHeight;
+        var bar = measureDockedTopnavHeight();
+        var breakPointY = Math.max(0, hero.offsetHeight - bar);
+
+        if (y >= vh + 6) {
+          upwardLockedAtBreakpoint = false;
+        }
+
+        var now = performance.now();
+        if (now < upwardLockThrottleUntil) return;
+
+        if (upwardLockedAtBreakpoint && Math.abs(y - breakPointY) < 4) {
+          upwardLockedAtBreakpoint = false;
+          upwardLockThrottleUntil = now + 800;
+          e.preventDefault();
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+          return;
+        }
+
+        if (!upwardLockedAtBreakpoint && y > breakPointY && y <= breakPointY + BREAKPOINT_ZONE) {
+          upwardLockedAtBreakpoint = true;
+          upwardLockThrottleUntil = now + 500;
+          e.preventDefault();
+          window.scrollTo({ top: breakPointY, behavior: 'smooth' });
+          return;
+        }
+
+        if (y < breakPointY) {
+          upwardLockedAtBreakpoint = false;
+        }
+      },
+      { passive: false }
+    );
+
+    /* ---- touch: upward scroll assist ---- */
+    var touchStartY = 0;
+    var touchStartScrollY = 0;
+
+    window.addEventListener('touchstart', function (e) {
+      if (e.touches.length === 1) {
+        touchStartY = e.touches[0].clientY;
+        touchStartScrollY = window.scrollY;
+      }
+    }, { passive: true });
+
+    window.addEventListener('touchend', function () {
+      var y = window.scrollY;
+      var bar = measureDockedTopnavHeight();
+      var breakPointY = Math.max(0, hero.offsetHeight - bar);
+      var dist = touchStartScrollY - y;
+
+      if (dist < 4) return;
+
+      if (upwardLockedAtBreakpoint && Math.abs(y - breakPointY) < 4) {
+        upwardLockedAtBreakpoint = false;
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+
+      if (!upwardLockedAtBreakpoint && y > breakPointY && y <= breakPointY + BREAKPOINT_ZONE) {
+        upwardLockedAtBreakpoint = true;
+        window.scrollTo({ top: breakPointY, behavior: 'smooth' });
+        return;
+      }
+
+      if (y < breakPointY) {
+        upwardLockedAtBreakpoint = false;
+      }
+    }, { passive: true });
   }
 })();
 
@@ -64,4 +157,15 @@ function scrollToHero(event) {
     event.stopPropagation();
   }
   window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function scrollToPortfolio(event) {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+  var portfolio = document.getElementById('portfolio');
+  if (portfolio) {
+    portfolio.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
 }
