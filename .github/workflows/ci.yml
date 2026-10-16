@@ -1,0 +1,127 @@
+# CI: master(Railway 자동 배포 브랜치)에 들어가기 전에 작업 브랜치·PR에서 검사한다.
+#  1) merge-check  : 최신 master와 병합 충돌이 없는지
+#  2) static       : JS 문법·EJS 컴파일·운영 의존성 보안 감사
+#  3) integration  : 실제 서버 기동 후 HTTP 통합 테스트 (SQLite / PostgreSQL × Node 20 / 22)
+#  4) browser      : 헤드리스 Chrome으로 JS 오류·CSP 위반·작성 흐름 (PostgreSQL)
+# master 직접 push에서는 돌지 않는다(배포 브랜치는 PR로만 갱신하는 흐름을 전제).
+name: CI
+
+on:
+  push:
+    branches-ignore: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  merge-check:
+    name: master 병합 충돌 검사
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: 최신 master와 시험 병합
+        run: |
+          git config user.name "ci"
+          git config user.email "ci@users.noreply.github.com"
+          git fetch --no-tags origin master
+          behind=$(git rev-list --count HEAD..origin/master)
+          echo "master보다 뒤처진 커밋: ${behind}"
+          if git merge --no-commit --no-ff origin/master; then
+            echo "충돌 없음"
+            git merge --abort 2>/dev/null || true
+          else
+            echo "::error::master와 병합 충돌이 있습니다. 충돌 파일:"
+            git diff --name-only --diff-filter=U
+            exit 1
+          fi
+
+  static:
+    name: 정적 검사·의존성 감사
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: JS 문법 + EJS 컴파일
+        run: npm run lint
+      - name: 운영 의존성 보안 감사 (high 이상이면 실패)
+        run: npm audit --omit=dev --audit-level=high
+
+  integration:
+    name: 통합 테스트 (${{ matrix.db }}, Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        db: [sqlite, postgres]
+        node: [20, 22]
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: portfolio_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci
+      - name: 테스트
+        env:
+          TEST_DATABASE_URL: ${{ matrix.db == 'postgres' && 'postgres://postgres:postgres@127.0.0.1:5432/portfolio_test' || '' }}
+        run: npm test
+
+  browser:
+    name: 브라우저 테스트 (Chrome, postgres)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: portfolio_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Chrome 경로 확인
+        run: |
+          CHROME="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium)"
+          echo "Chrome: ${CHROME}"
+          "${CHROME}" --version
+          echo "CHROME_PATH=${CHROME}" >> "$GITHUB_ENV"
+      - name: 테스트
+        env:
+          TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/portfolio_test
+        run: npm run test:browser
