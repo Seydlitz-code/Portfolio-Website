@@ -53,10 +53,13 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
+      - id: install
+        run: npm ci
       - name: JS 문법 + EJS 컴파일
         run: npm run lint
       - name: 운영 의존성 보안 감사 (high 이상이면 실패)
+        # 문법 검사가 실패해도 감사 결과까지 한 번에 보이도록 계속 실행 (npm ci 실패 시는 제외)
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: npm audit --omit=dev --audit-level=high
 
   integration:
