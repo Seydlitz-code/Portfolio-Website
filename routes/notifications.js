@@ -7,6 +7,8 @@ const {
   firstImageSrcFromPostBody,
   excerptText
 } = require('../lib/commentNotifications');
+const { parseId } = require('../lib/ids');
+const { toIsoUtc } = require('../lib/listingHelpers');
 
 router.get(
   '/notifications',
@@ -54,7 +56,7 @@ router.get(
           r.actor_avatar != null && String(r.actor_avatar).trim()
             ? String(r.actor_avatar).trim()
             : '/media/user/' + aid + '/avatar',
-        createdAt: r.n_created_at != null ? r.n_created_at : r.comment_created_at,
+        createdAt: toIsoUtc(r.n_created_at != null ? r.n_created_at : r.comment_created_at),
         unread: r.read_at == null
       };
     });
@@ -83,8 +85,8 @@ router.post(
   requireAdmin,
   asyncRoute(async (req, res) => {
     const recipientId = Number(req.session.user.id);
-    const nid = Number(req.params.notificationId);
-    if (!Number.isFinite(nid) || nid < 1) return res.status(400).json({ error: 'invalid id' });
+    const nid = parseId(req.params.notificationId);
+    if (nid == null) return res.status(400).json({ error: 'invalid id' });
 
     await db.run(
       `UPDATE comment_notifications SET read_at = CURRENT_TIMESTAMP WHERE id = ? AND recipient_user_id = ? AND read_at IS NULL`,

@@ -3,41 +3,63 @@ const multer = require('multer');
 const router = express.Router();
 const db = require('../lib/db');
 const { requireAdmin, requireLogin, isUserAdmin } = require('../middleware/auth');
-const { getSiteSettings } = require('../lib/siteData');
+const { getSiteSettings, POST_GLOBAL_NUM_JOIN, enrichListPostRow } = require('../lib/siteData');
 const {
+  toIsoUtc,
   formatListTime,
+  formatCommentDateTime,
+  isEditedAfterCreate,
   buildPaginationItems,
-  truncatePostTitleLine,
   truncateBoardNameLine,
   LIST_BOARD_NAME_ALL_POSTS_MAX
 } = require('../lib/listingHelpers');
-
-function isPostEdited(createdAt, updatedAt) {
-  if (!createdAt || !updatedAt) return false;
-  const c = new Date(createdAt).getTime();
-  const u = new Date(updatedAt).getTime();
-  if (Number.isNaN(c) || Number.isNaN(u)) return false;
-  return u - c > 2000;
-}
 const { asyncRoute } = require('../lib/asyncRoute');
 const { sanitizeMypageWritingsNext } = require('../lib/mypageWritings');
 const { createCommentNotification } = require('../lib/commentNotifications');
 const { sanitizePostHtml, isPostContentMeaningful, postContentLooksLikeHtml } = require('../lib/postHtml');
+const { parseId, idParam } = require('../lib/ids');
+const { extractAssetIds, deleteAssetsIfUnreferenced } = require('../lib/postAssets');
+const { verifiedMime, IMAGE_MIMES, VIDEO_MIMES } = require('../lib/fileSniff');
 
 const ALL_POSTS_PAGE_SIZE = 200;
 
-function formatCommentDateTime(iso) {
-  if (!iso) return '';
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '';
-  return d.toLocaleString('ko-KR', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false
-  });
+router.param('id', idParam('게시물을 찾을 수 없습니다.'));
+router.param('postId', idParam('게시물을 찾을 수 없습니다.'));
+router.param('commentId', idParam('댓글을 찾을 수 없습니다.'));
+
+/*
+ * 조회수: 같은 방문자(IP)가 같은 글을 30분 안에 다시 열면 증가하지 않음.
+ * 단일 인스턴스 메모리 기준이며, 항목 수가 많아지면 오래된 것부터 비운다.
+ */
+const VIEW_DEDUPE_MS = 30 * 60 * 1000;
+const VIEW_DEDUPE_MAX_KEYS = 50000;
+const recentViews = new Map();
+
+function shouldCountView(req, postId) {
+  const key = `${req.ip}|${postId}`;
+  const now = Date.now();
+  const last = recentViews.get(key);
+  if (last != null && now - last < VIEW_DEDUPE_MS) return false;
+  /* 갱신 시 delete 후 set 하므로 Map 순서 = 오래된 순 */
+  recentViews.delete(key);
+  if (recentViews.size >= VIEW_DEDUPE_MAX_KEYS) {
+    for (const k of recentViews.keys()) {
+      recentViews.delete(k);
+      if (recentViews.size < VIEW_DEDUPE_MAX_KEYS * 0.9) break;
+    }
+  }
+  recentViews.set(key, now);
+  return true;
+}
+
+/** 수정 폼의 project_id: 빈 값은 분류 없음(null), 그 외엔 실제 존재하는 게시판만 */
+async function resolveEditProjectId(raw) {
+  const s = raw != null ? String(raw).trim() : '';
+  if (s === '') return { ok: true, project_id: null };
+  const id = parseId(s);
+  if (id == null) return { ok: false };
+  const row = await db.get('SELECT id FROM projects WHERE id = ?', [id]);
+  return row ? { ok: true, project_id: id } : { ok: false };
 }
 
 /** express.urlencoded가 같은 키를 배열로 줄 때, 비어 있지 않은 값 중 마지막을 택함 */
@@ -162,8 +184,12 @@ router.post(
     if (!req.file || !req.file.buffer || !req.file.buffer.length) {
       return res.status(400).json({ error: '파일이 없습니다.' });
     }
+    const mime = verifiedMime(req.file.buffer, IMAGE_MIMES.concat(VIDEO_MIMES));
+    if (!mime) {
+      return res.status(400).json({ error: '파일 내용이 JPEG, PNG, GIF, WEBP 이미지나 MP4, WEBM 동영상 형식이 아닙니다.' });
+    }
     const ins = await db.run('INSERT INTO post_body_assets (mime, data) VALUES (?, ?)', [
-      req.file.mimetype,
+      mime,
       req.file.buffer
     ]);
     const id = ins.lastInsertRowid;
@@ -191,15 +217,9 @@ router.get(
     SELECT p.*, pr.name as project_name, pr.name_ja as project_name_ja,
       (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id) AS comment_count,
       u.nickname AS author_nickname,
-      (
-        (SELECT COUNT(*) FROM posts) -
-        (
-          SELECT COUNT(*) FROM posts p2
-          WHERE (p2.created_at > p.created_at)
-             OR (p2.created_at = p.created_at AND p2.id > p.id)
-        )
-      ) AS global_num
+      g.global_num
     FROM posts p
+    ${POST_GLOBAL_NUM_JOIN}
     LEFT JOIN projects pr ON p.project_id = pr.id
     LEFT JOIN users u ON p.author_id = u.id
     ORDER BY p.created_at DESC, p.id DESC
@@ -209,13 +229,7 @@ router.get(
     );
 
     const posts = rows.map((p) => ({
-      ...p,
-      display_time: formatListTime(p.created_at),
-      view_count: p.view_count != null ? Number(p.view_count) : 0,
-      comment_count: p.comment_count != null ? Number(p.comment_count) : 0,
-      global_num: p.global_num != null ? Number(p.global_num) : 0,
-      title_ko_short: truncatePostTitleLine(p.title),
-      title_ja_short: truncatePostTitleLine(p.title_ja != null ? p.title_ja : ''),
+      ...enrichListPostRow(p),
       project_name_ko_short: truncateBoardNameLine(p.project_name || '', LIST_BOARD_NAME_ALL_POSTS_MAX),
       project_name_ja_short: truncateBoardNameLine(
         p.project_name_ja != null ? String(p.project_name_ja) : '',
@@ -388,21 +402,22 @@ router.put(
     const content = sanitizePostHtml(contentRaw);
     const { project_id } = req.body;
 
-    if (!titleKo || !isPostContentMeaningful(content)) {
+    const existing = await db.get('SELECT id, content FROM posts WHERE id = ?', [req.params.id]);
+    if (!existing) return res.status(404).render('error', { code: 404, message: '게시물을 찾을 수 없습니다.' });
+
+    const projectResolved = await resolveEditProjectId(project_id);
+
+    if (!titleKo || !isPostContentMeaningful(content) || !projectResolved.ok) {
       const post = await db.get('SELECT * FROM posts WHERE id = ?', [req.params.id]);
       const projects = await db.all('SELECT * FROM projects ORDER BY order_num ASC');
-      return res.render('post-form', {
-        post: post || {
-          id: req.params.id,
-          title: titleKo,
-          title_ja: titleJa,
-          content: contentRaw,
-          project_id: project_id || null
-        },
+      return res.status(400).render('post-form', {
+        post,
         projects,
         formAction: `/posts/${req.params.id}?_method=PUT`,
         formMethod: 'POST',
-        error: '국문 제목과 본문(또는 첨부 미디어)을 입력해주세요.',
+        error: !projectResolved.ok
+          ? '게시판 정보가 올바르지 않습니다. 다시 선택해주세요.'
+          : '국문 제목과 본문(또는 첨부 미디어)을 입력해주세요.',
         settings: await getSiteSettings(),
         cancelHref: `/posts/${req.params.id}`,
         defaultProjectId: pickDefaultProjectId(projects, project_id),
@@ -416,8 +431,12 @@ router.put(
 
     await db.run(
       'UPDATE posts SET title = ?, title_ja = ?, content = ?, project_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-      [titleKo, titleJa, content, project_id || null, req.params.id]
+      [titleKo, titleJa, content, projectResolved.project_id, req.params.id]
     );
+    /* 수정으로 본문에서 빠진 첨부 미디어 정리 */
+    const kept = extractAssetIds(content);
+    const dropped = [...extractAssetIds(existing.content)].filter((id) => !kept.has(id));
+    await deleteAssetsIfUnreferenced(dropped);
     res.redirect(`/posts/${req.params.id}`);
   })
 );
@@ -426,7 +445,7 @@ router.delete(
   '/:id',
   requireLogin,
   asyncRoute(async (req, res) => {
-    const post = await db.get('SELECT author_id FROM posts WHERE id = ?', [req.params.id]);
+    const post = await db.get('SELECT author_id, content FROM posts WHERE id = ?', [req.params.id]);
     if (!post) {
       return res.status(404).render('error', { code: 404, message: '게시물을 찾을 수 없습니다.' });
     }
@@ -435,8 +454,10 @@ router.delete(
     if (!isOwner && !isAdm) {
       return res.status(403).render('error', { code: 403, message: '이 게시물을 삭제할 권한이 없습니다.' });
     }
+    await db.run('DELETE FROM comment_notifications WHERE post_id = ?', [req.params.id]);
     await db.run('DELETE FROM comments WHERE post_id = ?', [req.params.id]);
     await db.run('DELETE FROM posts WHERE id = ?', [req.params.id]);
+    await deleteAssetsIfUnreferenced(extractAssetIds(post.content));
     const nextSafe = sanitizeMypageWritingsNext(req.body && req.body.next != null ? req.body.next : '');
     if (nextSafe) return res.redirect(nextSafe);
     res.redirect('/posts');
@@ -463,8 +484,11 @@ router.get(
 
     if (!post) return res.status(404).render('error', { code: 404, message: '게시물을 찾을 수 없습니다.' });
 
-    await db.run('UPDATE posts SET view_count = COALESCE(view_count, 0) + 1 WHERE id = ?', [req.params.id]);
-    post.view_count = (post.view_count != null ? Number(post.view_count) : 0) + 1;
+    post.view_count = post.view_count != null ? Number(post.view_count) : 0;
+    if (shouldCountView(req, req.params.id)) {
+      await db.run('UPDATE posts SET view_count = COALESCE(view_count, 0) + 1 WHERE id = ?', [req.params.id]);
+      post.view_count += 1;
+    }
 
     const comments = await db.all(
       `
@@ -472,7 +496,7 @@ router.get(
     FROM comments c
     LEFT JOIN users u ON c.user_id = u.id
     WHERE c.post_id = ?
-    ORDER BY c.created_at ASC
+    ORDER BY c.created_at ASC, c.id ASC
   `,
       [req.params.id]
     );
@@ -481,10 +505,11 @@ router.get(
       c.id = Number(c.id);
       c.user_id = Number(c.user_id);
       c.post_id = Number(c.post_id);
-      const edited = isPostEdited(c.created_at, c.updated_at);
+      const edited = isEditedAfterCreate(c.created_at, c.updated_at);
       c.comment_edited = edited;
-      c.display_time_line =
-        formatCommentDateTime(c.updated_at || c.created_at) + (edited ? ' (수정)' : '');
+      c.display_time_iso = toIsoUtc(c.updated_at || c.created_at);
+      c.display_time_suffix = edited ? ' (수정)' : '';
+      c.display_time_line = formatCommentDateTime(c.updated_at || c.created_at) + c.display_time_suffix;
     });
 
     res.render('post', {
@@ -495,7 +520,9 @@ router.get(
       contentAsHtml: postContentLooksLikeHtml(post.content),
       postDisplayCreated: formatListTime(post.created_at),
       postDisplayUpdated: formatListTime(post.updated_at),
-      postEdited: isPostEdited(post.created_at, post.updated_at)
+      postCreatedIso: toIsoUtc(post.created_at),
+      postUpdatedIso: toIsoUtc(post.updated_at),
+      postEdited: isEditedAfterCreate(post.created_at, post.updated_at)
     });
   })
 );
@@ -509,8 +536,12 @@ router.post(
 
     const postId = Number(req.params.id);
     const userId = Number(req.session.user.id);
-    if (!Number.isFinite(postId) || postId < 1 || !Number.isFinite(userId) || userId < 1) {
-      return res.redirect('/auth/login?next=' + encodeURIComponent(req.originalUrl || '/posts'));
+    if (!Number.isFinite(userId) || userId < 1) {
+      return res.redirect('/auth/login?next=' + encodeURIComponent(`/posts/${postId}`));
+    }
+    const postExists = await db.get('SELECT id FROM posts WHERE id = ?', [postId]);
+    if (!postExists) {
+      return res.status(404).render('error', { code: 404, message: '게시물을 찾을 수 없습니다.' });
     }
 
     /*

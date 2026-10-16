@@ -41,10 +41,14 @@
     }
   }
 
+  /* 텍스트·속성값 공용 이스케이프 (속성 안에 들어가므로 따옴표까지 처리) */
   function escapeHtml(s) {
-    var d = document.createElement('div');
-    d.textContent = s != null ? String(s) : '';
-    return d.innerHTML;
+    return String(s != null ? s : '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 
   function formatWhen(iso) {

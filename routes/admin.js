@@ -7,6 +7,8 @@ const multer = require('multer');
 const { asyncRoute } = require('../lib/asyncRoute');
 const { upsertSiteProfileImage } = require('../lib/binaryAssets');
 const { sanitizePostHtml, sanitizeBioHtml, stripHtmlToPlain } = require('../lib/postHtml');
+const { parseId } = require('../lib/ids');
+const { verifiedMime, IMAGE_MIMES } = require('../lib/fileSniff');
 
 const router = express.Router();
 
@@ -53,16 +55,38 @@ router.post(
       });
     }
 
+    const renderApplyError = async (message) => {
+      const shell = await getAccountShell(req);
+      if (!shell) return res.status(400).send(message);
+      const home = await getSiteHomeData();
+      return res.status(400).render('mypage-account', {
+        ...shell,
+        ...home,
+        activeTab: 'mainSettings',
+        saved: false,
+        errMessage: message
+      });
+    };
+
+    let imageMime = null;
+    if (req.file && req.file.buffer && req.file.buffer.length) {
+      imageMime = verifiedMime(req.file.buffer, IMAGE_MIMES);
+      if (!imageMime) return renderApplyError('이미지 파일(JPG, PNG, GIF, WEBP)만 업로드 가능합니다.');
+    }
+
     const { site_name, bio } = req.body;
     if (site_name !== undefined) {
-      const v = (site_name + '').trim();
-      await db.upsertSiteSetting('site_name', v);
+      const sanitized = sanitizePostHtml(String(site_name).trim());
+      if (!stripHtmlToPlain(sanitized).length) {
+        return renderApplyError('메인 페이지 표기 이름은 비워둘 수 없습니다.');
+      }
+      await db.upsertSiteSetting('site_name', sanitized);
     }
     if (bio !== undefined) {
       await db.upsertSiteSetting('bio', sanitizeBioHtml(String(bio).trim()));
     }
-    if (req.file && req.file.buffer && req.file.buffer.length) {
-      await upsertSiteProfileImage(req.file.buffer, req.file.mimetype);
+    if (imageMime) {
+      await upsertSiteProfileImage(req.file.buffer, imageMime);
       await db.upsertSiteSetting('profile_image', '/media/site/profile-image');
     }
     res.redirect('/mypage/main-settings?saved=1');
@@ -98,7 +122,9 @@ router.post(
     if (!req.file || !req.file.buffer || !req.file.buffer.length) {
       return res.redirect('/mypage/main-settings');
     }
-    await upsertSiteProfileImage(req.file.buffer, req.file.mimetype);
+    const mime = verifiedMime(req.file.buffer, IMAGE_MIMES);
+    if (!mime) return res.status(400).send('이미지 파일(JPG, PNG, GIF, WEBP)만 업로드 가능합니다.');
+    await upsertSiteProfileImage(req.file.buffer, mime);
     await db.upsertSiteSetting('profile_image', '/media/site/profile-image');
     res.redirect('/mypage/main-settings?saved=1');
   })
@@ -130,9 +156,8 @@ router.put(
   '/projects/:id',
   requireAdmin,
   asyncRoute(async (req, res) => {
-    const idRaw = req.params.id;
-    const id = parseInt(idRaw, 10);
-    if (!Number.isFinite(id) || id < 1) {
+    const id = parseId(req.params.id);
+    if (id == null) {
       return res.redirect('/mypage/boards?editErr=1');
     }
     const row = await db.get('SELECT id FROM projects WHERE id = ?', [id]);
@@ -159,7 +184,8 @@ router.delete(
   '/projects/:id',
   requireAdmin,
   asyncRoute(async (req, res) => {
-    const id = req.params.id;
+    const id = parseId(req.params.id);
+    if (id == null) return res.redirect('/mypage/boards');
     const row = await db.get('SELECT COUNT(*) as c FROM posts WHERE project_id = ?', [id]);
     const cnt = row && row.c != null ? Number(row.c) : 0;
     if (cnt > 0) {

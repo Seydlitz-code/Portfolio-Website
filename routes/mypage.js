@@ -10,6 +10,7 @@ const { getSiteHomeData, getSiteSettings } = require('../lib/siteData');
 const { formatListTime, buildPaginationItems } = require('../lib/listingHelpers');
 const { asyncRoute } = require('../lib/asyncRoute');
 const { writingsListUrl, writingsCommentsOnlyUrl, commentPreviewParts, buildWritingsPager } = require('../lib/mypageWritings');
+const { verifiedMime, IMAGE_MIMES } = require('../lib/fileSniff');
 
 const uploadAvatar = multer({
   storage: multer.memoryStorage(),
@@ -20,6 +21,17 @@ const uploadAvatar = multer({
   },
   limits: { fileSize: 3 * 1024 * 1024 }
 });
+
+/**
+ * 세션은 있는데 DB에서 사용자가 사라진 경우(삭제된 계정 등): 세션을 끝내고 로그인 화면으로.
+ * (로그아웃은 POST 전용이라 GET /auth/logout으로 보내면 404가 났음)
+ */
+function endStaleSession(req, res) {
+  req.session.destroy(() => {
+    res.clearCookie('portfolio.sid');
+    res.redirect('/auth/login');
+  });
+}
 
 function runUploadAvatar(req, res) {
   return new Promise((resolve, reject) => {
@@ -91,7 +103,7 @@ async function postsPayload(req, extras) {
     FROM posts p
     LEFT JOIN projects pr ON p.project_id = pr.id
     WHERE p.author_id = ?
-    ORDER BY p.created_at DESC
+    ORDER BY p.created_at DESC, p.id DESC
     LIMIT ? OFFSET ?
   `,
       [uid, MY_WRITINGS_PAGE, postsOffset]
@@ -117,7 +129,7 @@ async function postsPayload(req, extras) {
     FROM comments c
     JOIN posts p ON p.id = c.post_id
     WHERE c.user_id = ?
-    ORDER BY c.created_at DESC
+    ORDER BY c.created_at DESC, c.id DESC
     LIMIT ? OFFSET ?
   `,
     [uid, MY_WRITINGS_PAGE, commentsOffset]
@@ -186,7 +198,7 @@ router.get(
     const data = await profilePayload(req, {
       saved: req.query.saved === '1'
     });
-    if (!data) return res.redirect('/auth/logout');
+    if (!data) return endStaleSession(req, res);
     res.render('mypage-account', await accountViewLocals(data));
   })
 );
@@ -196,7 +208,7 @@ router.get(
   requireLogin,
   asyncRoute(async (req, res) => {
     const data = await postsPayload(req);
-    if (!data) return res.redirect('/auth/logout');
+    if (!data) return endStaleSession(req, res);
     if (data.writingsNeedsRedirect) {
       return res.redirect(302, data.writingsCanonicalUrl);
     }
@@ -212,7 +224,7 @@ router.get(
   requireAdmin,
   asyncRoute(async (req, res) => {
     const shell = await getAccountShell(req);
-    if (!shell) return res.redirect('/auth/logout');
+    if (!shell) return endStaleSession(req, res);
     const home = await getSiteHomeData();
     res.render(
       'mypage-account',
@@ -235,7 +247,7 @@ router.get(
   requireAdmin,
   asyncRoute(async (req, res) => {
     const shell = await getAccountShell(req);
-    if (!shell) return res.redirect('/auth/logout');
+    if (!shell) return endStaleSession(req, res);
     const page = Math.max(1, parseInt(req.query.page, 10) || 1);
     const totalRow = await db.get('SELECT COUNT(*) as c FROM projects');
     const total = totalRow && totalRow.c != null ? Number(totalRow.c) : 0;
@@ -300,7 +312,7 @@ router.post(
           nicknameDupWarning: false,
           formNickname: (req.body && req.body.nickname) || ''
         });
-        if (!data) return res.redirect('/auth/logout');
+        if (!data) return endStaleSession(req, res);
         return res.status(400).render('mypage-account', await accountViewLocals(data));
       }
       const data = await profilePayload(req, {
@@ -308,14 +320,14 @@ router.post(
         nicknameDupWarning: false,
         formNickname: (req.body && req.body.nickname) || ''
       });
-      if (!data) return res.redirect('/auth/logout');
+      if (!data) return endStaleSession(req, res);
       return res.status(400).render('mypage-account', await accountViewLocals(data));
     }
 
     const uid = req.session.user.id;
     const row = await db.get('SELECT id, username, nickname, avatar FROM users WHERE id = ?', [uid]);
     if (!row) {
-      return res.redirect('/auth/logout');
+      return endStaleSession(req, res);
     }
 
     const newNick = (req.body.nickname != null ? String(req.body.nickname) : '').trim();
@@ -356,7 +368,15 @@ router.post(
     let nextAvatar = row.avatar != null && String(row.avatar).trim() !== '' ? String(row.avatar).trim() : null;
     if (hadFile) {
       const buf = req.file.buffer;
-      const mime = req.file.mimetype;
+      const mime = verifiedMime(buf, IMAGE_MIMES);
+      if (!mime) {
+        const data = await profilePayload(req, {
+          profileError: '프로필 이미지는 JPG, PNG, GIF, WEBP만 가능합니다.',
+          nicknameDupWarning: false,
+          formNickname: newNick
+        });
+        return res.status(400).render('mypage-account', await accountViewLocals(data));
+      }
       if (nextAvatar && nextAvatar.startsWith('/uploads/avatars/')) {
         tryUnlinkAvatar(nextAvatar);
       }

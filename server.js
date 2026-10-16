@@ -22,22 +22,40 @@ const notificationsRoutes = require('./routes/notifications');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const { sanitizePostHtml, sanitizeBioHtml, stripHtmlToPlain } = require('./lib/postHtml');
+const { sanitizePostHtml, sanitizeBioHtml, stripHtmlToPlain, plainTextToHtml } = require('./lib/postHtml');
+const { toIsoUtc } = require('./lib/listingHelpers');
+const {
+  isProductionLike,
+  resolveSessionSecret,
+  securityHeaders,
+  sameOriginGuard,
+  jsonForScript
+} = require('./lib/security');
+const { startOrphanAssetSweeper } = require('./lib/postAssets');
 
+const SESSION_SECRET = resolveSessionSecret();
+
+app.disable('x-powered-by');
 app.set('trust proxy', 1);
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
+app.use(securityHeaders);
+
 app.use((req, res, next) => {
   res.locals.sanitizeSiteHtml = sanitizePostHtml;
   res.locals.sanitizeBioHtml = sanitizeBioHtml;
+  res.locals.plainTextToHtml = plainTextToHtml;
+  res.locals.jsonForScript = jsonForScript;
+  res.locals.toIsoUtc = toIsoUtc;
   res.locals.sitePlainText = function sitePlainText(html) {
     return stripHtmlToPlain(sanitizePostHtml(html || ''));
   };
   next();
 });
 
+app.use(sameOriginGuard);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true, limit: '12mb' }));
 app.use(methodOverride('_method'));
@@ -53,47 +71,37 @@ app.use(
   })
 );
 
-function buildSessionMiddleware() {
+function buildSessionStore() {
   if (usePostgres()) {
-    const pool = getPool();
-    return session({
-      store: new pgSession({
-        pool,
-        tableName: 'portfolio_session',
-        createTableIfMissing: true
-      }),
-      name: 'portfolio.sid',
-      secret: process.env.SESSION_SECRET || 'portfolio-secret-lilip-change-in-prod',
-      resave: false,
-      saveUninitialized: false,
-      proxy: true,
-      cookie: {
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 1000 * 60 * 60 * 24 * 7
-      }
+    return new pgSession({
+      pool: getPool(),
+      tableName: 'portfolio_session',
+      createTableIfMissing: true
     });
   }
-
   const dataDir = getDataDir();
   if (!fs.existsSync(dataDir)) {
     fs.mkdirSync(dataDir, { recursive: true });
   }
-  const sessionDbPath = path.join(dataDir, 'sessions.db');
-  const sessionDb = new Database(sessionDbPath);
+  const sessionDb = new Database(path.join(dataDir, 'sessions.db'));
   sessionDb.pragma('journal_mode = WAL');
+  return new SqliteSessionStore({
+    client: sessionDb,
+    expired: { clear: true, intervalMs: 15 * 60 * 1000 }
+  });
+}
+
+function buildSessionMiddleware() {
   return session({
-    store: new SqliteSessionStore({
-      client: sessionDb,
-      expired: { clear: true, intervalMs: 15 * 60 * 1000 }
-    }),
+    store: buildSessionStore(),
     name: 'portfolio.sid',
-    secret: process.env.SESSION_SECRET || 'portfolio-secret-lilip-change-in-prod',
+    secret: SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
     proxy: true,
     cookie: {
-      secure: process.env.NODE_ENV === 'production',
+      httpOnly: true,
+      secure: isProductionLike(),
       sameSite: 'lax',
       maxAge: 1000 * 60 * 60 * 24 * 7
     }
@@ -170,6 +178,7 @@ app.use((err, req, res, next) => {
 async function start() {
   try {
     await initializeDatabase();
+    startOrphanAssetSweeper();
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`포트폴리오 서버 실행 중: port ${PORT}`);
       console.log(usePostgres() ? '[database] 모드: PostgreSQL' : '[database] 모드: SQLite');

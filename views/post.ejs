@@ -38,10 +38,10 @@
           <div class="post-meta-left">
             <span class="post-meta-author"><%= post.author_nickname && String(post.author_nickname).trim() ? post.author_nickname : '—' %></span>
             <span class="post-meta-times">
-              작성 <time datetime="<%= post.created_at %>"><%= typeof postDisplayCreated !== 'undefined' ? postDisplayCreated : '' %></time>
+              작성 <time datetime="<%= postCreatedIso %>" data-local-time="list"><%= typeof postDisplayCreated !== 'undefined' ? postDisplayCreated : '' %></time>
               <% if (typeof postEdited !== 'undefined' && postEdited) { %>
                 <span class="post-meta-sep">·</span>
-                수정 <time datetime="<%= post.updated_at %>"><%= typeof postDisplayUpdated !== 'undefined' ? postDisplayUpdated : '' %></time>
+                수정 <time datetime="<%= postUpdatedIso %>" data-local-time="list"><%= typeof postDisplayUpdated !== 'undefined' ? postDisplayUpdated : '' %></time>
                 <span class="post-edited-pill">(수정됨)</span>
               <% } %>
             </span>
@@ -57,9 +57,9 @@
 
         <div class="post-content<%= typeof contentAsHtml !== 'undefined' && contentAsHtml ? ' post-content--html' : '' %>">
           <% if (typeof contentAsHtml !== 'undefined' && contentAsHtml) { %>
-            <%- post.content %>
+            <%- sanitizeSiteHtml(post.content) %>
           <% } else { %>
-            <%- post.content.replace(/\n/g, '<br>') %>
+            <%- plainTextToHtml(post.content) %>
           <% } %>
         </div>
 
@@ -153,6 +153,7 @@
     </dialog>
   <% } %>
 
+  <script src="/js/local-time.js?v=20261017" defer></script>
   <script src="/js/post-detail.js?v=20260507" defer></script>
 </body>
 </html>

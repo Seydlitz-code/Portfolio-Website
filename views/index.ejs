@@ -109,7 +109,7 @@
                         </div>
                       </td>
                       <td class="board-td board-td--author"><%= post.author_nickname || '—' %></td>
-                      <td class="board-td board-td--date"><time datetime="<%= post.created_at %>"><%= post.display_time %></time></td>
+                      <td class="board-td board-td--date"><time datetime="<%= post.created_at_iso %>" data-local-time="list"><%= post.display_time %></time></td>
                       <td class="board-td board-td--views"><%= post.view_count %></td>
                       <td class="board-td board-td--comments"><%= post.comment_count %></td>
                     </tr>
@@ -162,7 +162,7 @@
                           </div>
                         </td>
                         <td class="board-td board-td--author"><%= post.author_nickname || '—' %></td>
-                        <td class="board-td board-td--date"><time datetime="<%= post.created_at %>"><%= post.display_time %></time></td>
+                        <td class="board-td board-td--date"><time datetime="<%= post.created_at_iso %>" data-local-time="list"><%= post.display_time %></time></td>
                         <td class="board-td board-td--views"><%= post.view_count %></td>
                         <td class="board-td board-td--comments"><%= post.comment_count %></td>
                       </tr>
@@ -179,5 +179,6 @@
   </main>
 
   <script src="/js/main.js?v=20260507"></script>
+  <script src="/js/local-time.js?v=20261017" defer></script>
 </body>
 </html>
