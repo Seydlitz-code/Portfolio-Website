@@ -10,7 +10,7 @@
     </div>
     <div class="comment-meta">
       <span class="comment-author"><%= comment.nickname %></span>
-      <time class="comment-date" datetime="<%= comment.updated_at || comment.created_at %>"><%= comment.display_time_line != null ? comment.display_time_line : '' %></time>
+      <time class="comment-date" datetime="<%= comment.display_time_iso %>" data-local-time="comment" data-suffix="<%= comment.display_time_suffix || '' %>"><%= comment.display_time_line != null ? comment.display_time_line : '' %></time>
     </div>
   </div>
   <div class="comment-view" id="comment-view-<%= comment.id %>">

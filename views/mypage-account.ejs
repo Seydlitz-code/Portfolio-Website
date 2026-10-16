@@ -109,7 +109,7 @@
                               <span class="mypage-writings-title-sep" aria-hidden="true"> / </span>
                               <span lang="ja"><%= _bnJa %></span>
                             </span>
-                            <time class="mypage-writings-bottom-time" datetime="<%= post.created_at %>"><%= formatListTime(post.created_at) %></time>
+                            <time class="mypage-writings-bottom-time" datetime="<%= toIsoUtc(post.created_at) %>" data-local-time="list"><%= formatListTime(post.created_at) %></time>
                           </div>
                           <form action="/posts/<%= post.id %>?_method=DELETE" method="POST" class="mypage-comment-delete-form mypage-writings-delete-form" onsubmit="return confirm('정말로 삭제하시겠습니까?');">
                             <input type="hidden" name="next" value="<%= _tn %>">
@@ -142,7 +142,7 @@
                       <li class="mypage-writings-card mypage-writings-card--comment">
                         <div class="mypage-writings-row-top">
                           <p class="<%= _clamp %>"><%= c.preview_text %></p>
-                          <time class="mypage-writings-row-time" datetime="<%= c.created_at %>"><%= formatListTime(c.created_at) %></time>
+                          <time class="mypage-writings-row-time" datetime="<%= toIsoUtc(c.created_at) %>" data-local-time="list"><%= formatListTime(c.created_at) %></time>
                         </div>
                         <div class="mypage-writings-row-bottom">
                           <a href="/posts/<%= c.post_id %>#comments" class="mypage-writings-post-ref">
@@ -415,7 +415,7 @@
   </div>
 
   <script>
-    window.__MYPAGE_ACCOUNT__ = <%- JSON.stringify({
+    window.__MYPAGE_ACCOUNT__ = <%- jsonForScript({
       initialNickname: typeof initialNickname !== 'undefined' ? initialNickname : profileUser.nickname,
       initialAvatar: typeof initialAvatar !== 'undefined' && initialAvatar ? initialAvatar : null,
       activeTab: activeTab
@@ -424,7 +424,7 @@
   <script src="/js/mypage-account.js?v=20260433"></script>
   <% if (activeTab === 'mainSettings') { %>
   <script>
-    window.__MYPAGE_MAIN_SETTINGS__ = <%- JSON.stringify({
+    window.__MYPAGE_MAIN_SETTINGS__ = <%- jsonForScript({
       site_name: typeof siteNameRecover !== 'undefined' && siteNameRecover != null ? siteNameRecover : ((settings && settings.site_name) ? settings.site_name : 'Donghawan Lee / @lilip'),
       bio: typeof bioRecover !== 'undefined' && bioRecover != null ? bioRecover : (settings && settings.bio ? settings.bio : ''),
       profile_image: settings && settings.profile_image ? settings.profile_image : ''
@@ -436,5 +436,6 @@
   <% if (activeTab === 'boardsManage') { %>
   <script src="/js/mypage-boards.js?v=20260512"></script>
   <% } %>
+  <script src="/js/local-time.js?v=20261017" defer></script>
 </body>
 </html>

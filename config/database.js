@@ -3,6 +3,7 @@ const { Pool } = require('pg');
 const bcrypt = require('bcrypt');
 const path = require('path');
 const fs = require('fs');
+const { isProductionLike } = require('../lib/security');
 
 /**
  * 로컬: SQLite 파일 (<프로젝트>/data, DATA_DIR로 경로 지정 가능)
@@ -368,14 +369,6 @@ async function initializePostgres() {
 function trimEnv(name) {
   const v = process.env[name];
   return v != null ? String(v).trim() : '';
-}
-
-function isProductionLike() {
-  return (
-    process.env.NODE_ENV === 'production' ||
-    process.env.RAILWAY_ENVIRONMENT === 'production' ||
-    process.env.RENDER === 'true'
-  );
 }
 
 function validateBootstrapUsername(u) {
