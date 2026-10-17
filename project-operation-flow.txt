@@ -768,9 +768,21 @@
   └──────────────────────────────────────────────────────────────────────┘
 
 ================================================================================
-10. 배포 (render.yaml)
+10. 배포 (Railway: railway.json / Render: render.yaml)
 ================================================================================
 
+  [Railway — 현재 운영]
+  ├── master 브랜치 push 시 자동 배포, DB는 Railway PostgreSQL(DATABASE_URL)
+  ├── 필수 Variables: SESSION_SECRET (없으면 server.js가 기동 중단 → 배포 실패)
+  │     값 생성: node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
+  └── railway.json:
+        ├── healthcheckPath: /healthz  (DB 연결 확인, 세션 미생성)
+        │     새 배포가 헬스체크를 통과해야 트래픽 전환 → 기동 실패 배포가
+        │     기존 정상 배포를 내리지 못함
+        ├── healthcheckTimeout: 120초
+        └── restartPolicy: ON_FAILURE, 최대 5회
+
+  [Render — render.yaml, 현재 미사용]
   Render.com Blueprint 기반 배포
 
   render.yaml:

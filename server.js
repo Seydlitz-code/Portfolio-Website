@@ -108,6 +108,25 @@ function buildSessionMiddleware() {
   });
 }
 
+/*
+ * 배포 헬스체크 (railway.json의 healthcheckPath).
+ * 세션 미들웨어보다 앞에 두어 검사 요청마다 세션·사용자 조회가 생기지 않게 하고, DB 연결만 확인한다.
+ * 새 배포가 이 검사를 통과해야 Railway가 트래픽을 넘기므로, 기동 실패한 배포가 정상 배포를 내리지 못한다.
+ */
+app.get(
+  '/healthz',
+  asyncRoute(async (req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    try {
+      await db.get('SELECT 1 AS ok');
+      res.json({ ok: true });
+    } catch (e) {
+      console.error('[healthz] DB 확인 실패:', e.message);
+      res.status(503).json({ ok: false });
+    }
+  })
+);
+
 app.use(buildSessionMiddleware());
 
 app.use(

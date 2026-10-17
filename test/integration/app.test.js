@@ -53,6 +53,17 @@ describe('기본 페이지·ID 검증', () => {
     });
   }
 
+  it('railway.json의 헬스체크 경로가 200·JSON을 주고 세션 쿠키는 만들지 않음', async () => {
+    const cfg = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, '../../railway.json'), 'utf8'));
+    const hc = cfg.deploy && cfg.deploy.healthcheckPath;
+    assert.ok(hc, 'railway.json에 healthcheckPath 필요');
+    const res = await fetch(server.base + hc);
+    assert.equal(res.status, 200);
+    assert.deepEqual(await res.json(), { ok: true });
+    assert.equal(res.headers.getSetCookie().length, 0);
+    assert.equal(res.headers.get('cache-control'), 'no-store');
+  });
+
   it('비로그인 /mypage → 로그인으로', async () => {
     const r = await guest().get('/mypage');
     assert.equal(r.status, 302);
