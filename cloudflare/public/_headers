@@ -1,0 +1,5 @@
+# 정적 파일(CSS, JS, 이미지)은 Worker를 거치지 않으므로 보안 헤더를 여기서 붙인다.
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: SAMEORIGIN
+  Referrer-Policy: strict-origin-when-cross-origin

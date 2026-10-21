@@ -6,6 +6,8 @@
   "compatibility_flags": ["nodejs_compat"],
   "assets": { "directory": "./public" },
   "observability": { "enabled": true },
+  // 매일 03:17 UTC: 만료 세션·시도 제한 기록 정리
+  "triggers": { "crons": ["17 3 * * *"] },
   "d1_databases": [
     {
       "binding": "DB",
