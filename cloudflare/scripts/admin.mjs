@@ -68,7 +68,7 @@ function runSql(target, sql) {
   const file = join(dir, 'admin.sql');
   try {
     writeFileSync(file, sql, 'utf8');
-    const r = spawnSync(process.execPath, [WRANGLER, 'd1', 'execute', DB_NAME, target, '--file', file, '--yes'], {
+    const r = spawnSync(process.execPath, [WRANGLER, 'd1', 'execute', DB_NAME, target, ...PERSIST, '--file', file, '--yes'], {
       stdio: ['ignore', 'pipe', 'pipe'],
       encoding: 'utf8'
     });
@@ -89,7 +89,7 @@ function query(target, sql) {
   const file = join(dir, 'query.sql');
   try {
     writeFileSync(file, sql, 'utf8');
-    const r = spawnSync(process.execPath, [WRANGLER, 'd1', 'execute', DB_NAME, target, '--json', '--file', file, '--yes'], {
+    const r = spawnSync(process.execPath, [WRANGLER, 'd1', 'execute', DB_NAME, target, ...PERSIST, '--json', '--file', file, '--yes'], {
       stdio: ['ignore', 'pipe', 'pipe'],
       encoding: 'utf8'
     });
@@ -146,6 +146,9 @@ function promote(target, username) {
 }
 
 const args = process.argv.slice(2);
+// 테스트용: --persist-to=<폴더> 로 다른 로컬 D1 상태를 쓴다 (--local과 함께)
+const persistArg = args.find((a) => a.startsWith('--persist-to='));
+const PERSIST = persistArg ? ['--persist-to', persistArg.slice('--persist-to='.length)] : [];
 const target = args.includes('--remote') ? '--remote' : args.includes('--local') ? '--local' : null;
 if (!target) usage('--remote(배포된 D1) 또는 --local(로컬 D1)을 지정하세요.');
 const positional = args.filter((a) => !a.startsWith('--'));

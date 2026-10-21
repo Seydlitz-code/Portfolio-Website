@@ -17,5 +17,7 @@ export type AppEnv = {
   Bindings: Env;
   Variables: {
     user: SessionUser | null;
+    /** 관리자에게만 계산: 안 읽은 댓글 알림 수 */
+    unreadCount: number;
   };
 };

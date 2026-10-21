@@ -7,6 +7,7 @@ import { checkCaptcha, issueCaptcha } from '../lib/captcha';
 import { clientIp, safeRedirectPath } from '../lib/security';
 import { IMAGE_MIMES, verifiedMime } from '../lib/fileSniff';
 import * as rate from '../lib/rateLimit';
+import { forgetVerifiedNickname, rememberVerifiedNickname } from '../lib/nicknameCheck';
 
 const USERNAME_MIN = 3;
 const USERNAME_MAX = 30;
@@ -94,17 +95,25 @@ auth.get('/check-username', async (c) => {
   return c.json(row ? { available: false, duplicate: true } : { available: true });
 });
 
+/** 로그인한 상태에서 통과하면 마이페이지 닉네임 변경에 쓸 수 있도록 확인 결과를 기억한다. */
 auth.get('/check-nickname', async (c) => {
   const n = str(c.req.query('nickname')).trim();
-  if (!n) return c.json({ available: false, message: '닉네임을 입력해주세요.' });
+  const me = c.get('user');
+  if (!n) {
+    forgetVerifiedNickname(c);
+    return c.json({ available: false, message: '닉네임을 입력해주세요.' });
+  }
   if (Array.from(n).length > NICKNAME_MAX) {
+    forgetVerifiedNickname(c);
     return c.json({ available: false, message: '닉네임은 20자 이하로 입력해주세요.' });
   }
   const row = await c.env.DB.prepare('SELECT id FROM users WHERE nickname = ?').bind(n).first<{ id: number }>();
-  if (!row) return c.json({ available: true });
-  const me = c.get('user');
-  if (me && me.id === row.id) return c.json({ available: true, self: true });
-  return c.json({ available: false, duplicate: true });
+  if (row && !(me && me.id === row.id)) {
+    forgetVerifiedNickname(c);
+    return c.json({ available: false, duplicate: true });
+  }
+  if (me) await rememberVerifiedNickname(c, me.id, n);
+  return c.json(row ? { available: true, self: true } : { available: true });
 });
 
 /* ---------- 회원가입 ---------- */
@@ -120,7 +129,8 @@ async function registerFail(c: Context<AppEnv>, error: string) {
   if (c.req.header('X-Register-Fetch') === '1') {
     return c.json({ error, captchaQuestion }, 400);
   }
-  return c.html(<RegisterPage error={error} captchaQuestion={captchaQuestion} />, 400);
+  // 기존 서버와 같이 HTML 폼 오류는 200으로 다시 그린다.
+  return c.html(<RegisterPage error={error} captchaQuestion={captchaQuestion} />);
 }
 
 auth.post('/register', async (c) => {
