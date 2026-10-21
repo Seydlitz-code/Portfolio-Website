@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 
 type Bindings = {
   DB: D1Database;
+  MEDIA: R2Bucket;
 };
 
 const app = new Hono<{ Bindings: Bindings }>();
@@ -24,7 +25,15 @@ app.get('/', (c) =>
 
 app.get('/health', async (c) => {
   const row = await c.env.DB.prepare('SELECT 1 AS ok').first<{ ok: number }>();
-  return c.json({ ok: true, db: row?.ok === 1 });
+  // 없는 키를 head로 조회: 버킷에 닿으면 null이 오고, 연결이 안 되면 예외가 난다.
+  let media = false;
+  try {
+    await c.env.MEDIA.head('__health__');
+    media = true;
+  } catch {
+    media = false;
+  }
+  return c.json({ ok: true, db: row?.ok === 1, media });
 });
 
 export default app;
