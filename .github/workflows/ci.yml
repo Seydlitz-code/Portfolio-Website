@@ -1,7 +1,7 @@
 # CI: master(Railway 자동 배포 브랜치)에 들어가기 전에 작업 브랜치·PR에서 검사한다.
 #  1) merge-check  : 최신 master와 병합 충돌이 없는지
 #  2) static       : JS 문법·EJS 컴파일·운영 의존성 보안 감사
-#  3) integration  : 실제 서버 기동 후 HTTP 통합 테스트 (SQLite / PostgreSQL × Node 20 / 22)
+#  3) integration  : 실제 서버 기동 후 HTTP 통합 테스트 (SQLite / PostgreSQL × Node 22 / 24)
 #  4) browser      : 헤드리스 Chrome으로 JS 오류·CSP 위반·작성 흐름 (PostgreSQL)
 # master 직접 push에서는 돌지 않는다(배포 브랜치는 PR로만 갱신하는 흐름을 전제).
 name: CI
@@ -69,7 +69,7 @@ jobs:
       fail-fast: false
       matrix:
         db: [sqlite, postgres]
-        node: [20, 22]
+        node: [22, 24]
     services:
       postgres:
         image: postgres:16

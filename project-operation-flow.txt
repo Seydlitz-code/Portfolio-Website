@@ -30,7 +30,7 @@
 ================================================================================
 
   [서버]
-  - Runtime       : Node.js (>=18.0.0)
+  - Runtime       : Node.js (>=22.12.0, package.json engines — Railway가 이 값으로 Node 버전을 고름)
   - Framework     : Express 4.18
   - Template      : EJS 3.1
   - Database      : better-sqlite3 (로컬) / pg + PostgreSQL (프로덕션)
@@ -768,9 +768,23 @@
   └──────────────────────────────────────────────────────────────────────┘
 
 ================================================================================
-10. 배포 (render.yaml)
+10. 배포 (Railway: railway.json / Render: render.yaml)
 ================================================================================
 
+  [Railway — 현재 운영]
+  ├── master 브랜치 push 시 자동 배포, DB는 Railway PostgreSQL(DATABASE_URL)
+  ├── Node 버전: package.json engines.node로 결정 (>=22.12.0 → Node 22)
+  │     sanitize-html이 ESM 전용 htmlparser2를 require하므로 Node 22.12 미만이면 기동 즉시 종료
+  ├── 필수 Variables: SESSION_SECRET (없으면 server.js가 기동 중단 → 배포 실패)
+  │     값 생성: node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
+  └── railway.json:
+        ├── healthcheckPath: /healthz  (DB 연결 확인, 세션 미생성)
+        │     새 배포가 헬스체크를 통과해야 트래픽 전환 → 기동 실패 배포가
+        │     기존 정상 배포를 내리지 못함
+        ├── healthcheckTimeout: 120초
+        └── restartPolicy: ON_FAILURE, 최대 5회
+
+  [Render — render.yaml, 현재 미사용]
   Render.com Blueprint 기반 배포
 
   render.yaml:
