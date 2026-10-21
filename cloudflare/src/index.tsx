@@ -17,7 +17,8 @@ import adminRoutes from './routes/admin';
 import mypageRoutes from './routes/mypage';
 import notificationsRoutes from './routes/notifications';
 
-const app = new Hono<AppEnv>();
+// strict: false → '/mypage/'처럼 끝에 /가 붙어도 같은 화면 (기존 Express와 같음)
+const app = new Hono<AppEnv>({ strict: false });
 
 /**
  * HTML 폼은 GET/POST만 보낼 수 있으므로 PUT/DELETE는 POST + _method로 보낸다.

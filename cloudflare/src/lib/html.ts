@@ -1,164 +1,63 @@
 /**
- * 게시물 본문·메인 자기소개·사이트 이름 HTML 정제 (기존 lib/postHtml.js 이식).
+ * 게시물 본문·메인 자기소개·사이트 이름 HTML 정제 (기존 lib/postHtml.js와 같은 라이브러리·설정).
  *
- * 기존에는 sanitize-html을 썼지만, 여기서는 Workers 내장 HTMLRewriter로 같은 허용 목록 규칙을 적용한다.
- * 내장 파서라 CPU를 적게 쓴다.
- *   - 허용하지 않는 태그: 태그만 지우고 안의 글은 남긴다 (script·style 등은 내용까지 지움)
- *   - 허용하지 않는 속성·이벤트 핸들러: 지움
- *   - href/src/cite/poster: http, https, mailto, tel과 상대 경로만 (img src는 data:도 허용)
- *   - iframe: YouTube 주소만 남김
- *   - style: 허용한 CSS 속성만, url()/expression() 등은 지움
+ * 처음에는 Workers 내장 HTMLRewriter로 같은 허용 목록을 흉내 냈지만, HTMLRewriter는 남은 텍스트를
+ * 다시 이스케이프하지 않아 <xmp> 안의 태그나 닫히지 않은 태그가 그대로 살아나는 문제가 있었다.
+ * 그래서 원래 서버와 같은 sanitize-html을 같은 옵션으로 쓴다 (출력을 새로 만들고 모든 텍스트를 이스케이프함).
+ * 에디터(contenteditable)가 만들거나 붙여넣기로 들어올 수 있는 서식 태그는 유지하고,
+ * 스크립트·이벤트 핸들러·위험한 URL 스킴·외부 iframe(YouTube 제외)은 제거한다.
  */
-
-const BASE_TAGS = [
-  // sanitize-html 기본 허용 태그
-  'address', 'article', 'aside', 'footer', 'header', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'hgroup', 'main',
-  'nav', 'section', 'blockquote', 'dd', 'div', 'dl', 'dt', 'figcaption', 'figure', 'hr', 'li', 'ol', 'p',
-  'pre', 'ul', 'a', 'abbr', 'b', 'bdi', 'bdo', 'br', 'cite', 'code', 'data', 'dfn', 'em', 'i', 'kbd', 'mark',
-  'q', 'rb', 'rp', 'rt', 'rtc', 'ruby', 's', 'samp', 'small', 'span', 'strong', 'sub', 'sup', 'time', 'u',
-  'var', 'wbr', 'caption', 'col', 'colgroup', 'table', 'tbody', 'td', 'tfoot', 'th', 'thead', 'tr',
-  // 기존 프로젝트에서 추가로 허용한 태그
-  'img', 'video', 'source', 'iframe', 'font', 'strike', 'del', 'ins', 'center'
-];
-const ALLOWED_TAGS = new Set(BASE_TAGS);
-
-/** 내용까지 통째로 지우는 태그 (sanitize-html의 nonTextTags) */
-const DROP_WITH_CONTENT = new Set(['script', 'style', 'textarea', 'option', 'noscript']);
-
-const GLOBAL_ATTRS = ['class', 'style', 'title', 'lang', 'dir', 'align'];
-const TAG_ATTRS: Record<string, string[]> = {
-  a: ['href', 'name', 'target', 'rel'],
-  img: ['src', 'alt', 'width', 'height', 'loading', 'decoding'],
-  video: ['src', 'controls', 'playsinline', 'preload', 'poster', 'width', 'height', 'muted', 'loop'],
-  source: ['src', 'type'],
-  iframe: ['src', 'title', 'allow', 'allowfullscreen', 'referrerpolicy', 'loading', 'width', 'height', 'frameborder'],
-  font: ['color', 'face', 'size'],
-  td: ['colspan', 'rowspan'],
-  th: ['colspan', 'rowspan']
-};
-
-const URL_ATTRS = new Set(['href', 'src', 'cite', 'poster']);
-const ALLOWED_SCHEMES = ['http', 'https', 'mailto', 'tel'];
-const IMG_SCHEMES = ['http', 'https', 'data'];
-const YOUTUBE_IFRAME_HOSTS = new Set(['www.youtube-nocookie.com', 'youtube-nocookie.com', 'www.youtube.com', 'youtube.com']);
+import sanitizeHtml from 'sanitize-html';
 
 /* CSS 값: url()/expression()/import 등 외부 로드·실행 경로 차단 */
 const SAFE_CSS_VALUE = /^(?!.*(?:url\s*\(|expression\s*\(|@import|javascript:|behavior\s*:))[^<>{};]*$/i;
-const STYLE_PROPS = new Set([
+const STYLE_PROPS = [
   'color', 'background-color', 'background', 'font-size', 'font-family', 'font-weight', 'font-style',
   'text-decoration', 'text-decoration-line', 'text-align', 'text-indent', 'line-height', 'letter-spacing',
   'vertical-align', 'white-space', 'width', 'height', 'max-width', 'min-width', 'margin', 'margin-top',
   'margin-bottom', 'margin-left', 'margin-right', 'padding', 'padding-top', 'padding-bottom',
   'padding-left', 'padding-right', 'border', 'border-collapse', 'list-style-type', 'display'
-]);
+];
+const allowedStyles: Record<string, Record<string, RegExp[]>> = { '*': {} };
+for (const p of STYLE_PROPS) allowedStyles['*'][p] = [SAFE_CSS_VALUE];
 
-function decodeEntities(s: string): string {
-  return s
-    .replace(/&#x([0-9a-f]+);?/gi, (_, h) => String.fromCodePoint(parseInt(h, 16)))
-    .replace(/&#(\d+);?/g, (_, d) => String.fromCodePoint(Number(d)))
-    .replace(/&colon;/gi, ':')
-    .replace(/&tab;/gi, '\t')
-    .replace(/&newline;/gi, '\n')
-    .replace(/&amp;/gi, '&');
-}
+const YOUTUBE_IFRAME_HOSTS = ['www.youtube-nocookie.com', 'youtube-nocookie.com', 'www.youtube.com', 'youtube.com'];
 
-/** sanitize-html의 naughtyHref와 같은 판단: 허용하지 않는 스킴이면 true */
-/** URL 앞뒤·중간에 숨겨 넣은 제어 문자·공백(스킴 검사 우회용)을 지울 때 쓰는 문자 집합 */
-const INVISIBLE_URL_CHARS = new RegExp(
-  '[' + [[0x00, 0x20], [0x7f, 0xa0], [0x200b, 0x200f], [0x2028, 0x2029], [0xfeff, 0xfeff]]
-    .map(([a, b]) => String.fromCharCode(a) + '-' + String.fromCharCode(b))
-    .join('') + ']+',
-  'g'
-);
-
-function isNaughtyUrl(raw: string, schemes: string[]): boolean {
-  const href = decodeEntities(raw)
-    .replace(/<!--.*?-->/g, '')
-    .replace(INVISIBLE_URL_CHARS, '');
-  if (href.startsWith('//') || href.startsWith('\\\\') || href.startsWith('/\\') || href.startsWith('\\/')) {
-    return true; // 프로토콜 상대 주소는 허용하지 않음
-  }
-  const m = /^([a-zA-Z][a-zA-Z0-9.\-+]*):/.exec(href);
-  if (!m) return false; // 상대 경로
-  return !schemes.includes(m[1].toLowerCase());
-}
-
-function filterStyle(value: string): string {
-  const out: string[] = [];
-  for (const decl of value.split(';')) {
-    const i = decl.indexOf(':');
-    if (i < 0) continue;
-    const prop = decl.slice(0, i).trim().toLowerCase();
-    const v = decl.slice(i + 1).trim();
-    if (!prop || !v || !STYLE_PROPS.has(prop) || !SAFE_CSS_VALUE.test(v)) continue;
-    out.push(`${prop}:${v}`);
-  }
-  return out.join(';');
-}
-
-function iframeSrcAllowed(src: string): boolean {
-  try {
-    const u = new URL(decodeEntities(src).trim());
-    return (u.protocol === 'https:' || u.protocol === 'http:') && YOUTUBE_IFRAME_HOSTS.has(u.hostname.toLowerCase());
-  } catch {
-    return false; // 상대 주소 iframe은 허용하지 않음
-  }
-}
-
-const elementHandler: HTMLRewriterElementContentHandlers = {
-  element(el) {
-    const tag = el.tagName.toLowerCase();
-    if (!ALLOWED_TAGS.has(tag)) {
-      if (DROP_WITH_CONTENT.has(tag)) el.remove();
-      else el.removeAndKeepContent();
-      return;
-    }
-    const allowed = new Set([...GLOBAL_ATTRS, ...(TAG_ATTRS[tag] ?? [])]);
-    const names = [...el.attributes].map(([name]) => name);
-    for (const name of names) {
-      const lower = name.toLowerCase();
-      const value = el.getAttribute(name) ?? '';
-      if (!allowed.has(lower)) {
-        el.removeAttribute(name);
-        continue;
-      }
-      if (URL_ATTRS.has(lower)) {
-        const schemes = tag === 'img' && lower === 'src' ? IMG_SCHEMES : ALLOWED_SCHEMES;
-        if (isNaughtyUrl(value, schemes) || (tag === 'iframe' && lower === 'src' && !iframeSrcAllowed(value))) {
-          el.removeAttribute(name);
-        }
-        continue;
-      }
-      if (lower === 'style') {
-        const filtered = filterStyle(value);
-        if (filtered) el.setAttribute(name, filtered);
-        else el.removeAttribute(name);
-      }
-    }
-    if (tag === 'a' && el.getAttribute('target') === '_blank') {
-      el.setAttribute('rel', 'noopener noreferrer');
-    }
+const SANITIZE_OPTIONS: sanitizeHtml.IOptions = {
+  allowedTags: sanitizeHtml.defaults.allowedTags.concat([
+    'img', 'video', 'source', 'iframe', 'span', 'font', 'u', 's', 'strike', 'del', 'ins',
+    'sub', 'sup', 'mark', 'h1', 'h2', 'figure', 'figcaption', 'center'
+  ]),
+  allowedAttributes: {
+    '*': ['class', 'style', 'title', 'lang', 'dir', 'align'],
+    a: ['href', 'name', 'target', 'rel'],
+    img: ['src', 'alt', 'width', 'height', 'loading', 'decoding'],
+    video: ['src', 'controls', 'playsinline', 'preload', 'poster', 'width', 'height', 'muted', 'loop'],
+    source: ['src', 'type'],
+    iframe: ['src', 'title', 'allow', 'allowfullscreen', 'referrerpolicy', 'loading', 'width', 'height', 'frameborder'],
+    font: ['color', 'face', 'size'],
+    td: ['colspan', 'rowspan'],
+    th: ['colspan', 'rowspan']
   },
-  comments(comment) {
-    comment.remove();
+  allowedSchemes: ['http', 'https', 'mailto', 'tel'],
+  allowedSchemesByTag: { img: ['http', 'https', 'data'] },
+  allowedSchemesAppliedToAttributes: ['href', 'src', 'cite', 'poster'],
+  allowProtocolRelative: false,
+  allowedIframeHostnames: YOUTUBE_IFRAME_HOSTS,
+  allowIframeRelativeUrls: false,
+  allowedStyles,
+  transformTags: {
+    a: (tagName, attribs) => {
+      const out = { ...attribs };
+      if (out.target === '_blank') out.rel = 'noopener noreferrer';
+      return { tagName, attribs: out };
+    }
   }
 };
 
+/** 호출하는 쪽 코드를 바꾸지 않도록 비동기 형태를 유지한다. */
 export async function sanitizePostHtml(html: unknown): Promise<string> {
-  const input = String(html ?? '');
-  if (!input) return '';
-  const res = new HTMLRewriter()
-    .on('*', elementHandler)
-    .onDocument({
-      comments(c) {
-        c.remove();
-      },
-      doctype() {
-        /* 문서 선언은 본문에 필요 없다 */
-      }
-    })
-    .transform(new Response(input, { headers: { 'content-type': 'text/html; charset=utf-8' } }));
-  return (await res.text()).replace(/<!doctype[^>]*>/gi, '');
+  return sanitizeHtml(String(html ?? ''), SANITIZE_OPTIONS);
 }
 
 export function escapeHtmlText(s: unknown): string {

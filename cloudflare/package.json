@@ -11,13 +11,17 @@
     "db:migrate:local": "wrangler d1 migrations apply portfolio-db --local",
     "db:migrate:remote": "wrangler d1 migrations apply portfolio-db --remote",
     "admin": "node scripts/admin.mjs",
-    "test": "node --test --test-concurrency=1 \"test/*.test.mjs\""
+    "test": "node --test --test-concurrency=1 \"test/*.test.mjs\"",
+    "test:browser": "node --test --test-concurrency=1 \"test/browser/*.test.mjs\""
   },
   "dependencies": {
-    "hono": "^4.13.13"
+    "hono": "^4.13.13",
+    "sanitize-html": "^2.18.1"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20261021.1",
+    "@types/sanitize-html": "^2.16.2",
+    "puppeteer-core": "^23.11.1",
     "typescript": "^5.9.3",
     "wrangler": "^4.151.3"
   }

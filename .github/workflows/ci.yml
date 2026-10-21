@@ -3,6 +3,7 @@
 #  2) static       : JS 문법·EJS 컴파일·운영 의존성 보안 감사
 #  3) integration  : 실제 서버 기동 후 HTTP 통합 테스트 (SQLite / PostgreSQL × Node 22 / 24)
 #  4) browser      : 헤드리스 Chrome으로 JS 오류·CSP 위반·작성 흐름 (PostgreSQL)
+#  5) cloudflare   : cloudflare/ (Workers 재구축) 타입 검사·의존성 감사·wrangler dev 통합·브라우저 테스트
 # master 직접 push에서는 돌지 않는다(배포 브랜치는 PR로만 갱신하는 흐름을 전제).
 name: CI
 
@@ -128,3 +129,33 @@ jobs:
         env:
           TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/portfolio_test
         run: npm run test:browser
+
+  cloudflare:
+    name: Cloudflare Workers (타입·감사·통합 테스트)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: cloudflare
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: cloudflare/package-lock.json
+      - id: install
+        run: npm ci
+      - name: 타입 검사
+        run: npm run typecheck
+      - name: 운영 의존성 보안 감사 (high 이상이면 실패)
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: npm audit --omit=dev --audit-level=high
+      - name: 통합 테스트 (로컬 D1·R2로 wrangler dev 기동)
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: npm test
+      - name: 브라우저 테스트 (Chrome)
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: |
+          CHROME="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium)"
+          echo "Chrome: ${CHROME}"
+          CHROME_PATH="${CHROME}" npm run test:browser

@@ -63,7 +63,8 @@ media.get('/user/:id/avatar', async (c) => {
   const row = await c.env.DB.prepare('SELECT avatar_key FROM users WHERE id = ?')
     .bind(id)
     .first<{ avatar_key: string | null }>();
-  if (!row?.avatar_key) return c.redirect(DEFAULT_AVATAR);
+  if (!row) return notFound();
+  if (!row.avatar_key) return c.redirect(DEFAULT_AVATAR);
   const obj = await c.env.MEDIA.get(row.avatar_key);
   if (!obj) return c.redirect(DEFAULT_AVATAR);
   return new Response(obj.body, {

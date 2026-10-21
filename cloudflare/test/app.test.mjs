@@ -60,6 +60,15 @@ describe('기본 페이지·ID 검증', () => {
     assert.equal(res.headers.get('cache-control'), 'no-store');
   });
 
+  it('끝에 /가 붙은 주소도 같은 화면', async () => {
+    assert.equal((await guest().get('/posts/')).status, 200);
+    assert.equal((await guest().get('/boards/1/')).status, 200);
+  });
+
+  it('없는 사용자의 아바타 → 404', async () => {
+    assert.equal((await guest().get('/media/user/999999/avatar')).status, 404);
+  });
+
   it('비로그인 /mypage → 로그인으로', async () => {
     const r = await guest().get('/mypage');
     assert.equal(r.status, 302);
@@ -173,6 +182,31 @@ describe('게시물 HTML 정제', () => {
     assert.doesNotMatch(html, /evil\.example/);
     assert.doesNotMatch(html, /secret/);
   });
+  it('원문 텍스트 태그(xmp 등)·CDATA·닫히지 않은 태그로 우회 불가 (검토에서 찾은 경로)', async () => {
+    const vectors = [
+      '<xmp><img src=x onerror=alert(11)></xmp>',
+      '<xmp><xmp><img src=x onerror=alert(12)></xmp></xmp>',
+      '<noembed><img src=x onerror=alert(13)></noembed>',
+      '<title><img src=x onerror=alert(14)></title>',
+      '<svg><![CDATA[><img src=x onerror=alert(15)>]]></svg>',
+      '<p>a</p><img src=x onerror=alert(16) ',
+      '<p>b</p><!-- open comment',
+      '<span style="background:u&#114;l(https://evil.example/t)">s</span>'
+    ];
+    for (const v of vectors) {
+      const id = await admin.createPost({ title: 'vec', content: `<p>본문</p>${v}`, project_id: boardId });
+      const page = (await new Client(server.base).get(`/posts/${id}`)).text;
+      const body = page.slice(page.indexOf('class="post-content'), page.indexOf('id="comments"'));
+      assert.doesNotMatch(body, /<img[^>]*onerror/i, v);
+      assert.doesNotMatch(body, /evil\.example/, v);
+      // 저장된 원문도 안전해야 한다 (에디터가 innerHTML로 다시 넣음)
+      const edit = (await admin.get(`/posts/${id}/edit`)).text;
+      const init = JSON.parse(Buffer.from(/id="post-editor-init-b64" value="([^"]+)"/.exec(edit)[1], 'base64').toString('utf8'));
+      assert.doesNotMatch(init.html, /<img[^>]*onerror/i, v);
+      assert.match(page, /id="comments"/, '댓글 영역이 주석에 먹히지 않음');
+    }
+  });
+
   it('정상 서식은 유지, target=_blank에 rel 추가', () => {
     assert.match(html, /style="color:red"/);
     assert.match(html, /<a href="\/posts" target="_blank" rel="noopener noreferrer">in<\/a>/);
