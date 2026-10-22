@@ -282,14 +282,13 @@
     container.appendChild(frag);
   }
 
+  /* 파일 본문을 그대로 보낸다 (multipart 아님). 서버가 메모리에 다 올리지 않고 R2로 바로 흘려보낼 수 있게 하기 위함. */
   async function uploadBodyFile(file) {
-    const fd = new FormData();
-    fd.append('file', file);
     const res = await fetch('/posts/body-upload', {
       method: 'POST',
-      body: fd,
+      body: file,
       credentials: 'same-origin',
-      headers: { Accept: 'application/json' }
+      headers: { Accept: 'application/json', 'Content-Type': file.type || 'application/octet-stream' }
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error || '업로드에 실패했습니다.');

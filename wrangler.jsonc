@@ -1,0 +1,28 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "portfolio",
+  "main": "src/index.tsx",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": { "directory": "./public" },
+  "observability": { "enabled": true },
+  // 오류 로그에 TypeScript 원본 위치가 보이도록 소스맵을 함께 올린다.
+  "upload_source_maps": true,
+  // 한 요청에 D1을 여러 번 부르므로, Cloudflare가 Worker를 D1 가까운 곳에서 실행하도록 한다.
+  "placement": { "mode": "smart" },
+  // 6시간마다: 만료 세션·시도 제한 기록·미참조 첨부 정리
+  "triggers": { "crons": ["17 */6 * * *"] },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "portfolio-db",
+      "database_id": "44a51fd4-9e83-43d4-b22a-7d2476566d6f"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "MEDIA",
+      "bucket_name": "portfolio-media"
+    }
+  ]
+}

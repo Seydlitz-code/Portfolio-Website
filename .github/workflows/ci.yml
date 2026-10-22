@@ -1,10 +1,9 @@
-# CI: master(Railway 자동 배포 브랜치)에 들어가기 전에 작업 브랜치·PR에서 검사한다.
-#  1) merge-check  : 최신 master와 병합 충돌이 없는지
-#  2) static       : JS 문법·EJS 컴파일·운영 의존성 보안 감사
-#  3) integration  : 실제 서버 기동 후 HTTP 통합 테스트 (SQLite / PostgreSQL × Node 22 / 24)
-#  4) browser      : 헤드리스 Chrome으로 JS 오류·CSP 위반·작성 흐름 (PostgreSQL)
-#  5) cloudflare   : cloudflare/ (Workers 재구축) 타입 검사·의존성 감사·wrangler dev 통합·브라우저 테스트
-# master 직접 push에서는 돌지 않는다(배포 브랜치는 PR로만 갱신하는 흐름을 전제).
+# CI: master에 들어가기 전에 작업 브랜치·PR에서 검사한다.
+#  1) merge-check : 최신 master와 병합 충돌이 없는지
+#  2) static      : JS 문법·TypeScript 타입·운영 의존성 보안 감사
+#  3) integration : wrangler dev(로컬 D1·R2)로 Worker를 띄워 HTTP 통합 테스트
+#  4) browser     : 헤드리스 Chrome으로 JS 오류·CSP 위반·작성 흐름
+# 배포는 CI가 아니라 `npm run deploy`(wrangler)로 한다. master 직접 push에서는 돌지 않는다.
 name: CI
 
 on:
@@ -46,7 +45,7 @@ jobs:
           fi
 
   static:
-    name: 정적 검사·의존성 감사
+    name: 정적 검사·타입·의존성 감사
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -56,34 +55,23 @@ jobs:
           cache: npm
       - id: install
         run: npm ci
-      - name: JS 문법 + EJS 컴파일
+      - name: JS 문법
         run: npm run lint
+      - name: TypeScript 타입 검사
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: npm run typecheck
       - name: 운영 의존성 보안 감사 (high 이상이면 실패)
-        # 문법 검사가 실패해도 감사 결과까지 한 번에 보이도록 계속 실행 (npm ci 실패 시는 제외)
+        # 앞 단계가 실패해도 감사 결과까지 한 번에 보이도록 계속 실행 (npm ci 실패 시는 제외)
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: npm audit --omit=dev --audit-level=high
 
   integration:
-    name: 통합 테스트 (${{ matrix.db }}, Node ${{ matrix.node }})
+    name: 통합 테스트 (Node ${{ matrix.node }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        db: [sqlite, postgres]
         node: [22, 24]
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: portfolio_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -91,27 +79,12 @@ jobs:
           node-version: ${{ matrix.node }}
           cache: npm
       - run: npm ci
-      - name: 테스트
-        env:
-          TEST_DATABASE_URL: ${{ matrix.db == 'postgres' && 'postgres://postgres:postgres@127.0.0.1:5432/portfolio_test' || '' }}
+      - name: 테스트 (로컬 D1·R2로 wrangler dev 기동)
         run: npm test
 
   browser:
-    name: 브라우저 테스트 (Chrome, postgres)
+    name: 브라우저 테스트 (Chrome)
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: portfolio_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -126,36 +99,4 @@ jobs:
           "${CHROME}" --version
           echo "CHROME_PATH=${CHROME}" >> "$GITHUB_ENV"
       - name: 테스트
-        env:
-          TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/portfolio_test
         run: npm run test:browser
-
-  cloudflare:
-    name: Cloudflare Workers (타입·감사·통합 테스트)
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: cloudflare
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: cloudflare/package-lock.json
-      - id: install
-        run: npm ci
-      - name: 타입 검사
-        run: npm run typecheck
-      - name: 운영 의존성 보안 감사 (high 이상이면 실패)
-        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
-        run: npm audit --omit=dev --audit-level=high
-      - name: 통합 테스트 (로컬 D1·R2로 wrangler dev 기동)
-        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
-        run: npm test
-      - name: 브라우저 테스트 (Chrome)
-        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
-        run: |
-          CHROME="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium)"
-          echo "Chrome: ${CHROME}"
-          CHROME_PATH="${CHROME}" npm run test:browser
