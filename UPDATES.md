@@ -64,9 +64,11 @@
 - Opus 5.5 10차 검토: 알림 패널이 보여 줄 40개를 먼저 고른 뒤 게시물 본문 조각을 읽는다. 마이그레이션 `0004_notification_recipient_created.sql`로 받는 사람별 최신순 인덱스를 추가했다 (로컬 SQLite 확인: 알림 500개에서 본문 조각 계산 500회 → 40회).
 - 기존 통합 테스트·브라우저 테스트를 wrangler dev 기반으로 옮기고, CI를 Cloudflare 기준(문법·타입·감사·통합·브라우저)으로 다시 구성했다.
 - 관리자 계정 스크립트가 Windows의 Node 24에서 wrangler 종료 순간 libuv 오류(`UV_HANDLE_CLOSING`)로 실패하던 문제를 고쳤다: 입력 후 콘솔 모드 복구, wrangler 비대화형 실행, 이 오류면 실제 반영 여부를 확인하고 한 번만 다시 시도. 원격 D1에서 `--file` 조회가 실제 행 대신 실행 요약을 돌려줘 "닉네임이 이미 사용 중"으로 잘못 판단하던 문제도 고쳤다 (조회는 `--command`로 보냄). 로그인되지 않은 터미널이면 `wrangler login` 안내를 바로 보여 준다.
+- 사이트를 링크로만 접속하게 했다: 모든 응답에 `X-Robots-Tag: noindex, nofollow, noarchive`, 페이지에 `<meta name="robots">`를 붙이고 `robots.txt` 수집 차단은 유지한다 (robots.txt만으로는 다른 곳에 링크가 걸리면 주소가 검색 결과에 오를 수 있음).
 - Railway 포트폴리오 프로젝트를 삭제했다 (2026-10-24 01:11 완전 삭제 예약, Railway 장애로 즉시 삭제는 반영되지 않음).
 
 **결정한 것**
+- 사이트는 정식 공개하지 않고 링크를 아는 사람만 들어오게 한다 (검색 결과에서 제외).
 - 기존 Railway DB의 게시물·회원은 옮기지 않는다 (테스트 사이트로 새로 시작).
 - `rate_limits.window_start`는 밀리초 정수로 두고 `RULES.md` §5에 예외로 적는다 (이미 적용한 마이그레이션이라 바꾸지 않음).
 - `0002_rate_limits.sql`의 주석은 "매일 Cron"이라고 적혀 있지만 실제 정리 주기는 6시간이다. 적용한 마이그레이션은 고치지 않는다는 규칙에 따라 파일은 그대로 두고 여기에 적는다.
@@ -76,7 +78,7 @@
 **남은 일**
 - 다음 배포 전에 원격 D1에 마이그레이션 0003·0004를 적용한다: `npm run db:migrate:remote` (그다음 `npm run deploy`).
 - 실제 사이트 관리자 계정 만들기: `npm run admin -- create --remote` (직접 실행).
-- 정식 공개 전에 `public/robots.txt`의 검색 차단을 푼다.
+- (검색 노출을 원하게 되면) `ROBOTS_TAG`·`public/_headers`·`public/robots.txt` 세 곳을 함께 바꾼다.
 - 2026-10-24 이후 Railway 프로젝트가 완전히 지워졌는지 확인한다.
 
 ## 2026-10-21

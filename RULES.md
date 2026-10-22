@@ -109,6 +109,7 @@
 - 사용자가 넣은 HTML은 `sanitizePostHtml`(sanitize-html, 기존 허용 목록)만으로 정제한다. 다른 정제기로 바꾸지 않는다 (2026-10-22 HTMLRewriter 판에서 XSS가 발견됨).
 - 화면 출력은 JSX의 기본 이스케이프를 쓴다. `RawHtml`·`raw()`·`InlineScript`에는 정제했거나 `escapeJsonForScript`로 이스케이프한 값만 넣는다.
 - 상태를 바꾸는 요청은 POST(+`_method`)로만 받는다. GET으로 데이터를 바꾸지 않는다. 출처 검사(`requireSameOrigin`)를 우회하는 라우트를 만들지 않는다.
+- 사이트는 링크를 아는 사람만 들어오게 검색 결과에서 뺀다 (2026-10-22 결정). 모든 Worker 응답에 `X-Robots-Tag`(`ROBOTS_TAG`, `src/lib/security.ts`)와 `<meta name="robots">`를, 정적 파일에는 `public/_headers`로 같은 값을 붙이고, `public/robots.txt`는 수집을 모두 막는다. 셋 중 하나만 바꾸지 않는다.
 - 경로·폼의 id는 `parseId`로 검사한다. 로그인 후 이동 경로는 `toSafeRedirectPath`로 검사한다.
 - 업로드 파일의 형식은 브라우저가 보낸 MIME이 아니라 파일 앞부분(`detectVerifiedMime`)으로 판별한다.
 - 권한이 필요한 라우트는 `requireLogin`·`requireAdmin`을 쓰고, 남의 글·댓글을 고치는 경우 작성자 확인을 따로 한다.

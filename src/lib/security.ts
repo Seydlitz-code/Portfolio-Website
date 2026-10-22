@@ -1,4 +1,4 @@
-/** 보안 헤더, CSRF 출처 검사, 안전한 이동 경로, 접속 IP (기존 lib/security.js 이식) */
+/** 보안 헤더(검색 제외 표시 포함), CSRF 출처 검사, 안전한 이동 경로, 접속 IP (기존 lib/security.js 이식) */
 import type { Context, MiddlewareHandler } from 'hono';
 import type { AppEnv } from '../types';
 
@@ -21,6 +21,13 @@ const CSP = [
 /** HTTPS에서 HSTS 유지 기간: 180일 */
 const HSTS_MAX_AGE_SEC = 180 * 24 * 60 * 60;
 
+/**
+ * 검색 결과에 넣지 말라는 표시. 사이트는 링크를 아는 사람만 들어오게 한다 (2026-10-22 결정).
+ * robots.txt의 수집 차단만으로는 다른 곳에 링크가 걸리면 주소만 검색 결과에 오를 수 있어 함께 붙인다.
+ * 정적 파일은 public/_headers에서 같은 값을 붙인다.
+ */
+export const ROBOTS_TAG = 'noindex, nofollow, noarchive';
+
 export const addSecurityHeaders: MiddlewareHandler<AppEnv> = async (c, next) => {
   await next();
   const headers = c.res.headers;
@@ -29,6 +36,7 @@ export const addSecurityHeaders: MiddlewareHandler<AppEnv> = async (c, next) => 
   headers.set('X-Frame-Options', 'SAMEORIGIN');
   headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
   headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  headers.set('X-Robots-Tag', ROBOTS_TAG);
   if (new URL(c.req.url).protocol === 'https:') {
     headers.set('Strict-Transport-Security', `max-age=${HSTS_MAX_AGE_SEC}; includeSubDomains`);
   }
