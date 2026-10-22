@@ -70,9 +70,52 @@ function ask(question, { hidden = false } = {}) {
     }
     readlineInterface.question(question, (answer) => {
       readlineInterface.close();
+      // 입력이 끝나면 콘솔을 원래 모드로 돌려놓는다 (원시 모드가 남으면 뒤에 실행하는 wrangler가 콘솔을 다루다 죽을 수 있다).
+      if (process.stdin.isTTY) process.stdin.setRawMode(false);
+      process.stdin.pause();
       if (hidden) process.stdout.write('\n');
       resolve(answer);
     });
+  });
+}
+
+/**
+ * Windows의 Node 24에서 wrangler가 끝나는 순간 간헐적으로 죽을 때 나오는 libuv 오류 문구.
+ * 이 오류는 SQL 실행 결과와 관계없이 날 수 있어, 실제로 반영됐는지 다시 확인한 뒤 판단한다.
+ */
+const WRANGLER_EXIT_CRASH_PATTERN = /Assertion failed|UV_HANDLE_CLOSING/;
+
+/** wrangler가 Cloudflare에 로그인되어 있지 않을 때 나오는 문구 */
+const WRANGLER_NOT_LOGGED_IN_PATTERN = /not authenticated|CLOUDFLARE_API_TOKEN|wrangler login|without logging in/i;
+
+/**
+ * 실패한 wrangler 출력에서 사람이 읽을 원인 한 줄을 고른다.
+ * 끝나는 순간 죽는 오류 줄(WRANGLER_EXIT_CRASH_PATTERN)은 진짜 원인을 가리므로 빼고 고른다.
+ */
+function describeWranglerFailure(output, status) {
+  if (WRANGLER_NOT_LOGGED_IN_PATTERN.test(output)) {
+    return '이 터미널에서 wrangler가 Cloudflare에 로그인되어 있지 않습니다. `npx.cmd wrangler login`으로 로그인한 뒤 다시 실행하세요.';
+  }
+  const lines = output.split('\n').map((line) => line.trim()).filter((line) => line && !WRANGLER_EXIT_CRASH_PATTERN.test(line));
+  return lines.find((line) => /constraint|error/i.test(line)) || lines.pop() || `wrangler 종료 코드 ${status}`;
+}
+
+/** 실패 원인을 담은 Error. 로그인 문제가 아니고 끝나는 순간 죽은 경우만 isExitCrash = true (다시 시도할 수 있음) */
+function buildWranglerError(output, status) {
+  const error = new Error(describeWranglerFailure(output, status));
+  error.isExitCrash = WRANGLER_EXIT_CRASH_PATTERN.test(output) && !WRANGLER_NOT_LOGGED_IN_PATTERN.test(output);
+  return error;
+}
+
+/**
+ * wrangler d1 execute를 자식 프로세스로 실행한다. CI=1로 스피너 등 대화형 출력을 끈다.
+ * sqlArgs는 ['--file', 경로] 또는 ['--command', SQL]이다. 셸을 거치지 않으므로 SQL의 따옴표가 깨지지 않는다.
+ */
+function runWrangler(extraArgs, sqlArgs) {
+  return spawnSync(process.execPath, [WRANGLER, 'd1', 'execute', DB_NAME, ...extraArgs, ...sqlArgs, '--yes'], {
+    stdio: ['ignore', 'pipe', 'pipe'],
+    encoding: 'utf8',
+    env: { ...process.env, CI: '1' }
   });
 }
 
@@ -81,14 +124,10 @@ function runSql(target, sql) {
   const file = join(tempDir, 'admin.sql');
   try {
     writeFileSync(file, sql, 'utf8');
-    const result = spawnSync(process.execPath, [WRANGLER, 'd1', 'execute', DB_NAME, target, ...PERSIST, '--file', file, '--yes'], {
-      stdio: ['ignore', 'pipe', 'pipe'],
-      encoding: 'utf8'
-    });
+    const result = runWrangler([target, ...PERSIST], ['--file', file]);
     const out = `${result.stdout || ''}${result.stderr || ''}`;
     if (result.status !== 0) {
-      const line = out.split('\n').find((l) => /constraint|error/i.test(l)) || out.trim().split('\n').pop();
-      throw new Error(line ? line.trim() : `wrangler 종료 코드 ${result.status}`);
+      throw buildWranglerError(out, result.status);
     }
     return out;
   } finally {
@@ -96,22 +135,26 @@ function runSql(target, sql) {
   }
 }
 
+/**
+ * 조회 결과 행을 돌려준다. 조회는 --file이 아니라 --command로 보낸다:
+ * 원격 D1은 --file을 가져오기(import)로 실행해 실제 행 대신 "Total queries executed" 같은 요약 한 줄만 돌려준다
+ * (로컬 D1은 실제 행을 돌려줘서 테스트로는 드러나지 않았다).
+ */
 function query(target, sql) {
-  // Windows에서 shell을 거치면 따옴표가 깨지므로 조회도 파일로 넘긴다.
-  const tempDir = mkdtempSync(join(tmpdir(), 'portfolio-admin-'));
-  const file = join(tempDir, 'query.sql');
-  try {
-    writeFileSync(file, sql, 'utf8');
-    const result = spawnSync(process.execPath, [WRANGLER, 'd1', 'execute', DB_NAME, target, ...PERSIST, '--json', '--file', file, '--yes'], {
-      stdio: ['ignore', 'pipe', 'pipe'],
-      encoding: 'utf8'
-    });
-    if (result.status !== 0) throw new Error((result.stderr || result.stdout || '').trim().split('\n').pop());
-    const json = JSON.parse(result.stdout.slice(result.stdout.indexOf('[')));
-    return json[0]?.results ?? [];
-  } finally {
-    rmSync(tempDir, { recursive: true, force: true });
+  const result = runWrangler([target, ...PERSIST, '--json'], ['--command', sql]);
+  const stdout = result.stdout || '';
+  // 끝나는 순간 죽었어도 결과 JSON을 이미 다 출력했으면 그 결과를 쓴다.
+  const hasResult = stdout.includes('[') && stdout.trimEnd().endsWith(']');
+  const isExitCrash = WRANGLER_EXIT_CRASH_PATTERN.test(`${stdout}${result.stderr || ''}`);
+  if (result.status !== 0 && !(isExitCrash && hasResult)) {
+    throw buildWranglerError(`${stdout}${result.stderr || ''}`, result.status);
   }
+  const json = JSON.parse(stdout.slice(stdout.indexOf('[')));
+  const rows = json[0]?.results ?? [];
+  if (rows.some((row) => 'Total queries executed' in row)) {
+    throw new Error('조회 결과 대신 실행 요약이 돌아왔습니다. wrangler 버전을 확인하세요.');
+  }
+  return rows;
 }
 
 async function create(target) {
@@ -138,12 +181,35 @@ async function create(target) {
   if (taken.some((r) => r.username === username)) exitWithUsage(`아이디 "${username}"는 이미 있습니다. promote를 쓰세요.`);
   if (taken.length) exitWithUsage(`닉네임 "${nickname}"은 이미 사용 중입니다.`);
 
-  runSql(
+  runSqlConfirmed(
     target,
     `INSERT INTO users (username, nickname, password_hash, is_admin, avatar_key)
-     VALUES (${quoteSqlString(username)}, ${quoteSqlString(nickname)}, ${quoteSqlString(hashPassword(password))}, 1, NULL);`
+     VALUES (${quoteSqlString(username)}, ${quoteSqlString(nickname)}, ${quoteSqlString(hashPassword(password))}, 1, NULL);`,
+    () => isAdminUser(target, username)
   );
   console.log(`관리자 "${username}"를 만들었습니다 (${target === '--remote' ? '원격' : '로컬'} D1).`);
+}
+
+/** 해당 아이디가 관리자로 저장돼 있는지 */
+function isAdminUser(target, username) {
+  const rows = query(target, `SELECT is_admin FROM users WHERE username = ${quoteSqlString(username)}`);
+  return rows.length > 0 && rows[0].is_admin === 1;
+}
+
+/**
+ * runSql을 실행하되, wrangler가 끝나는 순간 죽는 오류(WRANGLER_EXIT_CRASH_PATTERN)면
+ * isApplied로 실제 반영 여부를 확인한다. 반영됐으면 성공으로 보고, 아니면 한 번만 다시 시도한다.
+ */
+function runSqlConfirmed(target, sql, isApplied) {
+  try {
+    runSql(target, sql);
+  } catch (err) {
+    if (!err.isExitCrash) throw err;
+    if (isApplied()) return;
+    console.error('wrangler가 비정상 종료해 한 번 더 시도합니다...');
+    runSql(target, sql);
+  }
+  if (!isApplied()) throw new Error('저장 후 확인에서 계정을 찾지 못했습니다. 다시 실행해 주세요.');
 }
 
 function promote(target, username) {
@@ -154,7 +220,9 @@ function promote(target, username) {
     console.log(`"${username}"는 이미 관리자입니다.`);
     return;
   }
-  runSql(target, `UPDATE users SET is_admin = 1 WHERE username = ${quoteSqlString(username)};`);
+  runSqlConfirmed(target, `UPDATE users SET is_admin = 1 WHERE username = ${quoteSqlString(username)};`, () =>
+    isAdminUser(target, username)
+  );
   console.log(`"${username}"를 관리자로 바꿨습니다 (${target === '--remote' ? '원격' : '로컬'} D1).`);
 }
 
