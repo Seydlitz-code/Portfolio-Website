@@ -95,6 +95,16 @@ describe('보안 헤더', () => {
     assert.equal(res.headers.get('x-frame-options'), 'SAMEORIGIN');
     assert.equal(res.headers.get('x-powered-by'), null);
   });
+
+  it('링크로만 접속: 페이지·오류·헬스체크·정적 파일 모두 검색 제외 표시', async () => {
+    const client = new Client(server.base);
+    for (const urlPath of ['/', '/posts', '/auth/login', '/nope', '/healthz', '/css/style.css', '/robots.txt']) {
+      const res = await client.get(urlPath);
+      assert.equal(res.headers.get('x-robots-tag'), 'noindex, nofollow, noarchive', urlPath);
+    }
+    assert.match((await client.get('/')).text, /<meta name="robots" content="noindex, nofollow, noarchive"\/?>/);
+    assert.match((await client.get('/robots.txt')).text, /^Disallow: \/$/m);
+  });
 });
 
 describe('세션', () => {

@@ -1,6 +1,7 @@
 /** 모든 화면 공통 틀(Layout), 인라인 스크립트·정제된 HTML 출력 도우미, 오류 화면 (기존 views/error.ejs 이식) */
 import type { Child } from 'hono/jsx';
 import { html, raw } from 'hono/html';
+import { ROBOTS_TAG } from '../lib/security';
 
 const FONT_URL =
   'https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Inter:wght@300;400;500;700&display=swap';
@@ -24,6 +25,7 @@ export function Layout(props: LayoutProps) {
       <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="robots" content={ROBOTS_TAG} />
         <title>{props.title}</title>
         <link rel="stylesheet" href="/css/style.css" />
         {props.hasIcons && <link rel="stylesheet" href={FONT_AWESOME_URL} />}

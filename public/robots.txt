@@ -1,2 +1,4 @@
+# 링크를 아는 사람만 들어오는 사이트라 검색 로봇의 수집을 모두 막는다.
+# 페이지마다 X-Robots-Tag·meta robots(noindex)도 함께 붙인다 (src/lib/security.ts).
 User-agent: *
 Disallow: /

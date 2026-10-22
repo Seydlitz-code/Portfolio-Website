@@ -1,9 +1,11 @@
 # 정적 파일(CSS, JS, 이미지)은 Worker를 거치지 않으므로 보안·캐시 헤더를 여기서 붙인다.
 # CSS·JS는 주소에 버전이 없어 Cloudflare 기본값(매번 ETag로 재확인)을 그대로 쓴다.
+# X-Robots-Tag: 링크를 아는 사람만 들어오게 검색 결과에서 뺀다 (src/lib/security.ts의 ROBOTS_TAG와 같은 값).
 /*
   X-Content-Type-Options: nosniff
   X-Frame-Options: SAMEORIGIN
   Referrer-Policy: strict-origin-when-cross-origin
+  X-Robots-Tag: noindex, nofollow, noarchive
 
 # 기본 프로필 이미지 등은 거의 바뀌지 않으므로 하루 동안 브라우저 캐시를 쓴다.
 /images/*
